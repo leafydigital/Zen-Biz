@@ -55,7 +55,7 @@ export function BankDetailsForm({ profile }: { profile: Profile }) {
 
     const { error } = await supabase
       .from("profiles" as never)
-      .update({
+            .update({
         bank_name: bankName.trim() || null,
         bank_account_name: accountName.trim() || null,
         bank_account_number: accountNumber.trim() || null,

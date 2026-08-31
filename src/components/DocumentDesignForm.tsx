@@ -109,12 +109,12 @@ export function DocumentDesignForm({ profile }: { profile: Profile }) {
       signatureUrl = publicUrlData.publicUrl;
     }
 
-    const { error } = await supabase
+        const { error } = await supabase
       .from("profiles")
-      .update({
+            .update({
         document_design: design,
         signature_url: signatureUrl,
-      })
+      } as never)
       .eq("id", profile.id);
     setSaving(false);
     if (error) {

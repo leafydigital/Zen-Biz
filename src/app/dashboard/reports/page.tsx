@@ -31,7 +31,7 @@ export default async function GstReportPage() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("plan")
     .eq("id", user!.id)
     .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
@@ -48,11 +48,11 @@ export default async function GstReportPage() {
 
   const [{ data: invoices }, { data: purchases }] = await Promise.all([
     supabase
-      .from("invoices")
+      .from("invoices" as never)
       .select("invoice_date, gst_amount, subtotal")
       .neq("status", "cancelled"),
     supabase
-      .from("purchases")
+      .from("purchases" as never)
       .select("purchase_date, gst_amount, subtotal")
       .neq("status", "cancelled"),
   ]);

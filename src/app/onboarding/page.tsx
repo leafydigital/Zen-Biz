@@ -17,11 +17,11 @@ export default async function OnboardingPage() {
   // now instead of silently treating the account as brand new — this is
   // what previously made returning users see a blank "set up your business"
   // screen even though their data was safe all along.
-    const { data: existingProfile } = (await supabase
-    .from("profiles")
+  const { data: existingProfile } = await supabase
+    .from("profiles" as never)
     .select("onboarding_complete")
     .eq("id", user.id)
-    .maybeSingle()) as { data: { onboarding_complete: boolean } | null };
+    .maybeSingle() as { data: { onboarding_complete: boolean } | null; error: unknown };
 
   if (existingProfile?.onboarding_complete) {
     redirect("/dashboard");
@@ -31,7 +31,7 @@ export default async function OnboardingPage() {
     // Self-heal: create the missing profile row rather than losing track of
     // this account. If it already exists (a race with the trigger), this is
     // a no-op thanks to the ON CONFLICT rule in the database.
-           await supabase.from("profiles" as never).insert({ id: user.id, onboarding_complete: false } as never);
+    await supabase.from("profiles" as never).insert({ id: user.id, onboarding_complete: false } as never);
   }
 
   return (

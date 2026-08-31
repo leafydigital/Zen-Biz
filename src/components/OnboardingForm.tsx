@@ -77,7 +77,7 @@ export function OnboardingForm({ userId }: { userId: string }) {
     }
 
     const { error: dbError } = await supabase
-      .from("profiles")
+      .from("profiles" as never)
       .update({
         business_name: businessName.trim(),
         business_type: finalBusinessType,
@@ -85,10 +85,10 @@ export function OnboardingForm({ userId }: { userId: string }) {
         address: address.trim() || null,
         gst_number: gstNumber.trim() || null,
         logo_url: logoUrl,
-        onboarding_complete: true,
-      })
+                onboarding_complete: true,
+      } as never)
       .eq("id", userId);
-
+      
     setSaving(false);
     if (dbError) {
       console.error("Zen Biz: failed to save business profile", dbError);

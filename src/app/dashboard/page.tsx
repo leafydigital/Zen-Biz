@@ -18,7 +18,7 @@ export default async function DashboardHome() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("*")
     .eq("id", user!.id)
     .maybeSingle()) as { data: Profile | null };
@@ -28,9 +28,9 @@ export default async function DashboardHome() {
   const [{ count: productCount }, { count: customerCount }, invoicesResult] =
     await Promise.all([
       supabase.from("products").select("id", { count: "exact", head: true }),
-      supabase.from("customers").select("id", { count: "exact", head: true }),
+      supabase.from("customers" as never).select("id", { count: "exact", head: true }),
       supabase
-        .from("invoices")
+        .from("invoices" as never)
         .select("id, total, status, invoice_number, invoice_date")
         .order("created_at", { ascending: false })
         .limit(5),
@@ -41,7 +41,7 @@ export default async function DashboardHome() {
     | null;
 
   const { data: totals } = (await supabase
-    .from("invoices")
+    .from("invoices" as never)
     .select("total, status, amount_paid")) as {
     data: { total: number; status: string; amount_paid: number }[] | null;
   };
@@ -60,7 +60,7 @@ export default async function DashboardHome() {
   }, 0);
 
   const { data: purchaseTotals } = (await supabase
-    .from("purchases")
+    .from("purchases" as never)
     .select("total")
     .neq("status", "cancelled")) as { data: { total: number }[] | null };
   const totalPurchased = (purchaseTotals ?? []).reduce(

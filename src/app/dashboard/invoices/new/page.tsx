@@ -10,10 +10,10 @@ export default async function NewInvoicePage() {
 
   const [profileResult, customersResult, productsResult, { count }] =
     await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user!.id).single(),
-      supabase.from("customers").select("*").order("name"),
+      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
+      supabase.from("customers" as never).select("*").order("name"),
       supabase.from("products").select("*").eq("is_active", true).order("name"),
-      supabase.from("invoices").select("id", { count: "exact", head: true }),
+      supabase.from("invoices" as never).select("id", { count: "exact", head: true }),
     ]);
 
   const profile = profileResult.data as Profile | null;

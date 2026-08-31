@@ -21,7 +21,7 @@ export default async function BillingHistoryPage() {
   const supabase = createClient();
 
   const { data: payments } = (await supabase
-    .from("subscription_payments")
+    .from("subscription_payments" as never)
     .select("*")
     .order("created_at", { ascending: false })) as { data: SubscriptionPayment[] | null };
 

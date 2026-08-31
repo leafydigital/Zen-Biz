@@ -13,7 +13,7 @@ export default async function DeliveryChallansPage() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("plan")
     .eq("id", user!.id)
     .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
@@ -29,7 +29,7 @@ export default async function DeliveryChallansPage() {
   }
 
   const { data: challans } = (await supabase
-    .from("delivery_challans")
+    .from("delivery_challans" as never)
     .select("*, customers(name)")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 

@@ -35,8 +35,8 @@ export function TermsForm({
     setSaving(true);
     setError(null);
     const { error } = await supabase
-      .from("profiles")
-      .update({ [field]: terms.trim() || null })
+      .from("profiles" as never)
+     .update({ [field]: terms.trim() || null } as never)
       .eq("id", profile.id);
     setSaving(false);
     if (error) {

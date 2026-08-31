@@ -14,7 +14,7 @@ export function DeleteInvoiceButton({ invoiceId }: { invoiceId: string }) {
   async function handleDelete() {
     setDeleting(true);
     setError(null);
-    const { error } = await supabase.from("invoices").delete().eq("id", invoiceId);
+    const { error } = await supabase.from("invoices" as never).delete().eq("id", invoiceId);
     setDeleting(false);
     if (error) {
       console.error("Zen Biz: failed to delete invoice", error);

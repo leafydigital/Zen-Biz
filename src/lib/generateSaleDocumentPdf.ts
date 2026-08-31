@@ -291,7 +291,7 @@ async function renderStandardPdf(args: {
     try {
       const logoData = await loadImageAsDataUrl(profile.logo_url);
       if (logoData) {
-        doc.addImage(logoData, marginX, y - 26 * scale, logoSize, logoSize, undefined, "CONTAIN");
+                doc.addImage(logoData, marginX, y - 26 * scale, logoSize, logoSize);
         textStartX = marginX + logoSize + 10 * scale;
       }
     } catch {
@@ -635,7 +635,7 @@ async function renderStandardPdf(args: {
       try {
         const imageData = await loadImageAsDataUrl(signatureUrl);
         if (imageData) {
-          doc.addImage(imageData, sigX, afterTableY, sigBoxWidth, sigBoxHeight, undefined, "CONTAIN");
+                    doc.addImage(imageData, sigX, afterTableY, sigBoxWidth, sigBoxHeight);
         }
       } catch {
         // If the signature image can't be loaded (network hiccup, deleted
@@ -701,7 +701,7 @@ async function renderStandardPdf(args: {
       try {
         const imageData = await loadImageAsDataUrl(qrUrl);
         if (imageData) {
-          doc.addImage(imageData, qrX, afterTableY, qrSize, qrSize, undefined, "CONTAIN");
+                    doc.addImage(imageData, qrX, afterTableY, qrSize, qrSize);
         }
       } catch {
         // Skip the QR image if it can't be loaded — the rest of the PDF

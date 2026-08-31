@@ -12,9 +12,9 @@ export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
   async function handleDownload() {
     setLoading(true);
     const [invoiceResult, itemsResult, profileResult] = await Promise.all([
-      supabase.from("invoices").select("*").eq("id", invoiceId).single(),
-      supabase.from("invoice_items").select("*").eq("invoice_id", invoiceId),
-      supabase.from("profiles").select("*").single(),
+      supabase.from("invoices" as never).select("*").eq("id", invoiceId).single(),
+      supabase.from("invoice_items" as never).select("*").eq("invoice_id", invoiceId),
+      supabase.from("profiles" as never).select("*").single(),
     ]);
 
     const invoice = invoiceResult.data as Invoice | null;
@@ -29,7 +29,7 @@ export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
     let customer: Customer | null = null;
     if (invoice.customer_id) {
       const { data } = await supabase
-        .from("customers")
+        .from("customers" as never)
         .select("*")
         .eq("id", invoice.customer_id)
         .single();

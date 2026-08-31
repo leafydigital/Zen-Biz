@@ -8,7 +8,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
   const supabase = createClient();
 
   const { data: customer } = (await supabase
-    .from("customers")
+    .from("customers" as never)
     .select("*")
     .eq("id", params.id)
     .maybeSingle()) as { data: Customer | null };

@@ -12,10 +12,10 @@ export default async function NewPurchasePage() {
 
   const [profileResult, suppliersResult, productsResult, { count }] =
     await Promise.all([
-      supabase.from("profiles").select("*").eq("id", user!.id).single(),
-      supabase.from("suppliers").select("*").order("name"),
+      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
+      supabase.from("suppliers" as never).select("*").order("name"),
       supabase.from("products").select("*").eq("is_active", true).order("name"),
-      supabase.from("purchases").select("id", { count: "exact", head: true }),
+      supabase.from("purchases" as never).select("id", { count: "exact", head: true }),
     ]);
 
   const profile = profileResult.data as Profile | null;

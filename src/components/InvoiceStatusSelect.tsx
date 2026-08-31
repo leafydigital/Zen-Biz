@@ -39,9 +39,9 @@ export function InvoiceStatusSelect({
   async function applyStatus(next: InvoiceStatus, method: PaymentMethod | null) {
     setUpdating(true);
     setCurrent(next);
-    await supabase
-      .from("invoices")
-      .update({ status: next, payment_method: method })
+        await supabase
+      .from("invoices" as never)
+            .update({ status: next, payment_method: method } as never)
       .eq("id", invoiceId);
     setUpdating(false);
     router.refresh();

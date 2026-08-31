@@ -9,7 +9,7 @@ export default async function CustomersPage() {
   } = await supabase.auth.getUser();
 
   const { data: customers } = (await supabase
-    .from("customers")
+    .from("customers" as never)
     .select("*")
     .order("created_at", { ascending: false })) as { data: Customer[] | null };
 

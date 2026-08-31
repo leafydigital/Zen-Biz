@@ -45,8 +45,8 @@ export function SupplierFormModal({
     };
 
     const { error } = supplier
-      ? await supabase.from("suppliers").update(payload).eq("id", supplier.id)
-      : await supabase.from("suppliers").insert(payload);
+      ? await supabase.from("suppliers" as never).update(payload as never).eq("id", supplier.id)
+      : await supabase.from("suppliers" as never).insert(payload as never);
 
     setSaving(false);
     if (error) {

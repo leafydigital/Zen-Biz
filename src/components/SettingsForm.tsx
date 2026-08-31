@@ -94,7 +94,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
     }
 
     const { error: dbError } = await supabase
-      .from("profiles")
+      .from("profiles" as never)
       .update({
         business_name: businessName.trim(),
         business_type: finalBusinessType,
@@ -104,7 +104,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
         gst_number: gstNumber.trim() || null,
         default_currency: defaultCurrency,
         logo_url: logoUrl,
-      })
+      } as never)
       .eq("id", profile.id);
 
     setSaving(false);

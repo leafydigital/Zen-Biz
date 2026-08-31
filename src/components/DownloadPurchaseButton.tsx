@@ -12,9 +12,9 @@ export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
   async function handleDownload() {
     setLoading(true);
     const [purchaseResult, itemsResult, profileResult] = await Promise.all([
-      supabase.from("purchases").select("*").eq("id", purchaseId).single(),
-      supabase.from("purchase_items").select("*").eq("purchase_id", purchaseId),
-      supabase.from("profiles").select("*").single(),
+      supabase.from("purchases" as never).select("*").eq("id", purchaseId).single(),
+      supabase.from("purchase_items" as never).select("*").eq("purchase_id", purchaseId),
+      supabase.from("profiles" as never).select("*").single(),
     ]);
 
     const purchase = purchaseResult.data as Purchase | null;
@@ -29,7 +29,7 @@ export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
     let supplier: Supplier | null = null;
     if (purchase.supplier_id) {
       const { data } = await supabase
-        .from("suppliers")
+        .from("suppliers" as never)
         .select("*")
         .eq("id", purchase.supplier_id)
         .single();

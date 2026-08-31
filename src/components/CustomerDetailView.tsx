@@ -15,7 +15,7 @@ export function CustomerDetailView({ customer }: { customer: Customer }) {
 
   async function handleDelete() {
     setDeleting(true);
-    await supabase.from("customers").delete().eq("id", customer.id);
+    await supabase.from("customers" as never).delete().eq("id", customer.id);
     router.push("/dashboard/customers");
     router.refresh();
   }

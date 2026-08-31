@@ -16,7 +16,7 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
   const supabase = createClient();
 
   const { data: invoice } = (await supabase
-    .from("invoices")
+    .from("invoices" as never)
     .select("*")
     .eq("id", params.id)
     .maybeSingle()) as { data: Invoice | null };
@@ -24,7 +24,7 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
   if (!invoice) notFound();
 
   const { data: items } = (await supabase
-    .from("invoice_items")
+    .from("invoice_items" as never)
     .select("*")
     .eq("invoice_id", invoice.id)
     .order("created_at", { ascending: true })) as { data: InvoiceItem[] | null };
@@ -32,7 +32,7 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
   let customer: Customer | null = null;
   if (invoice.customer_id) {
     const { data } = await supabase
-      .from("customers")
+      .from("customers" as never)
       .select("*")
       .eq("id", invoice.customer_id)
       .maybeSingle();

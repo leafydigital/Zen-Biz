@@ -13,7 +13,7 @@ export default async function QuotationsPage() {
   const supabase = createClient();
 
   const { data: quotations } = (await supabase
-    .from("quotations")
+    .from("quotations" as never)
     .select("*, customers(name)")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 

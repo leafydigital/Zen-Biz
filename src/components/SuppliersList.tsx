@@ -28,7 +28,7 @@ export function SuppliersList({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
-    await supabase.from("suppliers").delete().eq("id", id);
+    await supabase.from("suppliers" as never).delete().eq("id", id);
     setDeletingId(null);
     router.refresh();
   }

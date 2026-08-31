@@ -13,7 +13,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
 
   const [productResult, profileResult] = await Promise.all([
     supabase.from("products").select("*").eq("id", params.id).maybeSingle(),
-    supabase.from("profiles").select("*").eq("id", user!.id).maybeSingle(),
+    supabase.from("profiles" as never).select("*").eq("id", user!.id).maybeSingle(),
   ]);
 
   const product = productResult.data as Product | null;

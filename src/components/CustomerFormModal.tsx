@@ -44,7 +44,7 @@ export function CustomerFormModal({
       notes: notes.trim() || null,
     };
 
-        const { error } = customer
+           const { error } = customer
       ? await supabase.from("customers" as never).update(payload as never).eq("id", customer.id)
       : await supabase.from("customers" as never).insert(payload as never);
 

@@ -185,7 +185,7 @@ export function NewPurchaseForm({
     setSaving(true);
 
     const { data: purchaseData, error: pErr } = await supabase
-      .from("purchases")
+      .from("purchases" as never)
       .insert({
         owner_id: ownerId,
         supplier_id: supplierId || null,
@@ -209,9 +209,9 @@ export function NewPurchaseForm({
         sgst_amount: gstSplit.sgstAmount,
         igst_amount: gstSplit.igstAmount,
         round_off: roundOff,
-        total: grandTotal,
+               total: grandTotal,
         notes: notes.trim() || null,
-      })
+      } as never)
       .select()
       .single();
 
@@ -249,7 +249,7 @@ export function NewPurchaseForm({
     // Saving these rows is what triggers the automatic stock increase in the
     // database (see the adjust_stock_on_purchase trigger) — no extra call
     // needed here, it happens as a side effect of this insert.
-    const { error: itemsErr } = await supabase.from("purchase_items").insert(itemsPayload);
+        const { error: itemsErr } = await supabase.from("purchase_items" as never).insert(itemsPayload as never);
 
     setSaving(false);
     if (itemsErr) {

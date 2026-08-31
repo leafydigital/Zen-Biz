@@ -11,10 +11,10 @@ export default async function EditInvoicePage({ params }: { params: { id: string
 
   const [invoiceResult, itemsResult, profileResult, customersResult, productsResult] =
     await Promise.all([
-      supabase.from("invoices").select("*").eq("id", params.id).maybeSingle(),
-      supabase.from("invoice_items").select("*").eq("invoice_id", params.id).order("created_at"),
-      supabase.from("profiles").select("*").eq("id", user!.id).single(),
-      supabase.from("customers").select("*").order("name"),
+      supabase.from("invoices" as never).select("*").eq("id", params.id).maybeSingle(),
+      supabase.from("invoice_items" as never).select("*").eq("invoice_id", params.id).order("created_at"),
+      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
+      supabase.from("customers" as never).select("*").order("name"),
       supabase.from("products").select("*").eq("is_active", true).order("name"),
     ]);
 

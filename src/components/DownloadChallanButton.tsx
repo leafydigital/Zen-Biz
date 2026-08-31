@@ -12,9 +12,9 @@ export function DownloadChallanButton({ challanId }: { challanId: string }) {
   async function handleDownload() {
     setLoading(true);
     const [challanResult, itemsResult, profileResult] = await Promise.all([
-      supabase.from("delivery_challans").select("*").eq("id", challanId).single(),
-      supabase.from("delivery_challan_items").select("*").eq("challan_id", challanId),
-      supabase.from("profiles").select("*").single(),
+      supabase.from("delivery_challans" as never).select("*").eq("id", challanId).single(),
+      supabase.from("delivery_challan_items" as never).select("*").eq("challan_id", challanId),
+      supabase.from("profiles" as never).select("*").single(),
     ]);
 
     const challan = challanResult.data as DeliveryChallan | null;
@@ -29,7 +29,7 @@ export function DownloadChallanButton({ challanId }: { challanId: string }) {
     let customer: Customer | null = null;
     if (challan.customer_id) {
       const { data } = await supabase
-        .from("customers")
+        .from("customers" as never)
         .select("*")
         .eq("id", challan.customer_id)
         .single();

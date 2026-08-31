@@ -26,7 +26,7 @@ export function ChallanStatusSelect({
   async function handleChange(next: DeliveryChallanStatus) {
     setUpdating(true);
     setCurrent(next);
-        await supabase.from("delivery_challans" as never).update({ status: next } as never).eq("id", challanId);
+              await supabase.from("delivery_challans" as never).update({ status: next } as never).eq("id", challanId);
     setUpdating(false);
     router.refresh();
   }

@@ -89,7 +89,7 @@ export function NewChallanForm({
     setSaving(true);
 
     const { data: challanData, error: cErr } = await supabase
-      .from("delivery_challans")
+      .from("delivery_challans" as never)
       .insert({
         owner_id: ownerId,
         customer_id: customerId || null,
@@ -97,7 +97,7 @@ export function NewChallanForm({
         challan_date: challanDate,
         status: "draft",
         notes: notes.trim() || null,
-      })
+      }as never)
       .select()
       .single();
 
@@ -121,8 +121,8 @@ export function NewChallanForm({
     }));
 
     const { error: itemsErr } = await supabase
-      .from("delivery_challan_items")
-      .insert(itemsPayload);
+      .from("delivery_challan_items" as never)
+            .insert(itemsPayload as never);
 
     setSaving(false);
     if (itemsErr) {

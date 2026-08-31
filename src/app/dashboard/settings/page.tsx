@@ -13,7 +13,7 @@ export default async function SettingsPage() {
   if (!user) redirect("/login");
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("*")
     .eq("id", user.id)
     .maybeSingle()) as { data: Profile | null };

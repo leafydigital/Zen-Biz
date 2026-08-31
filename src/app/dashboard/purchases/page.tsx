@@ -19,7 +19,7 @@ export default async function PurchasesPage() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("plan")
     .eq("id", user!.id)
     .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
@@ -35,7 +35,7 @@ export default async function PurchasesPage() {
   }
 
   const { data: purchases } = (await supabase
-    .from("purchases")
+    .from("purchases" as never)
     .select("*, suppliers(name)")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 

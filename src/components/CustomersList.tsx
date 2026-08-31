@@ -29,7 +29,7 @@ export function CustomersList({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
-    await supabase.from("customers").delete().eq("id", id);
+    await supabase.from("customers" as never).delete().eq("id", id);
     setDeletingId(null);
     router.refresh();
   }

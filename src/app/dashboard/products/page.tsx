@@ -10,7 +10,7 @@ export default async function ProductsPage() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("business_type")
     .eq("id", user!.id)
     .maybeSingle()) as { data: Pick<Profile, "business_type"> | null };

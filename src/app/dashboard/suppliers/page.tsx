@@ -11,7 +11,7 @@ export default async function SuppliersPage() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("plan")
     .eq("id", user!.id)
     .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
@@ -27,7 +27,7 @@ export default async function SuppliersPage() {
   }
 
   const { data: suppliers } = (await supabase
-    .from("suppliers")
+    .from("suppliers" as never)
     .select("*")
     .order("created_at", { ascending: false })) as { data: Supplier[] | null };
 

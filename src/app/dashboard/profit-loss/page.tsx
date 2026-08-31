@@ -31,7 +31,7 @@ export default async function ProfitLossPage() {
   } = await supabase.auth.getUser();
 
   const { data: profile } = (await supabase
-    .from("profiles")
+    .from("profiles" as never)
     .select("plan")
     .eq("id", user!.id)
     .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
@@ -47,8 +47,8 @@ export default async function ProfitLossPage() {
   }
 
   const [{ data: invoices }, { data: purchases }] = await Promise.all([
-    supabase.from("invoices").select("invoice_date, total").eq("status", "paid"),
-    supabase.from("purchases").select("purchase_date, total").eq("status", "paid"),
+    supabase.from("invoices" as never).select("invoice_date, total").eq("status", "paid"),
+    supabase.from("purchases" as never).select("purchase_date, total").eq("status", "paid"),
   ]);
 
   const months = new Map<string, { sales: number; purchases: number }>();

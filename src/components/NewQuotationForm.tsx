@@ -154,7 +154,7 @@ export function NewQuotationForm({
     setSaving(true);
 
     const { data: quotationData, error: qErr } = await supabase
-      .from("quotations")
+      .from("quotations" as never)
       .insert({
         owner_id: ownerId,
         customer_id: customerId || null,
@@ -180,7 +180,7 @@ export function NewQuotationForm({
         round_off: roundOff,
         total: grandTotal,
         notes: notes.trim() || null,
-      })
+      } as never)
       .select()
       .single();
 
@@ -215,7 +215,7 @@ export function NewQuotationForm({
       };
     });
 
-    const { error: itemsErr } = await supabase.from("quotation_items").insert(itemsPayload);
+        const { error: itemsErr } = await supabase.from("quotation_items" as never).insert(itemsPayload as never);
 
     setSaving(false);
     if (itemsErr) {

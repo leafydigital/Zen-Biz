@@ -249,8 +249,8 @@ export function NewInvoiceForm({
 
     if (isEditing) {
       const { data: updated, error: updErr } = await supabase
-        .from("invoices")
-        .update(commonFields)
+        .from("invoices" as never)
+                .update(commonFields as never)
         .eq("id", existingInvoice!.id)
         .select()
         .single();
@@ -265,7 +265,7 @@ export function NewInvoiceForm({
       }
 
       const { error: deleteErr } = await supabase
-        .from("invoice_items")
+        .from("invoice_items" as never)
         .delete()
         .eq("invoice_id", invoice.id);
 
@@ -276,8 +276,8 @@ export function NewInvoiceForm({
       }
     } else {
       const { data: created, error: invErr } = await supabase
-        .from("invoices")
-        .insert({ owner_id: ownerId, ...commonFields })
+        .from("invoices" as never)
+                .insert({ owner_id: ownerId, ...commonFields } as never)
         .select()
         .single();
 
@@ -313,7 +313,7 @@ export function NewInvoiceForm({
       };
     });
 
-    const { error: itemsErr } = await supabase.from("invoice_items").insert(itemsPayload);
+       const { error: itemsErr } = await supabase.from("invoice_items" as never).insert(itemsPayload as never);
 
     setSaving(false);
     if (itemsErr) {

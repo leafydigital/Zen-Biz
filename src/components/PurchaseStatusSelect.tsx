@@ -40,8 +40,8 @@ export function PurchaseStatusSelect({
     setUpdating(true);
     setCurrent(next);
     await supabase
-      .from("purchases")
-      .update({ status: next, payment_method: method })
+      .from("purchases" as never)
+     .update({ status: next, payment_method: method } as never)
       .eq("id", purchaseId);
     setUpdating(false);
     router.refresh();

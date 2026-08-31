@@ -14,7 +14,7 @@ export default async function InvoicesPage() {
   const supabase = createClient();
 
   const { data: invoices } = (await supabase
-    .from("invoices")
+    .from("invoices" as never)
     .select("*, customers(name)")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 

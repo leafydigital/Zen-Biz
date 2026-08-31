@@ -27,7 +27,7 @@ export function QuotationStatusSelect({
   async function handleChange(next: QuotationStatus) {
     setUpdating(true);
     setCurrent(next);
-    await supabase.from("quotations").update({ status: next }).eq("id", quotationId);
+   await supabase.from("quotations" as never).update({ status: next } as never).eq("id", quotationId);
     setUpdating(false);
     router.refresh();
   }

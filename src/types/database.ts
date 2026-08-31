@@ -317,19 +317,94 @@ export interface SubscriptionPayment {
 export interface Database {
   public: {
     Tables: {
-      profiles: { Row: Profile; Insert: Partial<Profile> & { id: string }; Update: Partial<Profile> };
-      products: { Row: Product; Insert: Partial<Product> & { name: string; owner_id: string }; Update: Partial<Product> };
-      customers: { Row: Customer; Insert: Partial<Customer> & { name: string; owner_id: string }; Update: Partial<Customer> };
-      invoices: { Row: Invoice; Insert: Partial<Invoice> & { invoice_number: string; owner_id: string }; Update: Partial<Invoice> };
-      invoice_items: { Row: InvoiceItem; Insert: Partial<InvoiceItem> & { invoice_id: string; owner_id: string; description: string }; Update: Partial<InvoiceItem> };
-      quotations: { Row: Quotation; Insert: Partial<Quotation> & { quotation_number: string; owner_id: string }; Update: Partial<Quotation> };
-      quotation_items: { Row: QuotationItem; Insert: Partial<QuotationItem> & { quotation_id: string; owner_id: string; description: string }; Update: Partial<QuotationItem> };
-      suppliers: { Row: Supplier; Insert: Partial<Supplier> & { name: string; owner_id: string }; Update: Partial<Supplier> };
-      purchases: { Row: Purchase; Insert: Partial<Purchase> & { purchase_number: string; owner_id: string }; Update: Partial<Purchase> };
-      purchase_items: { Row: PurchaseItem; Insert: Partial<PurchaseItem> & { purchase_id: string; owner_id: string; description: string }; Update: Partial<PurchaseItem> };
-      delivery_challans: { Row: DeliveryChallan; Insert: Partial<DeliveryChallan> & { challan_number: string; owner_id: string }; Update: Partial<DeliveryChallan> };
-      delivery_challan_items: { Row: DeliveryChallanItem; Insert: Partial<DeliveryChallanItem> & { challan_id: string; owner_id: string; description: string }; Update: Partial<DeliveryChallanItem> };
-      subscription_payments: { Row: SubscriptionPayment; Insert: Partial<SubscriptionPayment> & { owner_id: string; plan: PayablePlan; billing_cycle: BillingCycle; amount: number; razorpay_order_id: string }; Update: Partial<SubscriptionPayment> };
+      profiles: {
+        Row: Profile;
+        Insert: Partial<Profile> & { id: string };
+        Update: Partial<Profile>;
+        Relationships: never[];
+      };
+      products: {
+        Row: Product;
+        Insert: Partial<Product> & { name: string; owner_id: string };
+        Update: Partial<Product>;
+        Relationships: never[];
+      };
+      customers: {
+        Row: Customer;
+        Insert: Partial<Customer> & { name: string; owner_id: string };
+        Update: Partial<Customer>;
+        Relationships: never[];
+      };
+      invoices: {
+        Row: Invoice;
+        Insert: Partial<Invoice> & { invoice_number: string; owner_id: string };
+        Update: Partial<Invoice>;
+        Relationships: never[];
+      };
+      invoice_items: {
+        Row: InvoiceItem;
+        Insert: Partial<InvoiceItem> & { invoice_id: string; owner_id: string; description: string };
+        Update: Partial<InvoiceItem>;
+        Relationships: never[];
+      };
+      quotations: {
+        Row: Quotation;
+        Insert: Partial<Quotation> & { quotation_number: string; owner_id: string };
+        Update: Partial<Quotation>;
+        Relationships: never[];
+      };
+      quotation_items: {
+        Row: QuotationItem;
+        Insert: Partial<QuotationItem> & { quotation_id: string; owner_id: string; description: string };
+        Update: Partial<QuotationItem>;
+        Relationships: never[];
+      };
+      suppliers: {
+        Row: Supplier;
+        Insert: Partial<Supplier> & { name: string; owner_id: string };
+        Update: Partial<Supplier>;
+        Relationships: never[];
+      };
+      purchases: {
+        Row: Purchase;
+        Insert: Partial<Purchase> & { purchase_number: string; owner_id: string };
+        Update: Partial<Purchase>;
+        Relationships: never[];
+      };
+      purchase_items: {
+        Row: PurchaseItem;
+        Insert: Partial<PurchaseItem> & { purchase_id: string; owner_id: string; description: string };
+        Update: Partial<PurchaseItem>;
+        Relationships: never[];
+      };
+      delivery_challans: {
+        Row: DeliveryChallan;
+        Insert: Partial<DeliveryChallan> & { challan_number: string; owner_id: string };
+        Update: Partial<DeliveryChallan>;
+        Relationships: never[];
+      };
+      delivery_challan_items: {
+        Row: DeliveryChallanItem;
+        Insert: Partial<DeliveryChallanItem> & { challan_id: string; owner_id: string; description: string };
+        Update: Partial<DeliveryChallanItem>;
+        Relationships: never[];
+      };
+      subscription_payments: {
+        Row: SubscriptionPayment;
+        Insert: Partial<SubscriptionPayment> & {
+          owner_id: string;
+          plan: PayablePlan;
+          billing_cycle: BillingCycle;
+          amount: number;
+          razorpay_order_id: string;
+        };
+        Update: Partial<SubscriptionPayment>;
+        Relationships: never[];
+      };
     };
+    Views: Record<string, never>;
+    Functions: Record<string, never>;
+    Enums: Record<string, never>;
+    CompositeTypes: Record<string, never>;
   };
 }

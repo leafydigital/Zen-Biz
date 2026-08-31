@@ -12,9 +12,9 @@ export function DownloadQuotationButton({ quotationId }: { quotationId: string }
   async function handleDownload() {
     setLoading(true);
     const [quotationResult, itemsResult, profileResult] = await Promise.all([
-      supabase.from("quotations").select("*").eq("id", quotationId).single(),
-      supabase.from("quotation_items").select("*").eq("quotation_id", quotationId),
-      supabase.from("profiles").select("*").single(),
+      supabase.from("quotations" as never).select("*").eq("id", quotationId).single(),
+      supabase.from("quotation_items" as never).select("*").eq("quotation_id", quotationId),
+      supabase.from("profiles" as never).select("*").single(),
     ]);
 
     const quotation = quotationResult.data as Quotation | null;
@@ -29,7 +29,7 @@ export function DownloadQuotationButton({ quotationId }: { quotationId: string }
     let customer: Customer | null = null;
     if (quotation.customer_id) {
       const { data } = await supabase
-        .from("customers")
+        .from("customers" as never)
         .select("*")
         .eq("id", quotation.customer_id)
         .single();

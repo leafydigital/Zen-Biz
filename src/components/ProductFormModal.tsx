@@ -123,10 +123,10 @@ export function ProductFormModal({
       image_url: imageUrl,
     };
 
-    const { error } = product
-      ? await supabase.from("products").update(payload).eq("id", product.id)
-      : await supabase.from("products").insert(payload);
-
+        const { error } = product
+      ? await supabase.from("products" as never).update(payload as never).eq("id", product.id)
+      : await supabase.from("products" as never).insert(payload as never);
+      
     setSaving(false);
     if (error) {
       console.error("Zen Biz: failed to save product", error);
