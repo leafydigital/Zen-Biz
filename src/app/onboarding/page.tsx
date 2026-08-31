@@ -31,7 +31,7 @@ export default async function OnboardingPage() {
     // Self-heal: create the missing profile row rather than losing track of
     // this account. If it already exists (a race with the trigger), this is
     // a no-op thanks to the ON CONFLICT rule in the database.
-    await supabase.from("profiles").insert({ id: user.id, onboarding_complete: false });
+           await supabase.from("profiles" as never).insert({ id: user.id, onboarding_complete: false } as never);
   }
 
   return (

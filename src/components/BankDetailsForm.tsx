@@ -54,14 +54,14 @@ export function BankDetailsForm({ profile }: { profile: Profile }) {
     }
 
     const { error } = await supabase
-      .from("profiles")
+      .from("profiles" as never)
       .update({
         bank_name: bankName.trim() || null,
         bank_account_name: accountName.trim() || null,
         bank_account_number: accountNumber.trim() || null,
         bank_ifsc_or_swift: ifscOrSwift.trim() || null,
         payment_qr_url: qrUrl,
-      })
+      } as never)
       .eq("id", profile.id);
     setSaving(false);
     if (error) {
