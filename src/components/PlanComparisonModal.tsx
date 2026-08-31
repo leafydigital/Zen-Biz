@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { PLAN_PRICING } from "@/lib/planFeatures";
 import type { Plan } from "@/types/database";
 
@@ -19,7 +18,6 @@ const FEATURES: FeatureRow[] = [
   { label: "Quotations, convert to Invoice", starter: true, professional: true, business: true },
   { label: "A4 / A5 / Thermal paper sizes", starter: true, professional: true, business: true },
   { label: "Terms & Conditions, signature, bank details", starter: true, professional: true, business: true },
-  { label: "Multi-currency documents", starter: true, professional: true, business: true },
   { label: "Purchases & Suppliers", starter: false, professional: true, business: true },
   { label: "Delivery Challan", starter: false, professional: true, business: true },
   { label: "Share via WhatsApp / email", starter: false, professional: true, business: true },
@@ -96,6 +94,10 @@ export function PlanComparisonModal({
         <p className="mt-1 text-sm text-text-soft">
           You're currently on the {plans.find((p) => p.id === currentPlan)?.label} plan.
         </p>
+        <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">
+          Online upgrades are coming soon. Everything on the Starter plan
+          works fully in the meantime.
+        </p>
 
         <div className="mt-4 inline-flex rounded-full bg-paper p-1 text-sm">
           <button
@@ -148,13 +150,14 @@ export function PlanComparisonModal({
                     Free forever
                   </span>
                 ) : (
-                  <Link
-                    href={`/dashboard/settings/upgrade?plan=${p.id}&cycle=${cycle}`}
-                    onClick={onClose}
-                    className="mt-2 rounded-lg bg-ink px-3 py-2 text-center text-sm font-semibold text-paper transition hover:bg-ink-light"
+                  <button
+                    type="button"
+                    disabled
+                    title="Online payments are coming soon"
+                    className="mt-2 cursor-not-allowed rounded-lg bg-paper-fold px-3 py-2 text-center text-sm font-semibold text-text-soft opacity-70"
                   >
-                    Upgrade
-                  </Link>
+                    Coming soon
+                  </button>
                 )}
               </div>
             );
