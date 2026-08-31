@@ -172,6 +172,16 @@ export function NewInvoiceForm({
         ? 0
         : grandTotal;
 
+  // The GST % column only exists when GST actually applies, so the grid
+  // template itself needs to drop that track — otherwise the remaining
+  // cells shift left by one slot and misalign under the header row.
+  const itemsGridCols = gstApplies
+    ? "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
+    : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
+  const itemsHeaderGridCols = gstApplies
+    ? "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
+    : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
+
   function updateLine(id: string, patch: Partial<LineItem>) {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   }
@@ -626,13 +636,14 @@ export function NewInvoiceForm({
             </div>
           </label>
 
-          <div className="mb-1.5 hidden grid-cols-[1.3fr_0.55fr_0.55fr_0.75fr_0.55fr_0.55fr_28px] gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft lg:grid">
+          <div className={`mb-1.5 hidden gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft lg:grid ${itemsHeaderGridCols}`}>
             <span>Item</span>
             <span>Qty</span>
             <span>Unit</span>
             <span>Rate</span>
             <span>Disc %</span>
             {gstApplies && <span>GST %</span>}
+            <span className="text-right">Amount</span>
             <span />
           </div>
 
@@ -640,13 +651,13 @@ export function NewInvoiceForm({
             {lineResults.map(({ line, result }) => (
               <div
                 key={line.id}
-                className="grid grid-cols-1 gap-2 rounded-xl border border-paper-fold bg-paper/40 p-3 lg:grid-cols-[1.3fr_0.55fr_0.55fr_0.75fr_0.55fr_0.55fr_28px] lg:items-center lg:gap-2"
+                className={`grid grid-cols-1 gap-2 rounded-xl border border-paper-fold bg-paper/40 p-3 lg:items-center lg:gap-2 ${itemsGridCols}`}
               >
-                <div className="flex flex-col gap-1.5">
+                <div className="flex min-w-0 flex-col gap-1.5">
                   <select
                     value={line.productId ?? ""}
                     onChange={(e) => selectProduct(line.id, e.target.value)}
-                    className="rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
+                    className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                   >
                     <option value="">Custom item…</option>
                     {products.map((p) => (
@@ -659,22 +670,22 @@ export function NewInvoiceForm({
                     placeholder="Description"
                     value={line.description}
                     onChange={(e) => updateLine(line.id, { description: e.target.value })}
-                    className="rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
+                    className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                   />
-                  <div className="flex gap-1.5">
+                  <div className="flex min-w-0 gap-1.5">
                     <input
                       placeholder="Item code"
                       aria-label="Item code"
                       value={line.itemCode}
                       onChange={(e) => updateLine(line.id, { itemCode: e.target.value })}
-                      className="w-1/2 rounded-lg border border-paper-fold bg-white px-2.5 py-1.5 text-xs text-text focus:border-ink"
+                      className="w-1/2 min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-1.5 text-xs text-text focus:border-ink"
                     />
                     <input
                       placeholder="HSN/SAC"
                       aria-label="HSN or SAC code"
                       value={line.hsnCode}
                       onChange={(e) => updateLine(line.id, { hsnCode: e.target.value })}
-                      className="w-1/2 rounded-lg border border-paper-fold bg-white px-2.5 py-1.5 text-xs text-text focus:border-ink"
+                      className="w-1/2 min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-1.5 text-xs text-text focus:border-ink"
                     />
                   </div>
                 </div>
@@ -687,7 +698,7 @@ export function NewInvoiceForm({
                   aria-label="Quantity"
                   value={line.quantity}
                   onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })}
-                  className="rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
+                  className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
                 <input
@@ -695,7 +706,7 @@ export function NewInvoiceForm({
                   aria-label="Unit"
                   value={line.unit}
                   onChange={(e) => updateLine(line.id, { unit: e.target.value })}
-                  className="rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
+                  className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
                 <input
@@ -706,7 +717,7 @@ export function NewInvoiceForm({
                   aria-label="Rate"
                   value={line.unitPrice}
                   onChange={(e) => updateLine(line.id, { unitPrice: parseFloat(e.target.value) || 0 })}
-                  className="rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
+                  className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
                 <input
@@ -718,7 +729,7 @@ export function NewInvoiceForm({
                   aria-label="Discount percent"
                   value={line.discountPercent}
                   onChange={(e) => updateLine(line.id, { discountPercent: parseFloat(e.target.value) || 0 })}
-                  className="rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
+                  className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
                 {gstApplies && (
@@ -730,9 +741,15 @@ export function NewInvoiceForm({
                     aria-label="GST percent"
                     value={line.taxPercent}
                     onChange={(e) => updateLine(line.id, { taxPercent: parseFloat(e.target.value) || 0 })}
-                    className="rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
+                    className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                   />
                 )}
+
+                <div className="hidden text-right lg:block">
+                  <span className="font-ledger text-sm font-semibold tabular-nums text-text">
+                    {formatCurrency(result.taxableAmount, currency)}
+                  </span>
+                </div>
 
                 <button
                   type="button"

@@ -31,13 +31,21 @@ export default async function DashboardHome() {
       supabase.from("customers" as never).select("id", { count: "exact", head: true }),
       supabase
         .from("invoices" as never)
-        .select("id, total, status, invoice_number, invoice_date")
+        .select("id, total, status, invoice_number, invoice_date, currency, customers(name)")
         .order("created_at", { ascending: false })
         .limit(5),
     ]);
 
   const invoices = invoicesResult.data as
-    | { id: string; total: number; status: string; invoice_number: string; invoice_date: string }[]
+    | {
+        id: string;
+        total: number;
+        status: string;
+        invoice_number: string;
+        invoice_date: string;
+        currency: string;
+        customers: { name: string } | null;
+      }[]
     | null;
 
   const { data: totals } = (await supabase
@@ -78,14 +86,30 @@ export default async function DashboardHome() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-text sm:text-3xl">
-          Good to see you
-          {profile?.business_name ? `, ${profile.business_name}` : ""}
-        </h1>
-        <p className="mt-1 text-sm text-text-soft">
-          Here's how your CRM looks today.
-        </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-text sm:text-3xl">
+            Good to see you
+            {profile?.business_name ? `, ${profile.business_name}` : ""}
+          </h1>
+          <p className="mt-1 text-sm text-text-soft">
+            Here's how your CRM looks today.
+          </p>
+        </div>
+        <div className="flex gap-2">
+          <Link
+            href="/dashboard/quotations/new"
+            className="inline-flex items-center justify-center rounded-xl border border-paper-fold bg-white px-4 py-2.5 text-sm font-semibold text-text shadow-card transition hover:border-ink/30"
+          >
+            + Quotation
+          </Link>
+          <Link
+            href="/dashboard/invoices/new"
+            className="inline-flex items-center justify-center rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper shadow-card transition hover:bg-ink-light"
+          >
+            + Invoice
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">
@@ -141,9 +165,11 @@ export default async function DashboardHome() {
                   <p className="truncate text-sm font-medium text-text">
                     #{inv.invoice_number}
                   </p>
-                  <p className="text-xs text-text-soft">{inv.invoice_date}</p>
+                  <p className="truncate text-xs text-text-soft">
+                    {inv.customers?.name ?? "Walk-in customer"} · {inv.invoice_date}
+                  </p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex shrink-0 items-center gap-3">
                   <span
                     className={`rounded-full px-2.5 py-0.5 text-[0.7rem] font-semibold capitalize ${
                       inv.status === "paid"
