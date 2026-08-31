@@ -17,11 +17,11 @@ export default async function OnboardingPage() {
   // now instead of silently treating the account as brand new — this is
   // what previously made returning users see a blank "set up your business"
   // screen even though their data was safe all along.
-  const { data: existingProfile } = await supabase
+    const { data: existingProfile } = (await supabase
     .from("profiles")
     .select("onboarding_complete")
     .eq("id", user.id)
-    .maybeSingle();
+    .maybeSingle()) as { data: { onboarding_complete: boolean } | null };
 
   if (existingProfile?.onboarding_complete) {
     redirect("/dashboard");
