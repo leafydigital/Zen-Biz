@@ -44,7 +44,7 @@ export function SettingsTabs({ profile }: { profile: Profile }) {
         ))}
       </div>
 
-      <div className="max-w-xl rounded-xl2 border border-paper-fold bg-paper-card p-6 shadow-card">
+      <div className="max-w-3xl rounded-xl2 border border-paper-fold bg-paper-card p-6 shadow-card">
         {tab === "general" && <SettingsForm profile={profile} />}
         {tab === "appearance" && <DocumentDesignForm profile={profile} />}
         {tab === "terms" && (

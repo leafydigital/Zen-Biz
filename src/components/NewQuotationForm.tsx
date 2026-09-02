@@ -317,14 +317,18 @@ export function NewQuotationForm({
           </div>
 
           <div className="mt-4 rounded-xl border border-paper-fold bg-paper/60 p-4">
-            <label className="flex items-center justify-between gap-3">
+            <label className="flex cursor-pointer items-center justify-between gap-3">
               <span className="text-sm font-medium text-text">Shipping address same as billing</span>
-              <input
-                type="checkbox"
-                checked={shipToSameAsBill}
-                onChange={(e) => setShipToSameAsBill(e.target.checked)}
-                className="h-5 w-5 accent-ink"
-              />
+              <span className="relative inline-flex shrink-0 items-center">
+                <input
+                  type="checkbox"
+                  checked={shipToSameAsBill}
+                  onChange={(e) => setShipToSameAsBill(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <span className="h-6 w-11 rounded-full bg-paper-fold transition-colors peer-checked:bg-ink" />
+                <span className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+              </span>
             </label>
             {!shipToSameAsBill && (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -445,14 +449,14 @@ export function NewQuotationForm({
                   key={opt.value}
                   type="button"
                   onClick={() => setTaxType(opt.value)}
-                  className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition ${
+                  className={`flex h-full flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition ${
                     taxType === opt.value
                       ? "border-ink bg-ink text-paper"
                       : "border-paper-fold text-text hover:border-ink/40"
                   }`}
                 >
                   <span className="text-xs font-semibold">{opt.label}</span>
-                  <span className={`text-[0.68rem] ${taxType === opt.value ? "text-paper/70" : "text-text-soft"}`}>
+                  <span className={`text-[0.68rem] leading-snug ${taxType === opt.value ? "text-paper/70" : "text-text-soft"}`}>
                     {opt.hint}
                   </span>
                 </button>
@@ -672,7 +676,7 @@ export function NewQuotationForm({
       {/* Sticky totals sidebar */}
       <aside className="lg:w-80 lg:shrink-0">
         <div className="rounded-2xl border border-paper-fold bg-white p-4 shadow-card lg:sticky lg:top-6 lg:p-5">
-          <h3 className="mb-3 font-display text-lg font-semibold text-text">
+          <h3 className="mb-3 border-b border-paper-fold pb-3 font-display text-lg font-semibold text-text">
             Total
           </h3>
 
@@ -726,7 +730,7 @@ export function NewQuotationForm({
               </div>
             )}
 
-            <div className="mt-1 flex items-center justify-between border-t border-paper-fold pt-3">
+            <div className="-mx-4 mt-2 flex items-center justify-between bg-ink/[0.04] px-4 py-3 lg:-mx-5 lg:px-5">
               <span className="font-semibold text-text">Grand Total</span>
               <span className="font-ledger text-xl font-bold tabular-nums text-ink">
                 {formatCurrency(grandTotal, currency)}

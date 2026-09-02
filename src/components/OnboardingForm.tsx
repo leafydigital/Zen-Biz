@@ -198,7 +198,7 @@ export function OnboardingForm({ userId }: { userId: string }) {
         />
       </label>
 
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-text">
             Phone number <span className="text-text-soft">(optional)</span>

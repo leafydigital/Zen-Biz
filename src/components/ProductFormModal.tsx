@@ -198,7 +198,7 @@ export function ProductFormModal({
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">Price (₹)</span>
               <input
@@ -260,7 +260,7 @@ export function ProductFormModal({
             </span>
           </label>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">
                 Item code <span className="text-text-soft">(optional)</span>
@@ -318,16 +318,20 @@ export function ProductFormModal({
           </p>
 
           <div className="rounded-xl border border-paper-fold bg-white p-3.5">
-            <label className="flex items-center justify-between gap-3">
+            <label className="flex cursor-pointer items-center justify-between gap-3">
               <span className="text-sm font-medium text-text">
                 Track stock for this {itemLabel.toLowerCase()}
               </span>
-              <input
-                type="checkbox"
-                checked={trackStock}
-                onChange={(e) => setTrackStock(e.target.checked)}
-                className="h-5 w-5 accent-ink"
-              />
+              <span className="relative inline-flex shrink-0 items-center">
+                <input
+                  type="checkbox"
+                  checked={trackStock}
+                  onChange={(e) => setTrackStock(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <span className="h-6 w-11 rounded-full bg-paper-fold transition-colors peer-checked:bg-ink" />
+                <span className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+              </span>
             </label>
             <p className="mt-1.5 text-xs text-text-soft">{stockHint}</p>
 

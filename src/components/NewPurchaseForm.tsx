@@ -412,15 +412,15 @@ export function NewPurchaseForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-medium text-text">Payment status</span>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="flex flex-wrap gap-2">
                 {PAYMENT_STATUS_OPTIONS.map((s) => (
                   <button
                     key={s.value}
                     type="button"
                     onClick={() => setPaymentStatus(s.value as PurchaseStatus)}
-                    className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
                       paymentStatus === s.value
                         ? "border-ink bg-ink text-paper"
                         : "border-paper-fold text-text hover:border-ink/40"
@@ -503,14 +503,14 @@ export function NewPurchaseForm({
                   key={opt.value}
                   type="button"
                   onClick={() => setTaxType(opt.value)}
-                  className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition ${
+                  className={`flex h-full flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition ${
                     taxType === opt.value
                       ? "border-ink bg-ink text-paper"
                       : "border-paper-fold text-text hover:border-ink/40"
                   }`}
                 >
                   <span className="text-xs font-semibold">{opt.label}</span>
-                  <span className={`text-[0.68rem] ${taxType === opt.value ? "text-paper/70" : "text-text-soft"}`}>
+                  <span className={`text-[0.68rem] leading-snug ${taxType === opt.value ? "text-paper/70" : "text-text-soft"}`}>
                     {opt.hint}
                   </span>
                 </button>
@@ -735,7 +735,7 @@ export function NewPurchaseForm({
       {/* Sticky totals sidebar */}
       <aside className="lg:w-80 lg:shrink-0">
         <div className="rounded-2xl border border-paper-fold bg-white p-4 shadow-card lg:sticky lg:top-6 lg:p-5">
-          <h3 className="mb-3 font-display text-lg font-semibold text-text">
+          <h3 className="mb-3 border-b border-paper-fold pb-3 font-display text-lg font-semibold text-text">
             Total
           </h3>
 
@@ -789,7 +789,7 @@ export function NewPurchaseForm({
               </div>
             )}
 
-            <div className="mt-1 flex items-center justify-between border-t border-paper-fold pt-3">
+            <div className="-mx-4 mt-2 flex items-center justify-between bg-ink/[0.04] px-4 py-3 lg:-mx-5 lg:px-5">
               <span className="font-semibold text-text">Grand Total</span>
               <span className="font-ledger text-xl font-bold tabular-nums text-ink">
                 {formatCurrency(grandTotal, currency)}

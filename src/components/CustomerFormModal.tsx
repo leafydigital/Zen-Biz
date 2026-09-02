@@ -81,7 +81,7 @@ export function CustomerFormModal({
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">Phone</span>
               <input
@@ -111,7 +111,7 @@ export function CustomerFormModal({
             />
           </label>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">
                 State <span className="text-text-soft">(for GST)</span>

@@ -178,9 +178,6 @@ export function NewInvoiceForm({
   const itemsGridCols = gstApplies
     ? "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
     : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
-  const itemsHeaderGridCols = gstApplies
-    ? "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
-    : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
 
   function updateLine(id: string, patch: Partial<LineItem>) {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
@@ -377,9 +374,9 @@ export function NewInvoiceForm({
             <h2 className="font-display text-lg font-semibold text-text">Customer Information</h2>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-medium text-text">Customer</span>
+          <div className="flex flex-col gap-4">
+            <label className="flex flex-col gap-1.5">
+              <span className="text-sm font-medium text-text">Bill to</span>
               <select
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
@@ -395,41 +392,45 @@ export function NewInvoiceForm({
             </label>
 
             {selectedCustomer ? (
-              <>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium uppercase tracking-wide text-text-soft">Phone</span>
-                  <p className="text-sm text-text">{selectedCustomer.phone || "—"}</p>
+              <div className="grid gap-3 rounded-xl bg-paper/60 p-3.5 sm:grid-cols-3">
+                <div>
+                  <p className="text-[0.68rem] font-medium uppercase tracking-wide text-text-soft">Phone</p>
+                  <p className="mt-0.5 text-sm text-text">{selectedCustomer.phone || "—"}</p>
                 </div>
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium uppercase tracking-wide text-text-soft">GSTIN</span>
-                  <p className="font-ledger text-sm text-text">{selectedCustomer.gstin || "—"}</p>
+                <div>
+                  <p className="text-[0.68rem] font-medium uppercase tracking-wide text-text-soft">GSTIN</p>
+                  <p className="mt-0.5 font-ledger text-sm text-text">{selectedCustomer.gstin || "—"}</p>
                 </div>
-                <div className="flex flex-col gap-1.5 sm:col-span-2">
-                  <span className="text-xs font-medium uppercase tracking-wide text-text-soft">
-                    Billing Address
-                  </span>
-                  <p className="text-sm text-text">
+                <div className="sm:col-span-1">
+                  <p className="text-[0.68rem] font-medium uppercase tracking-wide text-text-soft">
+                    Billing address
+                  </p>
+                  <p className="mt-0.5 text-sm text-text">
                     {selectedCustomer.address || "—"}
                     {selectedCustomer.state ? ` · ${selectedCustomer.state}` : ""}
                   </p>
                 </div>
-              </>
+              </div>
             ) : (
-              <p className="text-sm text-text-soft sm:col-span-2">
+              <p className="text-sm text-text-soft">
                 Pick a customer to see their phone, GSTIN, and address here — or leave as walk-in.
               </p>
             )}
           </div>
 
           <div className="mt-4 rounded-xl border border-paper-fold bg-paper/60 p-4">
-            <label className="flex items-center justify-between gap-3">
+            <label className="flex cursor-pointer items-center justify-between gap-3">
               <span className="text-sm font-medium text-text">Shipping address same as billing</span>
-              <input
-                type="checkbox"
-                checked={shipToSameAsBill}
-                onChange={(e) => setShipToSameAsBill(e.target.checked)}
-                className="h-5 w-5 accent-ink"
-              />
+              <span className="relative inline-flex shrink-0 items-center">
+                <input
+                  type="checkbox"
+                  checked={shipToSameAsBill}
+                  onChange={(e) => setShipToSameAsBill(e.target.checked)}
+                  className="peer sr-only"
+                />
+                <span className="h-6 w-11 rounded-full bg-paper-fold transition-colors peer-checked:bg-ink" />
+                <span className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+              </span>
             </label>
             {!shipToSameAsBill && (
               <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -530,15 +531,15 @@ export function NewInvoiceForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <div className="flex flex-col gap-1.5">
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-medium text-text">Payment status</span>
-              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+              <div className="flex flex-wrap gap-2">
                 {PAYMENT_STATUS_OPTIONS.map((s) => (
                   <button
                     key={s.value}
                     type="button"
                     onClick={() => setPaymentStatus(s.value as InvoiceStatus)}
-                    className={`rounded-xl border px-3 py-2 text-sm font-medium transition ${
+                    className={`rounded-xl border px-4 py-2 text-sm font-medium transition ${
                       paymentStatus === s.value
                         ? "border-ink bg-ink text-paper"
                         : "border-paper-fold text-text hover:border-ink/40"
@@ -621,14 +622,14 @@ export function NewInvoiceForm({
                   key={opt.value}
                   type="button"
                   onClick={() => setTaxType(opt.value)}
-                  className={`flex flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition ${
+                  className={`flex h-full flex-col items-start gap-0.5 rounded-xl border px-3 py-2 text-left transition ${
                     taxType === opt.value
                       ? "border-ink bg-ink text-paper"
                       : "border-paper-fold text-text hover:border-ink/40"
                   }`}
                 >
                   <span className="text-xs font-semibold">{opt.label}</span>
-                  <span className={`text-[0.68rem] ${taxType === opt.value ? "text-paper/70" : "text-text-soft"}`}>
+                  <span className={`text-[0.68rem] leading-snug ${taxType === opt.value ? "text-paper/70" : "text-text-soft"}`}>
                     {opt.hint}
                   </span>
                 </button>
@@ -636,7 +637,7 @@ export function NewInvoiceForm({
             </div>
           </label>
 
-          <div className={`mb-1.5 hidden gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft lg:grid ${itemsHeaderGridCols}`}>
+          <div className={`mb-1.5 hidden gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft lg:grid ${itemsGridCols}`}>
             <span>Item</span>
             <span>Qty</span>
             <span>Unit</span>
@@ -848,7 +849,7 @@ export function NewInvoiceForm({
       {/* Sticky totals sidebar */}
       <aside className="lg:w-80 lg:shrink-0">
         <div className="rounded-2xl border border-paper-fold bg-white p-4 shadow-card lg:sticky lg:top-6 lg:p-5">
-          <h3 className="mb-3 font-display text-lg font-semibold text-text">
+          <h3 className="mb-3 border-b border-paper-fold pb-3 font-display text-lg font-semibold text-text">
             Total
           </h3>
 
@@ -902,7 +903,7 @@ export function NewInvoiceForm({
               </div>
             )}
 
-            <div className="mt-1 flex items-center justify-between border-t border-paper-fold pt-3">
+            <div className="-mx-4 mt-2 flex items-center justify-between bg-ink/[0.04] px-4 py-3 lg:-mx-5 lg:px-5">
               <span className="font-semibold text-text">Grand Total</span>
               <span className="font-ledger text-xl font-bold tabular-nums text-ink">
                 {formatCurrency(grandTotal, currency)}

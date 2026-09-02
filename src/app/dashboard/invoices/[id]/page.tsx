@@ -46,19 +46,22 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
   );
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <Link
             href="/dashboard/invoices"
             className="mb-2 inline-flex items-center gap-1.5 text-sm font-medium text-text-soft hover:text-ink"
           >
-            ← Back to Invoices
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+            Back to Invoices
           </Link>
           <h1 className="font-display text-2xl font-semibold text-text">
             Invoice #{invoice.invoice_number}
           </h1>
-          <p className="text-sm text-text-soft">
+          <p className="mt-0.5 text-sm text-text-soft">
             {invoice.invoice_date}
             {invoice.due_date && ` · Due ${invoice.due_date}`}
           </p>
@@ -69,18 +72,23 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
             status={invoice.status}
             paymentMethod={invoice.payment_method}
           />
-          <Link
-            href={`/dashboard/invoices/${invoice.id}/edit`}
-            className="rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"
-          >
-            Edit
-          </Link>
-          <DownloadInvoiceButton invoiceId={invoice.id} />
-          <DeleteInvoiceButton invoiceId={invoice.id} />
+          <div className="flex items-center gap-2">
+            <DownloadInvoiceButton invoiceId={invoice.id} />
+            <Link
+              href={`/dashboard/invoices/${invoice.id}/edit`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-paper-fold bg-white px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"
+            >
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+              Edit
+            </Link>
+            <DeleteInvoiceButton invoiceId={invoice.id} />
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl2 border border-paper-fold bg-paper-card p-5 shadow-card">
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-soft">
             Bill to
@@ -100,7 +108,11 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
             )}
           </div>
         )}
-        <div className="rounded-xl2 border border-paper-fold bg-paper-card p-5 shadow-card">
+        <div
+          className={`rounded-xl2 border border-paper-fold bg-paper-card p-5 shadow-card ${
+            invoice.ship_to_name || invoice.ship_to_address ? "" : "sm:col-span-1"
+          }`}
+        >
           <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-text-soft">
             Summary
           </p>
@@ -135,9 +147,13 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl2 border border-paper-fold bg-paper-card shadow-card">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[560px] text-sm">
+      {/* Line items — a real table on larger screens, stacked cards on
+          mobile, since a wide table squeezed into a phone-width column is
+          unreadable no matter how much it's allowed to horizontally
+          scroll. */}
+      <div className="rounded-xl2 border border-paper-fold bg-paper-card shadow-card">
+        <div className="hidden overflow-hidden rounded-xl2 sm:block">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-paper-fold bg-paper text-left text-xs font-semibold uppercase tracking-wide text-text-soft">
                 <th className="px-4 py-3">Item</th>
@@ -145,7 +161,7 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
                 <th className="px-4 py-3">Unit</th>
                 <th className="px-4 py-3">Unit price</th>
                 {hasAnyTax && <th className="px-4 py-3">Tax %</th>}
-                <th className="px-4 py-3">Total</th>
+                <th className="px-4 py-3 text-right">Total</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-paper-fold">
@@ -169,7 +185,7 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
                       {Number(item.tax_percent ?? 0)}%
                     </td>
                   )}
-                  <td className="px-4 py-3 font-ledger font-semibold tabular-nums text-text">
+                  <td className="px-4 py-3 text-right font-ledger font-semibold tabular-nums text-text">
                     {formatCurrency(Number(item.line_total), invoice.currency)}
                   </td>
                 </tr>
@@ -177,6 +193,32 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
             </tbody>
           </table>
         </div>
+
+        {/* Mobile: each line item as its own compact card, not a squeezed
+            horizontally-scrolling table. */}
+        <ul className="divide-y divide-paper-fold sm:hidden">
+          {(items ?? []).map((item: any) => (
+            <li key={item.id} className="flex flex-col gap-1.5 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <p className="text-sm font-medium text-text">
+                  {item.description}
+                  {item.item_code && (
+                    <span className="ml-1.5 text-xs font-normal text-text-soft">
+                      ({item.item_code})
+                    </span>
+                  )}
+                </p>
+                <p className="shrink-0 font-ledger text-sm font-semibold tabular-nums text-text">
+                  {formatCurrency(Number(item.line_total), invoice.currency)}
+                </p>
+              </div>
+              <p className="text-xs text-text-soft">
+                {item.quantity} {item.unit} × {formatCurrency(Number(item.unit_price), invoice.currency)}
+                {hasAnyTax && Number(item.tax_percent ?? 0) > 0 && ` · ${item.tax_percent}% tax`}
+              </p>
+            </li>
+          ))}
+        </ul>
       </div>
 
       {invoice.notes && (

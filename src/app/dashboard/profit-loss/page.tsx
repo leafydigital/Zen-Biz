@@ -126,15 +126,15 @@ export default async function ProfitLossPage() {
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-xl2 border border-paper-fold bg-paper-card shadow-card">
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[520px] text-sm">
+      <div className="rounded-xl2 border border-paper-fold bg-paper-card shadow-card">
+        <div className="hidden overflow-hidden rounded-xl2 sm:block">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-paper-fold bg-paper text-left text-xs font-semibold uppercase tracking-wide text-text-soft">
                 <th className="px-4 py-3">Month</th>
-                <th className="px-4 py-3">Sales</th>
-                <th className="px-4 py-3">Purchases</th>
-                <th className="px-4 py-3">Gross profit</th>
+                <th className="px-4 py-3 text-right">Sales</th>
+                <th className="px-4 py-3 text-right">Purchases</th>
+                <th className="px-4 py-3 text-right">Gross profit</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-paper-fold">
@@ -148,14 +148,14 @@ export default async function ProfitLossPage() {
                 rows.map((r) => (
                   <tr key={r.key}>
                     <td className="px-4 py-3 font-medium text-text">{r.label}</td>
-                    <td className="px-4 py-3 font-ledger tabular-nums text-text">
+                    <td className="px-4 py-3 text-right font-ledger tabular-nums text-text">
                       {formatCurrency(r.sales)}
                     </td>
-                    <td className="px-4 py-3 font-ledger tabular-nums text-text">
+                    <td className="px-4 py-3 text-right font-ledger tabular-nums text-text">
                       {formatCurrency(r.purchases)}
                     </td>
                     <td
-                      className={`px-4 py-3 font-ledger font-semibold tabular-nums ${
+                      className={`px-4 py-3 text-right font-ledger font-semibold tabular-nums ${
                         r.grossProfit >= 0 ? "text-success" : "text-alert"
                       }`}
                     >
@@ -166,6 +166,48 @@ export default async function ProfitLossPage() {
               )}
             </tbody>
           </table>
+        </div>
+
+        {/* Mobile: one card per month instead of a squeezed, horizontally
+            scrolling table. */}
+        <div className="sm:hidden">
+          {rows.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-text-soft">
+              No paid sales or purchases recorded yet.
+            </p>
+          ) : (
+            <ul className="divide-y divide-paper-fold">
+              {rows.map((r) => (
+                <li key={r.key} className="flex flex-col gap-2 p-4">
+                  <p className="text-sm font-medium text-text">{r.label}</p>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-text-soft">Sales</p>
+                      <p className="font-ledger font-semibold tabular-nums text-text">
+                        {formatCurrency(r.sales)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-text-soft">Purchases</p>
+                      <p className="font-ledger font-semibold tabular-nums text-text">
+                        {formatCurrency(r.purchases)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-text-soft">Gross profit</p>
+                      <p
+                        className={`font-ledger font-semibold tabular-nums ${
+                          r.grossProfit >= 0 ? "text-success" : "text-alert"
+                        }`}
+                      >
+                        {formatCurrency(r.grossProfit)}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </div>
 

@@ -100,17 +100,17 @@ export default async function GstReportPage() {
         </p>
       </div>
 
-      <div className="relative overflow-hidden rounded-xl2 border border-paper-fold bg-paper-card p-6 shadow-card">
-        <div className="overflow-x-auto rounded-xl border border-paper-fold">
-          <table className="w-full min-w-[640px] text-sm">
+      <div className="rounded-xl2 border border-paper-fold bg-paper-card shadow-card sm:p-2">
+        <div className="hidden overflow-hidden rounded-xl sm:block">
+          <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-paper-fold bg-paper text-left text-xs font-semibold uppercase tracking-wide text-text-soft">
                 <th className="px-4 py-3">Month</th>
-                <th className="px-4 py-3">Sales (ex-GST)</th>
-                <th className="px-4 py-3">Sales GST</th>
-                <th className="px-4 py-3">Purchases (ex-GST)</th>
-                <th className="px-4 py-3">Purchase GST</th>
-                <th className="px-4 py-3">Net GST payable</th>
+                <th className="px-4 py-3 text-right">Sales (ex-GST)</th>
+                <th className="px-4 py-3 text-right">Sales GST</th>
+                <th className="px-4 py-3 text-right">Purchases (ex-GST)</th>
+                <th className="px-4 py-3 text-right">Purchase GST</th>
+                <th className="px-4 py-3 text-right">Net GST payable</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-paper-fold">
@@ -124,19 +124,19 @@ export default async function GstReportPage() {
                 rows.map((r) => (
                   <tr key={r.key}>
                     <td className="px-4 py-3 font-medium text-text">{r.label}</td>
-                    <td className="px-4 py-3 font-ledger tabular-nums text-text">
+                    <td className="px-4 py-3 text-right font-ledger tabular-nums text-text">
                       {formatCurrency(r.salesTotal)}
                     </td>
-                    <td className="px-4 py-3 font-ledger tabular-nums text-text">
+                    <td className="px-4 py-3 text-right font-ledger tabular-nums text-text">
                       {formatCurrency(r.salesGst)}
                     </td>
-                    <td className="px-4 py-3 font-ledger tabular-nums text-text">
+                    <td className="px-4 py-3 text-right font-ledger tabular-nums text-text">
                       {formatCurrency(r.purchaseTotal)}
                     </td>
-                    <td className="px-4 py-3 font-ledger tabular-nums text-text">
+                    <td className="px-4 py-3 text-right font-ledger tabular-nums text-text">
                       {formatCurrency(r.purchaseGst)}
                     </td>
-                    <td className="px-4 py-3 font-ledger font-semibold tabular-nums text-ink">
+                    <td className="px-4 py-3 text-right font-ledger font-semibold tabular-nums text-ink">
                       {formatCurrency(r.netGst)}
                     </td>
                   </tr>
@@ -146,7 +146,56 @@ export default async function GstReportPage() {
           </table>
         </div>
 
-        <p className="mt-4 text-xs text-text-soft">
+        {/* Mobile: one card per month with labeled figures, instead of a
+            6-column table squeezed into a phone-width scrollbar. */}
+        <div className="sm:hidden">
+          {rows.length === 0 ? (
+            <p className="px-4 py-8 text-center text-sm text-text-soft">
+              No invoices or purchases recorded yet.
+            </p>
+          ) : (
+            <ul className="divide-y divide-paper-fold">
+              {rows.map((r) => (
+                <li key={r.key} className="flex flex-col gap-3 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-text">{r.label}</p>
+                    <p className="font-ledger text-sm font-semibold tabular-nums text-ink">
+                      {formatCurrency(r.netGst)}
+                    </p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-xs">
+                    <div>
+                      <p className="text-text-soft">Sales (ex-GST)</p>
+                      <p className="font-ledger font-semibold tabular-nums text-text">
+                        {formatCurrency(r.salesTotal)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-text-soft">Sales GST</p>
+                      <p className="font-ledger font-semibold tabular-nums text-text">
+                        {formatCurrency(r.salesGst)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-text-soft">Purchases (ex-GST)</p>
+                      <p className="font-ledger font-semibold tabular-nums text-text">
+                        {formatCurrency(r.purchaseTotal)}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-text-soft">Purchase GST</p>
+                      <p className="font-ledger font-semibold tabular-nums text-text">
+                        {formatCurrency(r.purchaseGst)}
+                      </p>
+                    </div>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <p className="p-4 pt-3 text-xs text-text-soft sm:px-2">
           Net GST payable = GST collected on sales − GST paid on purchases.
           A negative number means you have GST credit for that month.
         </p>
