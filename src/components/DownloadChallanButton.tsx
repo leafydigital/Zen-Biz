@@ -36,7 +36,7 @@ export function DownloadChallanButton({ challanId }: { challanId: string }) {
       customer = data as Customer | null;
     }
 
-    generateDeliveryChallanPdf({ challan, items: items ?? [], customer, profile });
+    await generateDeliveryChallanPdf({ challan, items: items ?? [], customer, profile });
     setLoading(false);
   }
 

@@ -132,7 +132,7 @@ export function NewChallanForm({
 
     if (download) {
       const customer = customers.find((c) => c.id === customerId) ?? null;
-      generateDeliveryChallanPdf({
+      await generateDeliveryChallanPdf({
         challan,
         items: itemsPayload.map((it, i) => ({
           id: String(i),

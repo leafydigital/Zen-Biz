@@ -13,12 +13,37 @@ const BORDER_LIGHT: [number, number, number] = [241, 245, 249];
 const WHITE: [number, number, number] = [255, 255, 255];
 
 /**
+ * jsPDF's addImage needs raw image data, not a remote URL — this fetches
+ * the logo and converts it to a base64 data URL so it can be embedded
+ * directly in the PDF. Returns null on any failure so the caller can skip
+ * the image gracefully rather than breaking PDF generation. Same helper
+ * as the one used internally by the shared Invoice/Bill/Quotation/
+ * Purchase generator, duplicated here since Delivery Challan is its own
+ * standalone file rather than importing from that one.
+ */
+async function loadImageAsDataUrl(url: string): Promise<string | null> {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return null;
+    const blob = await response.blob();
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
+  } catch {
+    return null;
+  }
+}
+
+/**
  * Builds a Delivery Challan PDF — a dispatch note for goods sent out, with
  * no prices or totals, since a challan tracks what physically went out, not
  * what it costs. Always A4, since this is a paperwork/dispatch document
  * rather than a customer-facing sale document with design options.
  */
-export function generateDeliveryChallanPdf({
+export async function generateDeliveryChallanPdf({
   challan,
   items,
   customer,
@@ -36,16 +61,31 @@ export function generateDeliveryChallanPdf({
   const leftColWidth = 230;
   let y = 46;
 
-  // ---- Header: business name (left, wraps if long) / DELIVERY CHALLAN
-  // title + meta box (right) — same generous, fixed spacing as the
-  // shared document generator so nothing here ever overlaps regardless
-  // of how long the business name or title text is. ----
+  // ---- Header: logo (if set) + business name (left, wraps if long) /
+  // DELIVERY CHALLAN title + meta box (right) — same generous, fixed
+  // spacing as the shared document generator so nothing here ever
+  // overlaps regardless of how long the business name or title text is,
+  // and the same logo treatment as Invoice/Bill/Quotation/Purchase. ----
+  let textStartX = marginX;
+  if (profile.logo_url) {
+    const logoSize = 30;
+    try {
+      const logoData = await loadImageAsDataUrl(profile.logo_url);
+      if (logoData) {
+        doc.addImage(logoData, marginX, y, logoSize, logoSize);
+        textStartX = marginX + logoSize + 14;
+      }
+    } catch {
+      // Falls back to text-only header if the logo can't be loaded.
+    }
+  }
+
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
   doc.setTextColor(...NAVY);
   const businessNameLines = doc.splitTextToSize(profile.business_name || "Your Business", leftColWidth);
   const nameBaselineY = y + 20 * 0.78;
-  doc.text(businessNameLines, marginX, nameBaselineY);
+  doc.text(businessNameLines, textStartX, nameBaselineY);
   let leftY = nameBaselineY + (businessNameLines.length - 1) * 22 + 18;
 
   doc.setFont("helvetica", "normal");
@@ -53,11 +93,11 @@ export function generateDeliveryChallanPdf({
   doc.setTextColor(...NAVY_SOFT);
   if (profile.address) {
     const addrLines = doc.splitTextToSize(profile.address, leftColWidth);
-    doc.text(addrLines, marginX, leftY);
+    doc.text(addrLines, textStartX, leftY);
     leftY += addrLines.length * 12;
   }
   if (profile.phone) {
-    doc.text(`Tel: ${profile.phone}`, marginX, leftY);
+    doc.text(`Phone: ${profile.phone}`, textStartX, leftY);
     leftY += 12;
   }
 
