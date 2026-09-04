@@ -427,6 +427,10 @@ async function renderStandardPdf(args: {
   const contactBits: string[] = [];
   if (profile.phone) contactBits.push(profile.phone);
   if (contactBits.length) {
+    // A small extra gap here (on top of the normal line step) separates
+    // the phone number from the address block above it, so it doesn't
+    // read as just another address line.
+    if (profile.address) leftY += 4 * scale;
     doc.text(contactBits.join("   |   "), textStartX, leftY);
     leftY += 11.5 * scale;
   }
@@ -438,7 +442,7 @@ async function renderStandardPdf(args: {
   // Right: document title as a solid navy pill — reads as a strong,
   // premium label regardless of word length, since the pill's own
   // padding (not the word) sets its shape.
-  const titleFontSize = titleSize - 2;
+  const titleFontSize = titleSize - 6;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(titleFontSize);
   const titlePadX = 16 * scale;
