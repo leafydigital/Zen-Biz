@@ -2,16 +2,26 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CustomerDetailView } from "@/components/CustomerDetailView";
-import type { Customer } from "@/types/database";
+import type { Customer, Profile } from "@/types/database";
 
 export default async function CustomerDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
 
-  const { data: customer } = (await supabase
-    .from("customers" as never)
-    .select("*")
-    .eq("id", params.id)
-    .maybeSingle()) as { data: Customer | null };
+  const [{ data: customer }, { data: profile }] = await Promise.all([
+    supabase
+      .from("customers" as never)
+      .select("*")
+      .eq("id", params.id)
+      .maybeSingle() as unknown as Promise<{ data: Customer | null }>,
+    supabase
+      .from("profiles" as never)
+      .select("plan")
+      .eq("id", user!.id)
+      .maybeSingle() as unknown as Promise<{ data: Pick<Profile, "plan"> | null }>,
+  ]);
 
   if (!customer) notFound();
 
@@ -23,7 +33,7 @@ export default async function CustomerDetailPage({ params }: { params: { id: str
       >
         ← Back to Customers
       </Link>
-      <CustomerDetailView customer={customer} />
+      <CustomerDetailView customer={customer} plan={profile?.plan ?? "starter"} />
     </div>
   );
 }

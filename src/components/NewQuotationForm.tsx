@@ -7,12 +7,13 @@ import { generateQuotationPdf } from "@/lib/generateQuotationPdf";
 import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS } from "@/types/database";
 import {
   TAX_TYPE_OPTIONS,
+  TAX_PERCENT_OPTIONS,
   calculateGstLine,
   calculateRoundOff,
   isSameState,
   splitGstAmount,
 } from "@/lib/gstCalculations";
-import type { Customer, Product, Profile, Quotation, TaxType } from "@/types/database";
+import type { Customer, GstPricingMode, Product, Profile, Quotation, TaxType } from "@/types/database";
 
 interface LineItem {
   id: string;
@@ -71,9 +72,11 @@ export function NewQuotationForm({
   const [shipToSameAsBill, setShipToSameAsBill] = useState(true);
   const [shipToName, setShipToName] = useState("");
   const [shipToAddress, setShipToAddress] = useState("");
-  const [taxType, setTaxType] = useState<TaxType>("exclusive");
-  const gstApplies = taxType === "inclusive" || taxType === "exclusive";
-  const itemsGridCols = gstApplies
+  const [taxType, setTaxType] = useState<TaxType>("gst");
+  const [gstPricingMode, setGstPricingMode] = useState<GstPricingMode>("exclusive");
+  const gstApplies = taxType === "gst";
+  const taxApplies = taxType === "gst" || taxType === "tax";
+  const itemsGridCols = taxApplies
     ? "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
     : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
   const [deliveryAddress, setDeliveryAddress] = useState("");
@@ -92,10 +95,11 @@ export function NewQuotationForm({
         line: l,
         result: calculateGstLine(
           { quantity: l.quantity, unitPrice: l.unitPrice, discountPercent: l.discountPercent, taxPercent: l.taxPercent },
-          taxType
+          taxType,
+          gstPricingMode
         ),
       })),
-    [lines, taxType]
+    [lines, taxType, gstPricingMode]
   );
 
   const subtotal = useMemo(
@@ -174,8 +178,8 @@ export function NewQuotationForm({
         tax_type: taxType,
         place_of_supply_state: gstApplies ? selectedCustomer?.state ?? profile.state ?? null : null,
         subtotal,
-        gst_enabled: gstApplies,
-        gst_percent: gstApplies && lines.length > 0 ? lines[0].taxPercent : 0,
+        gst_enabled: taxApplies,
+        gst_percent: taxApplies && lines.length > 0 ? lines[0].taxPercent : 0,
         gst_amount: totalTax,
         cgst_amount: gstSplit.cgstAmount,
         sgst_amount: gstSplit.sgstAmount,
@@ -199,7 +203,8 @@ export function NewQuotationForm({
     const itemsPayload = validLines.map((l) => {
       const result = calculateGstLine(
         { quantity: l.quantity, unitPrice: l.unitPrice, discountPercent: l.discountPercent, taxPercent: l.taxPercent },
-        taxType
+        taxType,
+        gstPricingMode
       );
       return {
         owner_id: ownerId,
@@ -464,13 +469,35 @@ export function NewQuotationForm({
             </div>
           </label>
 
+          {gstApplies && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-xs font-medium text-text-soft">Rate is:</span>
+              <div className="flex gap-1.5">
+                {(["exclusive", "inclusive"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setGstPricingMode(mode)}
+                    className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                      gstPricingMode === mode
+                        ? "border-ink bg-ink text-paper"
+                        : "border-paper-fold text-text hover:border-ink/40"
+                    }`}
+                  >
+                    {mode === "exclusive" ? "GST extra" : "GST included"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className={`mb-1.5 hidden gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft lg:grid ${itemsGridCols}`}>
             <span>Item</span>
             <span>Qty</span>
             <span>Unit</span>
             <span>Rate</span>
             <span>Disc %</span>
-            {gstApplies && <span>GST %</span>}
+            {taxApplies && <span>{gstApplies ? "GST %" : "Tax %"}</span>}
             <span className="text-right">Amount</span>
             <span />
           </div>
@@ -560,17 +587,37 @@ export function NewQuotationForm({
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
-                {gstApplies && (
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    aria-label="GST percent"
-                    value={line.taxPercent}
-                    onChange={(e) => updateLine(line.id, { taxPercent: parseFloat(e.target.value) || 0 })}
-                    className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
-                  />
+                {taxApplies && (
+                  <div className="flex min-w-0 gap-1">
+                    <select
+                      aria-label={gstApplies ? "GST percent" : "Tax percent"}
+                      value={TAX_PERCENT_OPTIONS.includes(line.taxPercent) ? String(line.taxPercent) : "custom"}
+                      onChange={(e) => {
+                        if (e.target.value === "custom") return;
+                        updateLine(line.id, { taxPercent: parseFloat(e.target.value) });
+                      }}
+                      className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
+                    >
+                      {TAX_PERCENT_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}%
+                        </option>
+                      ))}
+                      <option value="custom">Custom</option>
+                    </select>
+                    {!TAX_PERCENT_OPTIONS.includes(line.taxPercent) && (
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="%"
+                        aria-label="Custom tax percent"
+                        value={line.taxPercent}
+                        onChange={(e) => updateLine(line.id, { taxPercent: parseFloat(e.target.value) || 0 })}
+                        className="w-14 min-w-0 shrink-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
+                      />
+                    )}
+                  </div>
                 )}
 
                 <div className="hidden text-right lg:block">
@@ -718,6 +765,15 @@ export function NewQuotationForm({
                 split CGST/SGST vs IGST automatically — showing as IGST for
                 now.
               </p>
+            )}
+
+            {taxType === "tax" && totalTax > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-text-soft">Tax</span>
+                <span className="font-ledger tabular-nums text-text">
+                  {formatCurrency(totalTax, currency)}
+                </span>
+              </div>
             )}
 
             {roundOff !== 0 && (

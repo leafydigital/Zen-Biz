@@ -29,14 +29,14 @@ const FEATURES = [
   },
   {
     title: "Private by design",
-    body: "Every account's data is walled off at the database level. Log in with a different Gmail and it's a fresh CRM — nothing ever crosses over.",
+    body: "Every account's data is walled off at the database level. Log in with a different Gmail and it's a fresh account — nothing ever crosses over.",
     icon: (
       <path d="M6.5 10.5V8a5.5 5.5 0 0 1 11 0v2.5M5 10.5h14a1 1 0 0 1 1 1V20a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-8.5a1 1 0 0 1 1-1Z" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     ),
   },
   {
     title: "Works on any screen",
-    body: "The same CRM adapts itself to your laptop, tablet, or phone automatically — no separate app to install to get started.",
+    body: "The same software adapts itself to your laptop, tablet, or phone automatically — no separate app to install to get started.",
     icon: (
       <path d="M4 5h16a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1ZM9 20h6" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
     ),
@@ -53,7 +53,7 @@ const FEATURES = [
 const FAQ = [
   {
     q: "Is Zen Biz really free to use?",
-    a: "Yes. The Starter plan is free forever and includes products, customers, invoices, and quotations — no card required. Starter invoices carry a small Zen Biz watermark, which is removed on the Professional plan and above.",
+    a: "Yes. The Starter plan is free forever and includes products, customers, invoices, and quotations — no card required. It's capped at 75 customers, 75 products, and 50 invoices a month; Starter invoices also carry a small Zen Biz watermark. Both the limits and the watermark are removed on the Professional plan and above.",
   },
   {
     q: "Can I use Zen Biz for any type of business?",
@@ -65,7 +65,7 @@ const FAQ = [
   },
   {
     q: "Is my business data private and secure?",
-    a: "Yes. Every account's data is walled off at the database level using row-level security, not just hidden in the app. If you log in with a different Google account, it opens a completely fresh CRM — your data never mixes with anyone else's.",
+    a: "Yes. Every account's data is walled off at the database level using row-level security, not just hidden in the app. If you log in with a different Google account, it opens a completely fresh account — your data never mixes with anyone else's.",
   },
   {
     q: "Does Zen Biz work on mobile and tablet?",
@@ -116,7 +116,7 @@ export default async function HomePage() {
           <h1 className="mt-5 font-display text-4xl font-semibold leading-[1.1] text-text sm:text-5xl">
             Your business,
             <br />
-            <span className="italic text-ink">kept like a CRM.</span>
+            <span className="italic text-ink">kept like real billing software.</span>
           </h1>
           <p className="mt-5 max-w-md text-base text-text-soft sm:text-lg">
             Zen Biz replaces the paper account book — track what you sell,
@@ -128,7 +128,7 @@ export default async function HomePage() {
               href="/signup"
               className="rounded-xl bg-ink px-6 py-3.5 text-sm font-semibold text-paper transition hover:bg-ink-light"
             >
-              Start your CRM — free
+              Start billing for free
             </Link>
             <Link
               href="#features"
@@ -165,7 +165,7 @@ export default async function HomePage() {
       <section id="features" className="mx-auto w-full max-w-6xl px-4 py-16 sm:px-6">
         <div className="mb-10 text-center">
           <h2 className="font-display text-2xl font-semibold text-text sm:text-3xl">
-            Everything your CRM needs
+            Everything your billing needs
           </h2>
           <p className="mt-2 text-text-soft">
             Simple enough for day one, ready to grow with paid features later.
@@ -213,11 +213,13 @@ export default async function HomePage() {
               <p className="mt-1 text-xs text-text-soft">Freelancers & small shops</p>
               <ul className="mt-5 flex flex-col gap-2.5 text-sm text-text-soft">
                 {[
-                  "Products & services",
-                  "Customers",
+                  "Up to 75 products & services",
+                  "Up to 75 customers",
+                  "50 invoices per month",
                   "Invoices (watermarked)",
                   "Quotations, convert to invoice",
                   "A4 / A5 / Thermal sizes",
+                  "1 business, 1 user",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <span className="mt-0.5 text-success">✓</span>
@@ -244,11 +246,14 @@ export default async function HomePage() {
               <ul className="mt-5 flex flex-col gap-2.5 text-sm text-text-soft">
                 {[
                   "Everything in Starter, no watermark",
+                  "Unlimited invoices",
+                  "Unlimited customers & products",
                   "Purchases & Suppliers",
                   "Delivery Challan",
                   "Share via WhatsApp / email",
                   "Expense tracking",
                   "Invoice tracking (Sent/Viewed/Overdue)",
+                  "2 businesses, 2 users",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <span className="mt-0.5 text-success">✓</span>
@@ -280,6 +285,7 @@ export default async function HomePage() {
                   "Colourful document styles",
                   "Multiple users & roles",
                   "Low stock alerts",
+                  "Up to 5 businesses, 5+ users",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <span className="mt-0.5 text-success">✓</span>

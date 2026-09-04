@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { searchHsnCodes } from "@/lib/hsnReference";
-import type { Product } from "@/types/database";
+import { getPlanFeatures, getLimitMessage } from "@/lib/planFeatures";
+import type { Product, Plan } from "@/types/database";
 
 const OTHER_UNIT = "__other__";
 
@@ -16,6 +17,7 @@ export function ProductFormModal({
   unitOptions,
   stockTrackingDefault,
   stockHint,
+  plan,
   onClose,
 }: {
   ownerId: string;
@@ -25,6 +27,7 @@ export function ProductFormModal({
   unitOptions: string[];
   stockTrackingDefault: boolean;
   stockHint: string;
+  plan: Plan;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -86,6 +89,25 @@ export function ProductFormModal({
     e.preventDefault();
     setSaving(true);
     setError(null);
+
+    // Re-check the limit here too, not just at the list page's "Add"
+    // button — this is the actual enforcement point. Only applies to
+    // genuinely new products; editing an existing one never adds to the
+    // count. Checked before the image upload so a blocked save doesn't
+    // waste an upload.
+    if (!product) {
+      const limit = getPlanFeatures(plan).limits.products;
+      if (limit !== null) {
+        const { count } = await supabase
+          .from("products")
+          .select("id", { count: "exact", head: true });
+        if ((count ?? 0) >= limit) {
+          setSaving(false);
+          setError(getLimitMessage("products", limit).title);
+          return;
+        }
+      }
+    }
 
     const finalUnit = unitSelect === OTHER_UNIT ? customUnit.trim() : unitSelect;
 

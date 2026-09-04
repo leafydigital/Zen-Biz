@@ -6,7 +6,7 @@ import { AuthForm } from "@/components/AuthForm";
 
 export const metadata: Metadata = {
   title: "Sign Up Free",
-  description: "Create your free Zen Biz account and start managing your products, customers, and invoices in one private CRM.",
+  description: "Create your free Zen Biz account and start managing your products, customers, and invoices in one private billing software.",
 };
 
 export default function SignupPage() {
@@ -27,7 +27,7 @@ export default function SignupPage() {
           <Logo className="[&_span]:text-paper" />
           <div>
             <p className="font-display text-[1.6rem] italic leading-snug text-paper/95">
-              Open your first CRM
+              Open your first account
               <br />
               in under a minute.
             </p>
@@ -51,7 +51,7 @@ export default function SignupPage() {
             Create your account
           </h1>
           <p className="mb-6 text-sm text-text-soft">
-            Start your free Zen Biz CRM.
+            Start your free Zen Biz account.
           </p>
 
           <Suspense>

@@ -5,9 +5,19 @@ export type QuotationStatus = "draft" | "sent" | "accepted" | "rejected";
 export type PurchaseStatus = "unpaid" | "partial" | "paid" | "cancelled";
 export type DeliveryChallanStatus = "draft" | "dispatched" | "delivered";
 export type PaymentMethod = "cash" | "upi" | "bank" | "credit_card" | "cheque" | "other";
-export type TaxType = "inclusive" | "exclusive" | "exempt" | "non_gst";
+/**
+ * "gst" / "tax" / "non_tax" are the three modes selectable in the Tax
+ * Type dropdown going forward. "inclusive" / "exclusive" / "exempt" /
+ * "non_gst" are kept only so older saved documents (invoices, quotations,
+ * purchases) written before this dropdown existed keep loading and
+ * printing correctly — the app no longer writes these values.
+ */
+export type TaxType = "gst" | "tax" | "non_tax" | "inclusive" | "exclusive" | "exempt" | "non_gst";
 
-export type DocPaperSize = "a4" | "a5" | "thermal";
+/** Within "gst" mode, whether the entered rate already includes GST. */
+export type GstPricingMode = "inclusive" | "exclusive";
+
+export type DocPaperSize = "a4" | "a5" | "thermal" | "thermal58";
 export type DocStyle = "default" | "thermal_simple" | "colourful_paid";
 export type DocFontSize = 9 | 10 | 11 | 12 | 13 | 14;
 
@@ -59,6 +69,7 @@ export interface Profile {
   billing_cycle: BillingCycle | null;
   plan_renews_at: string | null;
   onboarding_complete: boolean;
+  language: string;
   // Shared across Invoice, Quotation, and Purchase — one paper size/style/
   // font/signature setting rather than three separate ones.
   document_design: DocDesignSettings;
@@ -110,10 +121,14 @@ export interface Customer {
   updated_at: string;
 }
 
+export type RecordType = "invoice" | "billing_record";
+
 export interface Invoice {
   id: string;
   owner_id: string;
   customer_id: string | null;
+  record_type: RecordType;
+  converted_invoice_id: string | null;
   invoice_number: string;
   invoice_date: string;
   due_date: string | null;

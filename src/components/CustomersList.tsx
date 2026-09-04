@@ -4,22 +4,30 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { Customer } from "@/types/database";
+import type { Customer, Plan } from "@/types/database";
 import { CustomerFormModal } from "@/components/CustomerFormModal";
+import { LimitReachedModal } from "@/components/LimitReachedModal";
 
 export function CustomersList({
   ownerId,
   customers,
+  plan,
+  customerLimit,
 }: {
   ownerId: string;
   customers: Customer[];
+  plan: Plan;
+  customerLimit: number | null;
 }) {
   const router = useRouter();
   const supabase = createClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const atLimit = customerLimit !== null && customers.length >= customerLimit;
 
   const filtered = customers.filter(
     (c) =>
@@ -34,18 +42,31 @@ export function CustomersList({
     router.refresh();
   }
 
+  function handleAddClick() {
+    if (atLimit) {
+      setLimitModalOpen(true);
+      return;
+    }
+    setEditing(null);
+    setModalOpen(true);
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-text">Customers</h1>
-          <p className="text-sm text-text-soft">Everyone you do business with.</p>
+          <p className="text-sm text-text-soft">
+            Everyone you do business with.
+            {customerLimit !== null && (
+              <span className={atLimit ? "ml-1 font-medium text-alert" : "ml-1"}>
+                {customers.length} / {customerLimit} used
+              </span>
+            )}
+          </p>
         </div>
         <button
-          onClick={() => {
-            setEditing(null);
-            setModalOpen(true);
-          }}
+          onClick={handleAddClick}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink-light"
         >
           + Add customer
@@ -73,17 +94,22 @@ export function CustomersList({
         <div className="overflow-hidden rounded-xl2 border border-paper-fold bg-paper-card shadow-card">
           <ul className="divide-y divide-paper-fold">
             {filtered.map((c) => (
-              <li key={c.id} className="flex items-center justify-between gap-3 p-4">
-                <Link href={`/dashboard/customers/${c.id}`} className="min-w-0 hover:opacity-80">
-                  <p className="truncate font-medium text-text underline-offset-2 hover:underline">
-                    {c.name}
-                  </p>
-                  <p className="truncate text-xs text-text-soft">
-                    {[c.phone, c.email].filter(Boolean).join(" · ") || "No contact info"}
-                  </p>
-                  {c.address && (
-                    <p className="truncate text-xs text-text-soft">{c.address}</p>
-                  )}
+              <li key={c.id} className="flex items-center justify-between gap-3 p-4 transition hover:bg-paper/60">
+                <Link href={`/dashboard/customers/${c.id}`} className="flex min-w-0 items-center gap-3 hover:opacity-90">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-sm font-semibold uppercase text-blue-600">
+                    {c.name.charAt(0)}
+                  </span>
+                  <span className="min-w-0">
+                    <p className="truncate font-medium text-text underline-offset-2 hover:underline">
+                      {c.name}
+                    </p>
+                    <p className="truncate text-xs text-text-soft">
+                      {[c.phone, c.email].filter(Boolean).join(" · ") || "No contact info"}
+                    </p>
+                    {c.address && (
+                      <p className="truncate text-xs text-text-soft">{c.address}</p>
+                    )}
+                  </span>
                 </Link>
                 <div className="flex shrink-0 gap-2">
                   <Link
@@ -119,7 +145,17 @@ export function CustomersList({
         <CustomerFormModal
           ownerId={ownerId}
           customer={editing}
+          plan={plan}
           onClose={() => setModalOpen(false)}
+        />
+      )}
+
+      {limitModalOpen && customerLimit !== null && (
+        <LimitReachedModal
+          kind="customers"
+          limit={customerLimit}
+          currentPlan={plan}
+          onClose={() => setLimitModalOpen(false)}
         />
       )}
     </div>

@@ -3,10 +3,10 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Customer } from "@/types/database";
+import type { Customer, Plan } from "@/types/database";
 import { CustomerFormModal } from "@/components/CustomerFormModal";
 
-export function CustomerDetailView({ customer }: { customer: Customer }) {
+export function CustomerDetailView({ customer, plan }: { customer: Customer; plan: Plan }) {
   const router = useRouter();
   const supabase = createClient();
   const [editOpen, setEditOpen] = useState(false);
@@ -78,6 +78,7 @@ export function CustomerDetailView({ customer }: { customer: Customer }) {
         <CustomerFormModal
           ownerId={customer.owner_id}
           customer={customer}
+          plan={plan}
           onClose={() => setEditOpen(false)}
         />
       )}

@@ -12,13 +12,13 @@ body {
 }
 
 body {
-  background-color: #f7f5f0;
-  color: #1a1a1a;
+  background-color: #f8fafc;
+  color: #172554;
 }
 
 /* Visible keyboard focus everywhere */
 :focus-visible {
-  outline: 2px solid #c9a227;
+  outline: 2px solid #2563eb;
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -40,8 +40,8 @@ body {
     to bottom,
     transparent,
     transparent 35px,
-    #e4e0d6 35px,
-    #e4e0d6 36px
+    #e2e8f0 35px,
+    #e2e8f0 36px
   );
 }
 
@@ -58,9 +58,9 @@ body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #e4e0d6;
+  background: #e2e8f0;
   border-radius: 8px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #c9a227;
+  background: #2563eb;
 }

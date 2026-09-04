@@ -4,7 +4,15 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
-export function DeleteInvoiceButton({ invoiceId }: { invoiceId: string }) {
+export function DeleteInvoiceButton({
+  invoiceId,
+  isBillingRecord = false,
+}: {
+  invoiceId: string;
+  /** When true, this is a Billing Record rather than an official Invoice
+   * — only the confirmation copy and post-delete redirect differ. */
+  isBillingRecord?: boolean;
+}) {
   const router = useRouter();
   const supabase = createClient();
   const [confirming, setConfirming] = useState(false);
@@ -22,7 +30,7 @@ export function DeleteInvoiceButton({ invoiceId }: { invoiceId: string }) {
       return;
     }
     setConfirming(false);
-    router.push("/dashboard/invoices");
+    router.push(isBillingRecord ? "/dashboard/billing-records" : "/dashboard/invoices");
     router.refresh();
   }
 
@@ -46,10 +54,13 @@ export function DeleteInvoiceButton({ invoiceId }: { invoiceId: string }) {
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-[340px] rounded-xl2 bg-paper-card p-5 shadow-card"
       >
-        <p className="mb-1.5 text-sm font-semibold text-text">Delete this invoice?</p>
+        <p className="mb-1.5 text-sm font-semibold text-text">
+          Delete this {isBillingRecord ? "billing record" : "invoice"}?
+        </p>
         <p className="mb-4 text-sm text-text-soft">
-          This can't be undone. If any items on this invoice track stock,
-          their quantities will be added back automatically.
+          This can't be undone.
+          {!isBillingRecord &&
+            " If any items on this invoice track stock, their quantities will be added back automatically."}
         </p>
         {error && (
           <p className="mb-3 rounded-lg bg-alert-bg px-3 py-2 text-xs text-alert">{error}</p>

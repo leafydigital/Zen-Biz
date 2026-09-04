@@ -7,9 +7,9 @@ import type { PaymentMethod, PurchaseStatus } from "@/types/database";
 
 const STYLES: Record<PurchaseStatus, string> = {
   paid: "bg-success-bg text-success",
-  partial: "bg-brass/20 text-brass-dark",
-  unpaid: "bg-brass/15 text-brass-dark",
-  cancelled: "bg-paper-fold text-text-soft",
+  partial: "bg-blue-50 text-blue-600",
+  unpaid: "bg-orange-50 text-orange-600",
+  cancelled: "bg-alert-bg text-alert",
 };
 
 const PAYMENT_METHODS: { value: PaymentMethod; label: string }[] = [

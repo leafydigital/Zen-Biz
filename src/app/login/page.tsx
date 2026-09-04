@@ -33,7 +33,7 @@ export default function LoginPage() {
               every rupee — in one place.
             </p>
             <p className="mt-4 text-sm text-paper/60">
-              Zen Biz is your business's private CRM. Only you can ever see
+              Zen Biz is your business's private billing software. Only you can ever see
               what's written in it.
             </p>
           </div>
@@ -53,7 +53,7 @@ export default function LoginPage() {
             Welcome back
           </h1>
           <p className="mb-6 text-sm text-text-soft">
-            Log in to open your CRM.
+            Log in to open your dashboard.
           </p>
 
           <Suspense>

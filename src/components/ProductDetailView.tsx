@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Product } from "@/types/database";
+import type { Product, Plan } from "@/types/database";
 import { ProductFormModal } from "@/components/ProductFormModal";
 
 function formatCurrency(n: number) {
@@ -21,6 +21,7 @@ export function ProductDetailView({
   unitOptions,
   stockTrackingDefault,
   stockHint,
+  plan,
 }: {
   product: Product;
   itemLabel: string;
@@ -28,6 +29,7 @@ export function ProductDetailView({
   unitOptions: string[];
   stockTrackingDefault: boolean;
   stockHint: string;
+  plan: Plan;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -150,6 +152,7 @@ export function ProductDetailView({
           unitOptions={unitOptions}
           stockTrackingDefault={stockTrackingDefault}
           stockHint={stockHint}
+          plan={plan}
           onClose={() => setEditOpen(false)}
         />
       )}

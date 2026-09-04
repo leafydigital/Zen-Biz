@@ -4,15 +4,18 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { INDIAN_STATE_NAMES } from "@/lib/indianStates";
-import type { Customer } from "@/types/database";
+import { getPlanFeatures, getLimitMessage } from "@/lib/planFeatures";
+import type { Customer, Plan } from "@/types/database";
 
 export function CustomerFormModal({
   ownerId,
   customer,
+  plan,
   onClose,
 }: {
   ownerId: string;
   customer?: Customer | null;
+  plan: Plan;
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -33,6 +36,24 @@ export function CustomerFormModal({
     setSaving(true);
     setError(null);
 
+    // Re-check the limit here too, not just at the list page's "Add"
+    // button — this is the actual enforcement point, since the button
+    // check alone could be bypassed. Only applies to genuinely new
+    // customers; editing an existing one never adds to the count.
+    if (!customer) {
+      const limit = getPlanFeatures(plan).limits.customers;
+      if (limit !== null) {
+        const { count } = await supabase
+          .from("customers" as never)
+          .select("id", { count: "exact", head: true });
+        if ((count ?? 0) >= limit) {
+          setSaving(false);
+          setError(getLimitMessage("customers", limit).title);
+          return;
+        }
+      }
+    }
+
     const payload = {
       owner_id: ownerId,
       name: name.trim(),
@@ -44,7 +65,7 @@ export function CustomerFormModal({
       notes: notes.trim() || null,
     };
 
-           const { error } = customer
+    const { error } = customer
       ? await supabase.from("customers" as never).update(payload as never).eq("id", customer.id)
       : await supabase.from("customers" as never).insert(payload as never);
 

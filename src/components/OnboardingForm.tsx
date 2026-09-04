@@ -235,7 +235,7 @@ export function OnboardingForm({ userId }: { userId: string }) {
         disabled={saving}
         className="rounded-xl bg-ink px-4 py-3 text-[0.95rem] font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60"
       >
-        {saving ? "Setting up…" : "Open my CRM"}
+        {saving ? "Setting up…" : "Open my dashboard"}
       </button>
     </form>
   );

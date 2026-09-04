@@ -21,6 +21,11 @@ export default async function EditInvoicePage({ params }: { params: { id: string
   const invoice = invoiceResult.data as Invoice | null;
   if (!invoice) notFound();
 
+  // The row's own record_type is the source of truth for whether this is
+  // an official invoice or a billing record — not a query param, which
+  // could be wrong or missing if someone bookmarks/shares the link.
+  const isBillingRecord = invoice.record_type === "billing_record";
+
   const items = itemsResult.data as InvoiceItem[] | null;
   const profile = profileResult.data as Profile | null;
   const customers = customersResult.data as Customer[] | null;
@@ -30,7 +35,7 @@ export default async function EditInvoicePage({ params }: { params: { id: string
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="font-display text-2xl font-semibold text-text">
-          Edit invoice #{invoice.invoice_number}
+          {isBillingRecord ? "Edit billing record" : `Edit invoice #${invoice.invoice_number}`}
         </h1>
         <p className="text-sm text-text-soft">Update the details and save.</p>
       </div>
@@ -42,6 +47,7 @@ export default async function EditInvoicePage({ params }: { params: { id: string
         suggestedInvoiceNumber={invoice.invoice_number}
         existingInvoice={invoice}
         existingItems={items ?? []}
+        recordType={isBillingRecord ? "billing_record" : "invoice"}
       />
     </div>
   );

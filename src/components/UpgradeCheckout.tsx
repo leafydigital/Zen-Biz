@@ -63,7 +63,7 @@ export function UpgradeCheckout({
         name: profile.business_name || undefined,
         contact: profile.phone || undefined,
       },
-      theme: { color: "#0F3D3E" },
+      theme: { color: "#2563EB" },
       handler: function () {
         setPaid(true);
         setStarting(false);

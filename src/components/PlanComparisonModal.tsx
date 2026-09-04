@@ -6,14 +6,17 @@ import type { Plan } from "@/types/database";
 
 interface FeatureRow {
   label: string;
-  starter: boolean;
-  professional: boolean;
-  business: boolean;
+  starter: boolean | string;
+  professional: boolean | string;
+  business: boolean | string;
 }
 
 const FEATURES: FeatureRow[] = [
-  { label: "Products & services", starter: true, professional: true, business: true },
-  { label: "Customers", starter: true, professional: true, business: true },
+  { label: "Invoices", starter: "50/month", professional: "Unlimited", business: "Unlimited" },
+  { label: "Customers", starter: "75", professional: "Unlimited", business: "Unlimited" },
+  { label: "Products & services", starter: "75", professional: "Unlimited", business: "Unlimited" },
+  { label: "Businesses", starter: "1", professional: "2", business: "Up to 5" },
+  { label: "Users", starter: "1", professional: "2", business: "5+" },
   { label: "Invoices (with watermark on Starter)", starter: true, professional: true, business: true },
   { label: "Quotations, convert to Invoice", starter: true, professional: true, business: true },
   { label: "A4 / A5 / Thermal paper sizes", starter: true, professional: true, business: true },
@@ -33,8 +36,8 @@ const FEATURES: FeatureRow[] = [
 function Check() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-label="Included">
-      <circle cx="12" cy="12" r="11" fill="#E9F2ED" />
-      <path d="M7.5 12.5l3 3 6-6.5" stroke="#2E6B4F" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="11" fill="#ECFDF5" />
+      <path d="M7.5 12.5l3 3 6-6.5" stroke="#10B981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
 }
@@ -42,10 +45,21 @@ function Check() {
 function Cross() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-label="Not included">
-      <circle cx="12" cy="12" r="11" fill="#F2F0EA" />
-      <path d="M9 9l6 6M15 9l-6 6" stroke="#A8A296" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+      <circle cx="12" cy="12" r="11" fill="#F1F5F9" />
+      <path d="M9 9l6 6M15 9l-6 6" stroke="#94A3B8" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
     </svg>
   );
+}
+
+function FeatureCell({ value }: { value: boolean | string }) {
+  if (typeof value === "string") {
+    return (
+      <div className="flex justify-center py-2.5 px-1 text-center text-xs font-semibold text-text">
+        {value}
+      </div>
+    );
+  }
+  return <div className="flex justify-center py-2.5">{value ? <Check /> : <Cross />}</div>;
 }
 
 export function PlanComparisonModal({
@@ -165,7 +179,7 @@ export function PlanComparisonModal({
         </div>
 
         <div className="mt-6 overflow-hidden rounded-xl border border-paper-fold">
-          <div className="grid grid-cols-[1fr_60px_60px_60px] bg-paper text-xs font-semibold uppercase tracking-wide text-text-soft">
+          <div className="grid grid-cols-[1fr_78px_78px_78px] bg-paper text-xs font-semibold uppercase tracking-wide text-text-soft">
             <div className="px-4 py-3">Feature</div>
             <div className="px-1 py-3 text-center">Starter</div>
             <div className="px-1 py-3 text-center">Pro</div>
@@ -173,11 +187,11 @@ export function PlanComparisonModal({
           </div>
           <div className="divide-y divide-paper-fold">
             {FEATURES.map((f) => (
-              <div key={f.label} className="grid grid-cols-[1fr_60px_60px_60px] items-center">
+              <div key={f.label} className="grid grid-cols-[1fr_78px_78px_78px] items-center">
                 <div className="px-4 py-2.5 text-sm text-text">{f.label}</div>
-                <div className="flex justify-center py-2.5">{f.starter ? <Check /> : <Cross />}</div>
-                <div className="flex justify-center py-2.5">{f.professional ? <Check /> : <Cross />}</div>
-                <div className="flex justify-center py-2.5">{f.business ? <Check /> : <Cross />}</div>
+                <FeatureCell value={f.starter} />
+                <FeatureCell value={f.professional} />
+                <FeatureCell value={f.business} />
               </div>
             ))}
           </div>

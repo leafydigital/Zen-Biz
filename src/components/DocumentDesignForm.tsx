@@ -15,7 +15,8 @@ const SAMPLE_ITEMS = [
 const PAPER_SIZE_OPTIONS: { value: DocPaperSize; label: string; hint: string }[] = [
   { value: "a4", label: "A4", hint: "Standard full page" },
   { value: "a5", label: "A5", hint: "Half page, compact" },
-  { value: "thermal", label: "Thermal", hint: "80mm receipt printer" },
+  { value: "thermal", label: "Thermal 80mm", hint: "Standard receipt printer" },
+  { value: "thermal58", label: "Thermal 58mm", hint: "Compact receipt printer" },
 ];
 
 const STYLE_OPTIONS: { value: DocStyle; label: string; hint: string; locked?: boolean }[] = [
@@ -139,7 +140,7 @@ export function DocumentDesignForm({ profile }: { profile: Profile }) {
 
       <div>
         <p className="mb-2 text-sm font-medium text-text">Paper size</p>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
           {PAPER_SIZE_OPTIONS.map((opt) => {
             const active = design.paperSize === opt.value;
             return (

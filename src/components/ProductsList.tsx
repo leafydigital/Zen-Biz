@@ -4,8 +4,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { Product } from "@/types/database";
+import type { Product, Plan } from "@/types/database";
 import { ProductFormModal } from "@/components/ProductFormModal";
+import { LimitReachedModal } from "@/components/LimitReachedModal";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -25,6 +26,8 @@ export function ProductsList({
   stockTrackingDefault,
   stockHint,
   itemHint,
+  plan,
+  productLimit,
 }: {
   ownerId: string;
   products: Product[];
@@ -35,13 +38,18 @@ export function ProductsList({
   stockTrackingDefault: boolean;
   stockHint: string;
   itemHint: string;
+  plan: Plan;
+  productLimit: number | null;
 }) {
   const router = useRouter();
   const supabase = createClient();
   const [modalOpen, setModalOpen] = useState(false);
+  const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
   const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const atLimit = productLimit !== null && products.length >= productLimit;
 
   const filtered = products.filter((p) =>
     p.name.toLowerCase().includes(search.toLowerCase())
@@ -54,6 +62,15 @@ export function ProductsList({
     router.refresh();
   }
 
+  function handleAddClick() {
+    if (atLimit) {
+      setLimitModalOpen(true);
+      return;
+    }
+    setEditing(null);
+    setModalOpen(true);
+  }
+
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -61,13 +78,17 @@ export function ProductsList({
           <h1 className="font-display text-2xl font-semibold text-text">
             {itemLabelPlural}
           </h1>
-          <p className="text-sm text-text-soft">{itemHint}</p>
+          <p className="text-sm text-text-soft">
+            {itemHint}
+            {productLimit !== null && (
+              <span className={atLimit ? "ml-1 font-medium text-alert" : "ml-1"}>
+                {products.length} / {productLimit} used
+              </span>
+            )}
+          </p>
         </div>
         <button
-          onClick={() => {
-            setEditing(null);
-            setModalOpen(true);
-          }}
+          onClick={handleAddClick}
           className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink-light"
         >
           + Add {itemLabel.toLowerCase()}
@@ -96,7 +117,7 @@ export function ProductsList({
           {filtered.map((p) => (
             <div
               key={p.id}
-              className="flex flex-col gap-2 rounded-xl2 border border-paper-fold bg-paper-card p-4 shadow-card"
+              className="flex flex-col gap-2 rounded-xl2 border border-paper-fold bg-white p-4 shadow-card transition hover:border-ink/20 hover:shadow-md"
             >
               <div className="flex items-start justify-between gap-2">
                 <Link
@@ -111,8 +132,10 @@ export function ProductsList({
                       className="h-11 w-11 shrink-0 rounded-lg border border-paper-fold object-cover"
                     />
                   ) : (
-                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border border-dashed border-paper-fold text-[0.6rem] text-text-soft">
-                      No photo
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                        <path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5ZM4 8l8 4.5M12 12.5V21M12 12.5 20 8" strokeLinecap="round" strokeLinejoin="round" />
+                      </svg>
                     </div>
                   )}
                   <p className="font-medium text-text underline-offset-2 hover:underline">
@@ -176,7 +199,17 @@ export function ProductsList({
           unitOptions={unitOptions}
           stockTrackingDefault={stockTrackingDefault}
           stockHint={stockHint}
+          plan={plan}
           onClose={() => setModalOpen(false)}
+        />
+      )}
+
+      {limitModalOpen && productLimit !== null && (
+        <LimitReachedModal
+          kind="products"
+          limit={productLimit}
+          currentPlan={plan}
+          onClose={() => setLimitModalOpen(false)}
         />
       )}
     </div>

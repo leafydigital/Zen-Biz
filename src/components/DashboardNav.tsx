@@ -5,6 +5,9 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { getLabels } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
+import { Logo } from "@/components/Logo";
+import { PlanComparisonModal } from "@/components/PlanComparisonModal";
+import { useTranslation } from "@/lib/i18n/I18nContext";
 import type { Plan } from "@/types/database";
 
 const ICONS = {
@@ -56,64 +59,120 @@ export function DashboardNav({
   plan?: Plan;
 }) {
   const pathname = usePathname();
+  const { t } = useTranslation();
   const labels = getLabels(businessType);
-  const features = getPlanFeatures(plan ?? "starter");
+  const resolvedPlan = plan ?? "starter";
+  const features = getPlanFeatures(resolvedPlan);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
-  const items: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
-    { href: "/dashboard", label: "Overview", icon: "home" },
+  const mainItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
+    { href: "/dashboard", label: t.nav.overview, icon: "home" },
     { href: "/dashboard/products", label: labels.itemPlural, icon: "box" },
-    { href: "/dashboard/purchases", label: "Purchases", icon: "cart", locked: !features.purchases },
-    { href: "/dashboard/suppliers", label: "Suppliers", icon: "truck", locked: !features.purchases },
-    { href: "/dashboard/customers", label: "Customers", icon: "users" },
-    { href: "/dashboard/invoices", label: "Invoices", icon: "file" },
-    { href: "/dashboard/quotations", label: "Quotations", icon: "file" },
-    { href: "/dashboard/delivery-challans", label: "Delivery Challans", icon: "truck", locked: !features.deliveryChallans },
-    { href: "/dashboard/reports", label: "GST Report", icon: "chart", locked: !features.gstReport },
-    { href: "/dashboard/profit-loss", label: "Profit & Loss", icon: "scale", locked: !features.profitAndLoss },
-    { href: "/dashboard/settings", label: "Settings", icon: "settings" },
+    { href: "/dashboard/purchases", label: t.nav.purchases, icon: "cart", locked: !features.purchases },
+    { href: "/dashboard/suppliers", label: t.nav.suppliers, icon: "truck", locked: !features.purchases },
+    { href: "/dashboard/customers", label: t.nav.customers, icon: "users" },
+    { href: "/dashboard/invoices", label: t.nav.invoices, icon: "file" },
+    { href: "/dashboard/billing-records", label: t.nav.billingRecords, icon: "file" },
+    { href: "/dashboard/quotations", label: t.nav.quotations, icon: "file" },
+    { href: "/dashboard/delivery-challans", label: t.nav.deliveryChallans, icon: "truck", locked: !features.deliveryChallans },
   ];
+  const reportItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
+    { href: "/dashboard/reports", label: t.nav.gstReport, icon: "chart", locked: !features.gstReport },
+    { href: "/dashboard/profit-loss", label: t.nav.profitLoss, icon: "scale", locked: !features.profitAndLoss },
+  ];
+  const settingsItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
+    { href: "/dashboard/settings", label: t.nav.settings, icon: "settings" },
+  ];
+  const items = [...mainItems, ...reportItems, ...settingsItems];
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
     return pathname.startsWith(href);
   }
 
+  function NavLink({ item }: { item: (typeof items)[number] }) {
+    const active = isActive(item.href);
+    return (
+      <Link
+        href={item.href}
+        className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition ${
+          active
+            ? "bg-white/15 text-white"
+            : "text-blue-100 hover:bg-white/10 hover:text-white"
+        }`}
+      >
+        <Icon name={item.icon} />
+        <span className="flex-1">{item.label}</span>
+        {item.locked && (
+          <span className="rounded-full bg-white/90 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-wide text-brass-dark">
+            {t.nav.pro}
+          </span>
+        )}
+      </Link>
+    );
+  }
+
   return (
     <>
-      {/* Desktop / tablet: left rail with the brass stitch as the active indicator */}
+      {/* Desktop / tablet: gradient rail with grouped sections */}
       <nav
-        className="hidden shrink-0 flex-col gap-1 border-r border-paper-fold bg-paper-card px-3 py-6 md:flex md:w-56 lg:w-64"
+        className="hidden shrink-0 flex-col gap-1 overflow-y-auto bg-gradient-to-b from-ink via-indigo-600 to-brass px-3 py-5 md:flex md:w-56 lg:w-64"
         aria-label="Main navigation"
       >
-        {items.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`relative flex items-center gap-3 rounded-lg px-3.5 py-2.5 text-sm font-medium transition ${
-                active
-                  ? "bg-ink/[0.06] text-ink"
-                  : "text-text-soft hover:bg-ink/[0.04] hover:text-text"
-              }`}
-            >
-              {active && (
-                <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-full bg-brass" />
-              )}
-              <Icon name={item.icon} />
-              <span className="flex-1">{item.label}</span>
-              {item.locked && (
-                <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-brass-dark">
-                  Paid
-                </span>
-              )}
-            </Link>
-          );
-        })}
+        <Link href="/dashboard" className="mb-4 px-2">
+          <Logo variant="light" />
+        </Link>
+
+        <div className="flex flex-col gap-1">
+          {mainItems.map((item) => (
+            <NavLink key={item.href} item={item} />
+          ))}
+        </div>
+
+        <p className="mb-1 mt-5 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">
+          {t.nav.reports}
+        </p>
+        <div className="flex flex-col gap-1">
+          {reportItems.map((item) => (
+            <NavLink key={item.href} item={item} />
+          ))}
+        </div>
+
+        <p className="mb-1 mt-5 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">
+          {t.nav.settings}
+        </p>
+        <div className="flex flex-col gap-1">
+          {settingsItems.map((item) => (
+            <NavLink key={item.href} item={item} />
+          ))}
+        </div>
+
+        {resolvedPlan === "starter" && (
+          <div className="mt-auto pt-5">
+            <div className="rounded-2xl bg-white/15 p-4 text-center backdrop-blur-sm">
+              <span className="text-xl" aria-hidden="true">👑</span>
+              <p className="mt-1.5 text-sm font-semibold text-white">Upgrade to Pro</p>
+              <p className="mt-1 text-xs text-blue-100">
+                Unlock all features and grow your business faster.
+              </p>
+              <button
+                type="button"
+                onClick={() => setUpgradeOpen(true)}
+                className="mt-3 inline-flex w-full items-center justify-center gap-1 rounded-xl bg-white px-3 py-2 text-xs font-semibold text-ink transition hover:bg-blue-50"
+              >
+                Upgrade Now →
+              </button>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Mobile: bottom tab bar shows the 4 most-used items, others sit behind "More" */}
       <MobileNav items={items} isActive={isActive} />
+
+      {upgradeOpen && (
+        <PlanComparisonModal currentPlan={resolvedPlan} onClose={() => setUpgradeOpen(false)} />
+      )}
     </>
   );
 }
@@ -133,6 +192,7 @@ function MobileNav({
   isActive: (href: string) => boolean;
 }) {
   const [moreOpen, setMoreOpen] = useState(false);
+  const { t } = useTranslation();
 
   // Keep the bottom bar to 4 primary tabs + "More" — 8 items squeezed into
   // one row would be unreadable on a phone-width screen. Anything beyond
@@ -158,7 +218,7 @@ function MobileNav({
                 active ? "text-ink" : "text-text-soft"
               }`}
             >
-              <span className={active ? "text-brass-dark" : ""}>
+              <span className={active ? "text-ink" : ""}>
                 <Icon name={item.icon} />
               </span>
               {item.label}
@@ -173,7 +233,7 @@ function MobileNav({
             overflowHasActive ? "text-ink" : "text-text-soft"
           }`}
         >
-          <span className={overflowHasActive ? "text-brass-dark" : ""}>
+          <span className={overflowHasActive ? "text-ink" : ""}>
             <Icon name="more" />
           </span>
           More
@@ -217,7 +277,7 @@ function MobileNav({
                     <span className="flex-1">{item.label}</span>
                     {item.locked && (
                       <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-brass-dark">
-                        Paid
+                        {t.nav.pro}
                       </span>
                     )}
                   </Link>

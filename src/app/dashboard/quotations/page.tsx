@@ -50,13 +50,20 @@ export default async function QuotationsPage() {
             {quotations.map((q: any) => (
               <li
                 key={q.id}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 p-4 transition hover:bg-paper/60 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="min-w-0">
-                  <p className="font-medium text-text">#{q.quotation_number}</p>
-                  <p className="text-xs text-text-soft">
-                    {q.customers?.name ?? "Not specified"} · {q.quotation_date}
-                  </p>
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                      <path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1ZM14 3.5V8h4M9 13h4M9 16.5h6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-text">#{q.quotation_number}</p>
+                    <p className="text-xs text-text-soft">
+                      {q.customers?.name ?? "Not specified"} · {q.quotation_date}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">

@@ -50,6 +50,7 @@ export default async function GstReportPage() {
     supabase
       .from("invoices" as never)
       .select("invoice_date, gst_amount, subtotal")
+      .eq("record_type", "invoice")
       .neq("status", "cancelled"),
     supabase
       .from("purchases" as never)

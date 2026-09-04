@@ -25,6 +25,7 @@ alter table public.profiles add column if not exists plan text not null default 
 alter table public.profiles add column if not exists billing_cycle text;
 alter table public.profiles add column if not exists plan_renews_at timestamptz;
 alter table public.profiles add column if not exists onboarding_complete boolean not null default false;
+alter table public.profiles add column if not exists language text not null default 'en';
 alter table public.profiles add column if not exists document_design jsonb not null default '{"paperSize": "a4", "style": "default", "fontSize": 10}'::jsonb;
 alter table public.profiles add column if not exists signature_url text;
 alter table public.profiles add column if not exists invoice_terms text;
@@ -92,6 +93,8 @@ alter table public.invoices add column if not exists cgst_amount numeric(12, 2) 
 alter table public.invoices add column if not exists sgst_amount numeric(12, 2) not null default 0;
 alter table public.invoices add column if not exists igst_amount numeric(12, 2) not null default 0;
 alter table public.invoices add column if not exists round_off numeric(12, 2) not null default 0;
+alter table public.invoices add column if not exists record_type text not null default 'invoice';
+alter table public.invoices add column if not exists converted_invoice_id uuid;
 alter table public.invoices add column if not exists total numeric(12, 2) not null default 0;
 alter table public.invoices add column if not exists notes text;
 alter table public.invoices add column if not exists created_at timestamptz not null default now();

@@ -37,6 +37,7 @@ export default async function ProductDetailPage({ params }: { params: { id: stri
         unitOptions={labels.unitOptions}
         stockTrackingDefault={labels.stockTrackingDefault}
         stockHint={labels.stockHint}
+        plan={profile?.plan ?? "starter"}
       />
     </div>
   );

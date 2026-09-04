@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsTabs } from "@/components/SettingsTabs";
+import { getTranslations } from "@/lib/i18n/translations";
 import type { Profile } from "@/types/database";
 
 export default async function SettingsPage() {
@@ -20,14 +21,16 @@ export default async function SettingsPage() {
 
   if (!profile) redirect("/onboarding");
 
+  const t = getTranslations(profile.language);
+
   return (
     <div className="flex flex-col gap-5">
       <div>
         <h1 className="font-display text-2xl font-semibold text-text">
-          Settings
+          {t.settings.title}
         </h1>
         <p className="text-sm text-text-soft">
-          Manage your business details and how your documents look.
+          {t.settings.subtitle}
         </p>
       </div>
       <Suspense>

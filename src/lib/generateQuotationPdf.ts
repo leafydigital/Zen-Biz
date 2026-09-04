@@ -27,18 +27,25 @@ export async function generateQuotationPdf({
     docNumber: quotation.quotation_number,
     docDate: quotation.quotation_date,
     dueDate: quotation.valid_until,
+    status: quotation.status,
+    taxType: quotation.tax_type,
+    placeOfSupply: quotation.place_of_supply_state,
     partyLabel: "Quote for",
     party: customer
-      ? { name: customer.name, phone: customer.phone, address: customer.address }
+      ? { name: customer.name, phone: customer.phone, address: customer.address, gstin: customer.gstin }
       : { name: "Not specified" },
     shipTo: quotation.ship_to_name || quotation.ship_to_address
       ? { name: quotation.ship_to_name, address: quotation.ship_to_address }
       : null,
     items,
     subtotal: Number(quotation.subtotal),
-    gstEnabled: false,
-    gstPercent: 0,
-    gstAmount: 0,
+    gstEnabled: quotation.gst_enabled,
+    gstPercent: Number(quotation.gst_percent),
+    gstAmount: Number(quotation.gst_amount),
+    cgstAmount: Number(quotation.cgst_amount ?? 0),
+    sgstAmount: Number(quotation.sgst_amount ?? 0),
+    igstAmount: Number(quotation.igst_amount ?? 0),
+    roundOff: Number(quotation.round_off ?? 0),
     total: Number(quotation.total),
     notes: quotation.notes,
     profile,

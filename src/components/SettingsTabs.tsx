@@ -8,22 +8,23 @@ import { DocumentDesignForm } from "@/components/DocumentDesignForm";
 import { TermsForm } from "@/components/TermsForm";
 import { BankDetailsForm } from "@/components/BankDetailsForm";
 import { PlanBillingTab } from "@/components/PlanBillingTab";
+import { useTranslation } from "@/lib/i18n/I18nContext";
 
 type Tab = "general" | "appearance" | "terms" | "bank" | "plan";
 
-const TABS: { id: Tab; label: string }[] = [
-  { id: "general", label: "General" },
-  { id: "appearance", label: "Document appearance" },
-  { id: "terms", label: "Terms & Conditions" },
-  { id: "bank", label: "Bank & Payment" },
-  { id: "plan", label: "Plan & Billing" },
-];
-
 export function SettingsTabs({ profile }: { profile: Profile }) {
+  const { t } = useTranslation();
+  const TABS: { id: Tab; label: string }[] = [
+    { id: "general", label: t.settings.general },
+    { id: "appearance", label: t.settings.documentAppearance },
+    { id: "terms", label: t.settings.termsConditions },
+    { id: "bank", label: t.settings.bankPayment },
+    { id: "plan", label: t.settings.planBilling },
+  ];
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "general";
   const [tab, setTab] = useState<Tab>(
-    TABS.some((t) => t.id === initialTab) ? initialTab : "general"
+    TABS.some((tabDef) => tabDef.id === initialTab) ? initialTab : "general"
   );
 
   return (

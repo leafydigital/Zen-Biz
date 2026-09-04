@@ -24,15 +24,22 @@ export async function generatePurchasePdf({
     docNumber: purchase.purchase_number,
     docDate: purchase.purchase_date,
     status: purchase.status,
+    paymentMethod: purchase.payment_method,
+    taxType: purchase.tax_type,
+    placeOfSupply: purchase.place_of_supply_state,
     partyLabel: "Purchased from",
     party: supplier
-      ? { name: supplier.name, phone: supplier.phone, address: supplier.address }
+      ? { name: supplier.name, phone: supplier.phone, address: supplier.address, gstin: supplier.gstin }
       : { name: "Not specified" },
     items,
     subtotal: Number(purchase.subtotal),
     gstEnabled: purchase.gst_enabled,
     gstPercent: Number(purchase.gst_percent),
     gstAmount: Number(purchase.gst_amount),
+    cgstAmount: Number(purchase.cgst_amount ?? 0),
+    sgstAmount: Number(purchase.sgst_amount ?? 0),
+    igstAmount: Number(purchase.igst_amount ?? 0),
+    roundOff: Number(purchase.round_off ?? 0),
     total: Number(purchase.total),
     notes: purchase.notes,
     profile,

@@ -47,7 +47,11 @@ export default async function ProfitLossPage() {
   }
 
   const [{ data: invoices }, { data: purchases }] = await Promise.all([
-    supabase.from("invoices" as never).select("invoice_date, total").eq("status", "paid"),
+    supabase
+      .from("invoices" as never)
+      .select("invoice_date, total")
+      .eq("record_type", "invoice")
+      .eq("status", "paid"),
     supabase.from("purchases" as never).select("purchase_date, total").eq("status", "paid"),
   ]);
 

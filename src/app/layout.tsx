@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
+import { I18nProvider } from "@/lib/i18n/I18nContext";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -33,13 +34,13 @@ const SITE_URL = "https://zenbiz.app";
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Zen Biz — Free Business CRM Software for Products, Customers & Invoices",
+    default: "Zen Biz — Free Business Billing Software for Products, Customers & Invoices",
     template: "%s · Zen Biz",
   },
   description:
-    "Zen Biz is a free online CRM for small businesses. Manage products & services, customers, and invoices in one private, secure dashboard — works on laptop, tablet, and mobile. No card required to start.",
+    "Zen Biz is free online billing software for small businesses. Manage products & services, customers, and invoices in one private, secure dashboard — works on laptop, tablet, and mobile. No card required to start.",
   keywords: [
-    "business CRM software",
+    "business billing software",
     "free invoice software India",
     "small business billing software",
     "customer management software",
@@ -48,7 +49,7 @@ export const metadata: Metadata = {
     "GST invoice software",
     "quotation software for small business",
     "billing software for shop",
-    "CRM app for small business",
+    "billing app for small business",
   ],
   authors: [{ name: "Zen Biz" }],
   creator: "Zen Biz",
@@ -69,24 +70,24 @@ export const metadata: Metadata = {
     type: "website",
     url: SITE_URL,
     siteName: "Zen Biz",
-    title: "Zen Biz — Free Business CRM Software for Products, Customers & Invoices",
+    title: "Zen Biz — Free Business Billing Software for Products, Customers & Invoices",
     description:
-      "Track products, customers, and invoices in one private CRM built for small businesses. Free to start, works on any device.",
+      "Track products, customers, and invoices in one private billing software built for small businesses. Free to start, works on any device.",
     images: [
       {
         url: "/og-image.png",
         width: 1200,
         height: 630,
-        alt: "Zen Biz — the private business CRM dashboard",
+        alt: "Zen Biz — the private business billing software dashboard",
       },
     ],
     locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Zen Biz — Free Business CRM Software",
+    title: "Zen Biz — Free Business Billing Software",
     description:
-      "Track products, customers, and invoices in one private CRM. Free to start, works on any device.",
+      "Track products, customers, and invoices in one private billing software. Free to start, works on any device.",
     images: ["/og-image.png"],
   },
   icons: {
@@ -98,7 +99,7 @@ export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
   maximumScale: 5,
-  themeColor: "#0F3D3E",
+  themeColor: "#2563EB",
 };
 
 export default function RootLayout({
@@ -113,7 +114,7 @@ export default function RootLayout({
     applicationCategory: "BusinessApplication",
     operatingSystem: "Web, Android, iOS",
     description:
-      "Zen Biz is a free online CRM for small businesses to manage products, services, customers, and invoices in one private, secure dashboard.",
+      "Zen Biz is free online billing software for small businesses to manage products, services, customers, and invoices in one private, secure dashboard.",
     offers: {
       "@type": "Offer",
       price: "0",
@@ -130,7 +131,9 @@ export default function RootLayout({
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       </head>
-      <body className="font-body antialiased">{children}</body>
+      <body className="font-body antialiased">
+        <I18nProvider>{children}</I18nProvider>
+      </body>
     </html>
   );
 }

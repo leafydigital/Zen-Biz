@@ -6,8 +6,11 @@ import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS } from "@/types/database";
 import { PAYMENT_METHOD_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/lib/paymentOptions";
+import { getPlanFeatures } from "@/lib/planFeatures";
+import { LimitReachedModal } from "@/components/LimitReachedModal";
 import {
   TAX_TYPE_OPTIONS,
+  TAX_PERCENT_OPTIONS,
   calculateGstLine,
   calculateRoundOff,
   isSameState,
@@ -15,6 +18,7 @@ import {
 } from "@/lib/gstCalculations";
 import type {
   Customer,
+  GstPricingMode,
   Invoice,
   InvoiceItem,
   InvoiceStatus,
@@ -52,6 +56,24 @@ function newLine(): LineItem {
   };
 }
 
+/**
+ * Supabase surfaces raw Postgres errors, which are accurate but not
+ * always useful to read as-is — e.g. a missing column shows up as
+ * "column invoices.record_type does not exist" rather than telling the
+ * person what to actually do about it. This keeps the real message
+ * (nothing is hidden) but adds a plain-language hint for the specific
+ * cases worth explaining.
+ */
+function friendlySaveError(message: string): string {
+  if (/column .* does not exist/i.test(message)) {
+    return `${message} — the database is missing a column this save needs. Ask whoever manages the database to run the latest migration, then try saving again.`;
+  }
+  if (/permission denied|row-level security/i.test(message)) {
+    return `${message} — you may not have permission to save this. Try signing out and back in, or contact support if it continues.`;
+  }
+  return message;
+}
+
 function formatCurrency(n: number, currency: string) {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
   return `${symbol}${n.toLocaleString("en-IN", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -65,6 +87,8 @@ export function NewInvoiceForm({
   suggestedInvoiceNumber,
   existingInvoice,
   existingItems,
+  invoicesThisMonth = 0,
+  recordType = "invoice",
 }: {
   ownerId: string;
   profile: Profile;
@@ -73,6 +97,11 @@ export function NewInvoiceForm({
   suggestedInvoiceNumber: string;
   existingInvoice?: Invoice;
   existingItems?: InvoiceItem[];
+  invoicesThisMonth?: number;
+  /** "billing_record" saves an internal-only record: no invoice number
+   * shown/required, doesn't touch the monthly limit, and skips straight
+   * to the Billing Records list rather than Invoices. */
+  recordType?: "invoice" | "billing_record";
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -108,8 +137,24 @@ export function NewInvoiceForm({
     existingInvoice?.amount_paid ? String(existingInvoice.amount_paid) : ""
   );
 
-  const [taxType, setTaxType] = useState<TaxType>(existingInvoice?.tax_type ?? "exclusive");
-  const gstApplies = taxType === "inclusive" || taxType === "exclusive";
+  const [taxType, setTaxType] = useState<TaxType>(
+    existingInvoice?.tax_type === "inclusive" || existingInvoice?.tax_type === "exclusive"
+      ? "gst"
+      : existingInvoice?.tax_type === "exempt" || existingInvoice?.tax_type === "non_gst"
+        ? "non_gst"
+        : existingInvoice?.tax_type ?? "gst"
+  );
+  const [gstPricingMode, setGstPricingMode] = useState<GstPricingMode>(
+    existingInvoice?.tax_type === "inclusive" ? "inclusive" : "exclusive"
+  );
+  // GST mode splits into CGST/SGST/IGST and shows the state-based split
+  // logic; Tax mode shows a flat percentage with no GST split; Non-GST
+  // and Non-Tax show no tax fields at all. taxApplies covers both modes
+  // that actually charge something (GST or a flat Tax), used anywhere
+  // the UI just needs to know "is there a tax column/field to show" —
+  // gstApplies is specifically for the GST-only CGST/SGST/IGST split.
+  const gstApplies = taxType === "gst";
+  const taxApplies = taxType === "gst" || taxType === "tax";
 
   const [deliveryAddress, setDeliveryAddress] = useState(existingInvoice?.delivery_address ?? "");
   const [vehicleNumber, setVehicleNumber] = useState(existingInvoice?.vehicle_number ?? "");
@@ -134,7 +179,9 @@ export function NewInvoiceForm({
       : [newLine()]
   );
   const [saving, setSaving] = useState(false);
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   const lineResults = useMemo(
     () =>
@@ -142,10 +189,11 @@ export function NewInvoiceForm({
         line: l,
         result: calculateGstLine(
           { quantity: l.quantity, unitPrice: l.unitPrice, discountPercent: l.discountPercent, taxPercent: l.taxPercent },
-          taxType
+          taxType,
+          gstPricingMode
         ),
       })),
-    [lines, taxType]
+    [lines, taxType, gstPricingMode]
   );
 
   const subtotal = useMemo(
@@ -172,10 +220,11 @@ export function NewInvoiceForm({
         ? 0
         : grandTotal;
 
-  // The GST % column only exists when GST actually applies, so the grid
-  // template itself needs to drop that track — otherwise the remaining
-  // cells shift left by one slot and misalign under the header row.
-  const itemsGridCols = gstApplies
+  // The tax % column only exists when a tax mode (GST or flat Tax)
+  // actually applies, so the grid template itself needs to drop that
+  // track — otherwise the remaining cells shift left by one slot and
+  // misalign under the header row.
+  const itemsGridCols = taxApplies
     ? "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
     : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
 
@@ -207,13 +256,16 @@ export function NewInvoiceForm({
   async function handleSubmit(e: React.FormEvent, download: boolean) {
     e.preventDefault();
     setError(null);
+    setSuccessMessage(null);
+
+    const isBillingRecord = recordType === "billing_record";
 
     const validLines = lines.filter((l) => l.description.trim() && l.quantity > 0);
     if (validLines.length === 0) {
       setError("Add at least one item with a description and quantity.");
       return;
     }
-    if (!invoiceNumber.trim()) {
+    if (!isBillingRecord && !invoiceNumber.trim()) {
       setError("Give this invoice a number.");
       return;
     }
@@ -222,13 +274,32 @@ export function NewInvoiceForm({
       return;
     }
 
+    // Only new, official invoices count against the monthly limit — a
+    // Billing Record doesn't consume it (that's the whole point of
+    // saving one instead of an invoice), and editing an existing
+    // invoice doesn't create a new one either.
+    if (!isEditing && !isBillingRecord) {
+      const limit = getPlanFeatures(profile.plan).limits.invoicesPerMonth;
+      if (limit !== null && invoicesThisMonth >= limit) {
+        setShowLimitModal(true);
+        return;
+      }
+    }
+
     setSaving(true);
 
     let invoice: Invoice | null;
 
     const commonFields = {
       customer_id: customerId || null,
-      invoice_number: invoiceNumber.trim(),
+      // Billing Records don't have a real invoice number yet — the
+      // column is NOT NULL and unique per owner, so a short random
+      // placeholder is used instead (never shown anywhere; it's
+      // overwritten with a real number at the moment of conversion).
+      invoice_number: isBillingRecord
+        ? `DRAFT-${crypto.randomUUID().slice(0, 8)}`
+        : invoiceNumber.trim(),
+      record_type: recordType,
       invoice_date: invoiceDate,
       due_date: dueDate || null,
       status: paymentStatus,
@@ -243,8 +314,13 @@ export function NewInvoiceForm({
       tax_type: taxType,
       place_of_supply_state: gstApplies ? selectedCustomer?.state ?? profile.state ?? null : null,
       subtotal,
-      gst_enabled: gstApplies,
-      gst_percent: gstApplies && lines.length > 0 ? lines[0].taxPercent : 0,
+      // gst_enabled/gst_percent/gst_amount double as the generic
+      // "there is a tax percentage" fields for flat Tax mode too — the
+      // PDF decides whether to label the resulting row "GST" or "Tax"
+      // based on tax_type, so these columns don't need a separate set
+      // for the non-GST flat-tax case.
+      gst_enabled: taxApplies,
+      gst_percent: taxApplies && lines.length > 0 ? lines[0].taxPercent : 0,
       gst_amount: totalTax,
       cgst_amount: gstSplit.cgstAmount,
       sgst_amount: gstSplit.sgstAmount,
@@ -257,7 +333,7 @@ export function NewInvoiceForm({
     if (isEditing) {
       const { data: updated, error: updErr } = await supabase
         .from("invoices" as never)
-                .update(commonFields as never)
+        .update(commonFields as never)
         .eq("id", existingInvoice!.id)
         .select()
         .single();
@@ -267,7 +343,7 @@ export function NewInvoiceForm({
       if (updErr || !invoice) {
         setSaving(false);
         console.error("Zen Biz: failed to update invoice", updErr);
-        setError(updErr?.message ?? "Could not update the invoice.");
+        setError(friendlySaveError(updErr?.message ?? "Could not update the invoice."));
         return;
       }
 
@@ -278,13 +354,13 @@ export function NewInvoiceForm({
 
       if (deleteErr) {
         setSaving(false);
-        setError(deleteErr.message);
+        setError(friendlySaveError(deleteErr.message));
         return;
       }
     } else {
       const { data: created, error: invErr } = await supabase
         .from("invoices" as never)
-                .insert({ owner_id: ownerId, ...commonFields } as never)
+        .insert({ owner_id: ownerId, ...commonFields } as never)
         .select()
         .single();
 
@@ -293,7 +369,7 @@ export function NewInvoiceForm({
       if (invErr || !invoice) {
         setSaving(false);
         console.error("Zen Biz: failed to save invoice", invErr);
-        setError(invErr?.message ?? "Could not save the invoice.");
+        setError(friendlySaveError(invErr?.message ?? "Could not save the invoice."));
         return;
       }
     }
@@ -320,47 +396,83 @@ export function NewInvoiceForm({
       };
     });
 
-       const { error: itemsErr } = await supabase.from("invoice_items" as never).insert(itemsPayload as never);
+    const { error: itemsErr } = await supabase.from("invoice_items" as never).insert(itemsPayload as never);
 
     setSaving(false);
     if (itemsErr) {
-      setError(itemsErr.message);
+      setError(friendlySaveError(itemsErr.message));
       return;
     }
 
-    if (download) {
+    if (download && !isBillingRecord) {
       const customer = customers.find((c) => c.id === customerId) ?? null;
-      await generateInvoicePdf({
-        invoice: invoice!,
-        items: itemsPayload.map((it, i) => ({
-          id: String(i),
-          owner_id: ownerId,
-          invoice_id: invoice!.id,
-          product_id: it.product_id,
-          description: it.description,
-          quantity: it.quantity,
-          unit: it.unit,
-          item_code: it.item_code,
-          hsn_code: it.hsn_code,
-          unit_price: it.unit_price,
-          discount_percent: it.discount_percent,
-          tax_percent: it.tax_percent,
-          tax_amount: it.tax_amount,
-          line_total: it.line_total,
-          created_at: new Date().toISOString(),
-        })),
-        customer,
-        profile,
-      });
+      try {
+        await generateInvoicePdf({
+          invoice: invoice!,
+          items: itemsPayload.map((it, i) => ({
+            id: String(i),
+            owner_id: ownerId,
+            invoice_id: invoice!.id,
+            product_id: it.product_id,
+            description: it.description,
+            quantity: it.quantity,
+            unit: it.unit,
+            item_code: it.item_code,
+            hsn_code: it.hsn_code,
+            unit_price: it.unit_price,
+            discount_percent: it.discount_percent,
+            tax_percent: it.tax_percent,
+            tax_amount: it.tax_amount,
+            line_total: it.line_total,
+            created_at: new Date().toISOString(),
+          })),
+          customer,
+          profile,
+        });
+      } catch (pdfErr) {
+        // The invoice itself already saved successfully at this point —
+        // only the PDF download failed. Don't let that hide the save
+        // succeeding: tell the person clearly and still continue on to
+        // the success message and redirect below.
+        console.error("Zen Biz: invoice saved but PDF generation failed", pdfErr);
+        setError(
+          "The invoice was saved, but the PDF couldn't be generated. You can download it again from the invoice page."
+        );
+      }
     }
 
-    router.push(isEditing ? `/dashboard/invoices/${invoice!.id}` : "/dashboard/invoices");
-    router.refresh();
+    const savedMessage = isBillingRecord
+      ? "Billing record saved successfully."
+      : isEditing
+        ? "Invoice updated successfully."
+        : "Invoice saved successfully.";
+    setSuccessMessage(savedMessage);
+
+    // Give the success message a moment to actually be visible before
+    // navigating away — an instant redirect would make it flash by
+    // unseen, which is the whole reason a visible confirmation was added.
+    setTimeout(() => {
+      if (isBillingRecord) {
+        router.push(isEditing ? `/dashboard/billing-records/${invoice!.id}` : "/dashboard/billing-records");
+      } else {
+        router.push(isEditing ? `/dashboard/invoices/${invoice!.id}` : "/dashboard/invoices");
+      }
+      router.refresh();
+    }, 700);
   }
 
   return (
+    <>
     <form className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-6">
       <div className="flex flex-1 flex-col gap-6">
+        {recordType === "billing_record" && (
+          <div className="rounded-2xl border border-brass/30 bg-brass/10 px-5 py-3.5">
+            <p className="text-sm font-semibold text-brass-dark">BILLING RECORD</p>
+            <p className="mt-0.5 text-xs text-text-soft">
+              Saved for your own records — not an official invoice, no invoice number, and won't count against your plan's invoice limit.
+            </p>
+          </div>
+        )}
         {/* Customer Information */}
         <section className="rounded-2xl border border-paper-fold bg-white p-5 shadow-card sm:p-6">
           <div className="mb-4 flex items-center gap-2.5">
@@ -471,15 +583,17 @@ export function NewInvoiceForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text">Invoice number</span>
-              <input
-                required
-                value={invoiceNumber}
-                onChange={(e) => setInvoiceNumber(e.target.value)}
-                className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
-              />
-            </label>
+            {recordType === "invoice" && (
+              <label className="flex flex-col gap-1.5">
+                <span className="text-sm font-medium text-text">Invoice number</span>
+                <input
+                  required
+                  value={invoiceNumber}
+                  onChange={(e) => setInvoiceNumber(e.target.value)}
+                  className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
+                />
+              </label>
+            )}
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">Date</span>
               <input
@@ -637,13 +751,35 @@ export function NewInvoiceForm({
             </div>
           </label>
 
+          {gstApplies && (
+            <div className="mb-4 flex items-center gap-2">
+              <span className="text-xs font-medium text-text-soft">Rate is:</span>
+              <div className="flex gap-1.5">
+                {(["exclusive", "inclusive"] as const).map((mode) => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setGstPricingMode(mode)}
+                    className={`rounded-lg border px-2.5 py-1 text-xs font-medium transition ${
+                      gstPricingMode === mode
+                        ? "border-ink bg-ink text-paper"
+                        : "border-paper-fold text-text hover:border-ink/40"
+                    }`}
+                  >
+                    {mode === "exclusive" ? "GST extra" : "GST included"}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className={`mb-1.5 hidden gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft lg:grid ${itemsGridCols}`}>
             <span>Item</span>
             <span>Qty</span>
             <span>Unit</span>
             <span>Rate</span>
             <span>Disc %</span>
-            {gstApplies && <span>GST %</span>}
+            {taxApplies && <span>{gstApplies ? "GST %" : "Tax %"}</span>}
             <span className="text-right">Amount</span>
             <span />
           </div>
@@ -733,17 +869,37 @@ export function NewInvoiceForm({
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
-                {gstApplies && (
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    aria-label="GST percent"
-                    value={line.taxPercent}
-                    onChange={(e) => updateLine(line.id, { taxPercent: parseFloat(e.target.value) || 0 })}
-                    className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
-                  />
+                {taxApplies && (
+                  <div className="flex min-w-0 gap-1">
+                    <select
+                      aria-label={gstApplies ? "GST percent" : "Tax percent"}
+                      value={TAX_PERCENT_OPTIONS.includes(line.taxPercent) ? String(line.taxPercent) : "custom"}
+                      onChange={(e) => {
+                        if (e.target.value === "custom") return;
+                        updateLine(line.id, { taxPercent: parseFloat(e.target.value) });
+                      }}
+                      className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
+                    >
+                      {TAX_PERCENT_OPTIONS.map((p) => (
+                        <option key={p} value={p}>
+                          {p}%
+                        </option>
+                      ))}
+                      <option value="custom">Custom</option>
+                    </select>
+                    {!TAX_PERCENT_OPTIONS.includes(line.taxPercent) && (
+                      <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        placeholder="%"
+                        aria-label="Custom tax percent"
+                        value={line.taxPercent}
+                        onChange={(e) => updateLine(line.id, { taxPercent: parseFloat(e.target.value) || 0 })}
+                        className="w-14 min-w-0 shrink-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
+                      />
+                    )}
+                  </div>
                 )}
 
                 <div className="hidden text-right lg:block">
@@ -893,6 +1049,15 @@ export function NewInvoiceForm({
               </p>
             )}
 
+            {taxType === "tax" && totalTax > 0 && (
+              <div className="flex items-center justify-between">
+                <span className="text-text-soft">Tax</span>
+                <span className="font-ledger tabular-nums text-text">
+                  {formatCurrency(totalTax, currency)}
+                </span>
+              </div>
+            )}
+
             {roundOff !== 0 && (
               <div className="flex items-center justify-between">
                 <span className="text-text-soft">Round off</span>
@@ -920,26 +1085,69 @@ export function NewInvoiceForm({
             )}
           </div>
 
+          {successMessage && (
+            <p
+              className="mt-3 rounded-xl bg-success-bg px-4 py-3 text-sm font-medium text-success"
+              role="status"
+            >
+              {successMessage}
+            </p>
+          )}
+          {error && (
+            <p
+              className="mt-3 rounded-xl bg-alert-bg px-4 py-3 text-sm font-medium text-alert"
+              role="alert"
+            >
+              {error}
+            </p>
+          )}
+
           <div className="mt-4 flex flex-col gap-2">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={(e) => handleSubmit(e, true)}
-              className="rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60"
-            >
-              {saving ? "Saving…" : "Save & Download PDF"}
-            </button>
-            <button
-              type="button"
-              disabled={saving}
-              onClick={(e) => handleSubmit(e, false)}
-              className="rounded-xl border border-paper-fold px-4 py-3 text-sm font-semibold text-text transition hover:bg-paper disabled:opacity-60"
-            >
-              {saving ? "Saving…" : isEditing ? "Save changes" : "Save invoice"}
-            </button>
+            {recordType === "invoice" ? (
+              <>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={(e) => handleSubmit(e, true)}
+                  className="rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60"
+                >
+                  {saving ? "Saving…" : "Save & Download PDF"}
+                </button>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={(e) => handleSubmit(e, false)}
+                  className="rounded-xl border border-paper-fold px-4 py-3 text-sm font-semibold text-text transition hover:bg-paper disabled:opacity-60"
+                >
+                  {saving ? "Saving…" : isEditing ? "Save changes" : "Save invoice"}
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                disabled={saving}
+                onClick={(e) => handleSubmit(e, false)}
+                className="rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60"
+              >
+                {saving ? "Saving…" : isEditing ? "Save changes" : "Save Billing"}
+              </button>
+            )}
           </div>
         </div>
       </aside>
     </form>
+
+    {showLimitModal && (() => {
+      const limit = getPlanFeatures(profile.plan).limits.invoicesPerMonth;
+      return limit !== null ? (
+        <LimitReachedModal
+          kind="invoicesPerMonth"
+          limit={limit}
+          currentPlan={profile.plan}
+          onClose={() => setShowLimitModal(false)}
+        />
+      ) : null;
+    })()}
+    </>
   );
 }

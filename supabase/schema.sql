@@ -34,6 +34,10 @@ create table if not exists public.profiles (
   billing_cycle text check (billing_cycle in ('monthly', 'yearly')),
   plan_renews_at timestamptz,
   onboarding_complete boolean not null default false,
+  -- The app's display language for this owner — menus, buttons, and
+  -- system messages. Persisted here (not just localStorage) so it
+  -- follows the person across devices and survives logout/login.
+  language text not null default 'en',
   -- Paper size, style, font size, and signature/seal are shared across
   -- every document type (Invoice, Quotation, Purchase) — one setting
   -- instead of repeating the same picker three times.
@@ -155,6 +159,17 @@ create table if not exists public.invoices (
   id uuid primary key default gen_random_uuid(),
   owner_id uuid not null references auth.users (id) on delete cascade,
   customer_id uuid references public.customers (id) on delete set null,
+  -- 'invoice' is an official, numbered invoice — it counts toward the
+  -- monthly plan limit and can be downloaded/printed/shared. A
+  -- 'billing_record' is the same shape of data saved for internal
+  -- reference only: no invoice number yet, doesn't touch the limit, and
+  -- has no export/print/share affordances in the UI. Converting one to
+  -- the other is just flipping this column plus assigning invoice_number.
+  record_type text not null default 'invoice' check (record_type in ('invoice', 'billing_record')),
+  -- Set only on a billing_record, once it's been converted — points at
+  -- the invoice row that resulted, so the UI can show "View Invoice"
+  -- and refuse to convert the same record twice.
+  converted_invoice_id uuid references public.invoices (id) on delete set null,
   invoice_number text not null,
   invoice_date date not null default current_date,
   due_date date,
@@ -179,7 +194,7 @@ create table if not exists public.invoices (
   -- the entered rate already contains GST, Exclusive adds GST on top,
   -- Exempt/Non-GST both charge zero tax but are labelled differently for
   -- filing purposes.
-  tax_type text not null default 'exclusive' check (tax_type in ('inclusive', 'exclusive', 'exempt', 'non_gst')),
+  tax_type text not null default 'exclusive' check (tax_type in ('inclusive', 'exclusive', 'exempt', 'non_gst', 'gst', 'tax', 'non_tax')),
   -- The state GST was actually charged for, snapshotted at save time (not
   -- looked up live from the customer later) — this is what decided
   -- CGST+SGST vs IGST below, and it stays fixed even if the business's or
@@ -277,7 +292,7 @@ create table if not exists public.quotations (
   delivery_address text,
   vehicle_number text,
   transport_name text,
-  tax_type text not null default 'exclusive' check (tax_type in ('inclusive', 'exclusive', 'exempt', 'non_gst')),
+  tax_type text not null default 'exclusive' check (tax_type in ('inclusive', 'exclusive', 'exempt', 'non_gst', 'gst', 'tax', 'non_tax')),
   place_of_supply_state text,
   subtotal numeric(12, 2) not null default 0,
   gst_enabled boolean not null default false,
@@ -395,7 +410,7 @@ create table if not exists public.purchases (
   delivery_address text,
   vehicle_number text,
   transport_name text,
-  tax_type text not null default 'exclusive' check (tax_type in ('inclusive', 'exclusive', 'exempt', 'non_gst')),
+  tax_type text not null default 'exclusive' check (tax_type in ('inclusive', 'exclusive', 'exempt', 'non_gst', 'gst', 'tax', 'non_tax')),
   place_of_supply_state text,
   subtotal numeric(12, 2) not null default 0,
   gst_enabled boolean not null default false,

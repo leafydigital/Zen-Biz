@@ -6,6 +6,8 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { BUSINESS_TYPE_OPTIONS } from "@/lib/businessLabels";
 import { CURRENCY_OPTIONS } from "@/types/database";
+import { LANGUAGES } from "@/lib/i18n/languages";
+import { useTranslation } from "@/lib/i18n/I18nContext";
 import type { Profile } from "@/types/database";
 
 const OTHER_VALUE = "__other__";
@@ -13,6 +15,7 @@ const OTHER_VALUE = "__other__";
 export function SettingsForm({ profile }: { profile: Profile }) {
   const router = useRouter();
   const supabase = createClient();
+  const { t, language, setLanguage } = useTranslation();
 
   const isKnownType = (BUSINESS_TYPE_OPTIONS as readonly string[]).includes(
     profile.business_type
@@ -104,6 +107,7 @@ export function SettingsForm({ profile }: { profile: Profile }) {
         gst_number: gstNumber.trim() || null,
         default_currency: defaultCurrency,
         logo_url: logoUrl,
+        language,
       } as never)
       .eq("id", profile.id);
 
@@ -280,6 +284,22 @@ export function SettingsForm({ profile }: { profile: Profile }) {
           Suggested by default on new invoices, quotations, and purchases —
           you can still change it for any individual document.
         </span>
+      </label>
+
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-text">{t.settings.language}</span>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value)}
+          className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+        >
+          {LANGUAGES.map((l) => (
+            <option key={l.code} value={l.code}>
+              {l.nativeName} ({l.englishName})
+            </option>
+          ))}
+        </select>
+        <span className="text-xs text-text-soft">{t.settings.languageHint}</span>
       </label>
 
       {error && (

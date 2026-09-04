@@ -1,4 +1,4 @@
-import type { TaxType } from "@/types/database";
+import type { TaxType, GstPricingMode } from "@/types/database";
 
 export interface GstLineInput {
   quantity: number;
@@ -22,26 +22,41 @@ export interface GstLineResult {
 
 /**
  * Computes a single line item's amounts, taking discount and tax type
- * into account. "Inclusive" means the entered rate already contains GST,
- * so tax is backed out rather than added on top; "Exclusive" adds GST on
- * top of the discounted amount; "Exempt" and "Non-GST Supply" both charge
- * zero tax (the distinction between them is for filing/labeling purposes,
- * not arithmetic).
+ * into account.
+ *
+ * - "gst" (the current default): GST is calculated per gstPricingMode —
+ *   "exclusive" adds GST on top of the discounted amount (the default);
+ *   "inclusive" means the entered rate already contains GST, so it's
+ *   backed out rather than added on top.
+ * - "tax": a flat, non-GST tax percentage — same arithmetic as GST
+ *   exclusive (added on top of the discounted amount), just not
+ *   presented or split as CGST/SGST/IGST anywhere downstream.
+ * - "non_tax": zero tax, always.
+ * - The legacy values ("inclusive", "exclusive", "exempt", "non_gst")
+ *   are handled the same way they always were, so documents saved
+ *   before this dropdown existed keep calculating identically.
  */
-export function calculateGstLine(input: GstLineInput, taxType: TaxType): GstLineResult {
+export function calculateGstLine(
+  input: GstLineInput,
+  taxType: TaxType,
+  gstPricingMode: GstPricingMode = "exclusive"
+): GstLineResult {
   const grossAmount = input.quantity * input.unitPrice;
   const discountAmount = grossAmount * (input.discountPercent / 100);
   const taxableAmount = grossAmount - discountAmount;
 
-  if (taxType === "exempt" || taxType === "non_gst") {
+  if (taxType === "non_tax" || taxType === "exempt" || taxType === "non_gst") {
     return { grossAmount, discountAmount, taxableAmount, taxAmount: 0, lineTotal: taxableAmount };
   }
 
-  if (taxType === "inclusive") {
+  const isInclusive = taxType === "inclusive" || (taxType === "gst" && gstPricingMode === "inclusive");
+  if (isInclusive) {
     const taxAmount = taxableAmount - taxableAmount / (1 + input.taxPercent / 100);
     return { grossAmount, discountAmount, taxableAmount, taxAmount, lineTotal: taxableAmount };
   }
 
+  // "gst" (exclusive pricing), "tax", and legacy "exclusive" all add the
+  // percentage on top of the discounted amount the same way.
   const taxAmount = taxableAmount * (input.taxPercent / 100);
   return {
     grossAmount,
@@ -96,8 +111,15 @@ export function calculateRoundOff(amount: number): { rounded: number; roundOff: 
 }
 
 export const TAX_TYPE_OPTIONS: { value: TaxType; label: string; hint: string }[] = [
-  { value: "exclusive", label: "GST Exclusive", hint: "GST added on top of the rate" },
-  { value: "inclusive", label: "GST Inclusive", hint: "Rate already includes GST" },
-  { value: "exempt", label: "GST Exempt", hint: "No GST charged, exempt supply" },
-  { value: "non_gst", label: "Non-GST Supply", hint: "Outside GST altogether" },
+  { value: "gst", label: "GST", hint: "CGST/SGST or IGST, split automatically" },
+  { value: "non_gst", label: "Non-GST", hint: "No GST charged on this document" },
+  { value: "tax", label: "Tax", hint: "A flat tax percentage, not GST" },
+  { value: "non_tax", label: "Non-Tax", hint: "No tax at all" },
 ];
+
+/**
+ * Common Indian GST slabs for quick selection — the tax-percent field
+ * still accepts any custom value, this is just a shortcut for the usual
+ * ones so people don't have to type "18" every time.
+ */
+export const TAX_PERCENT_OPTIONS = [0, 5, 12, 18, 28];

@@ -16,6 +16,7 @@ export default async function InvoicesPage() {
   const { data: invoices } = (await supabase
     .from("invoices" as never)
     .select("*, customers(name)")
+    .eq("record_type", "invoice")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 
   return (
@@ -49,15 +50,22 @@ export default async function InvoicesPage() {
             {invoices.map((inv: any) => (
               <li
                 key={inv.id}
-                className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                className="flex flex-col gap-3 p-4 transition hover:bg-paper/60 sm:flex-row sm:items-center sm:justify-between"
               >
-                <Link href={`/dashboard/invoices/${inv.id}`} className="min-w-0 hover:opacity-80">
-                  <p className="font-medium text-text underline-offset-2 hover:underline">
-                    #{inv.invoice_number}
-                  </p>
-                  <p className="text-xs text-text-soft">
-                    {inv.customers?.name ?? "Walk-in customer"} · {inv.invoice_date}
-                  </p>
+                <Link href={`/dashboard/invoices/${inv.id}`} className="flex min-w-0 items-center gap-3 hover:opacity-90">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
+                      <path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1ZM14 3.5V8h4M9 13h6M9 16.5h6" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </span>
+                  <span className="min-w-0">
+                    <p className="font-medium text-text underline-offset-2 hover:underline">
+                      #{inv.invoice_number}
+                    </p>
+                    <p className="text-xs text-text-soft">
+                      {inv.customers?.name ?? "Walk-in customer"} · {inv.invoice_date}
+                    </p>
+                  </span>
                 </Link>
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">

@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLabels } from "@/lib/businessLabels";
+import { getPlanFeatures } from "@/lib/planFeatures";
 import { ProductsList } from "@/components/ProductsList";
 import type { Product, Profile } from "@/types/database";
 
@@ -11,11 +12,12 @@ export default async function ProductsPage() {
 
   const { data: profile } = (await supabase
     .from("profiles" as never)
-    .select("business_type")
+    .select("business_type, plan")
     .eq("id", user!.id)
-    .maybeSingle()) as { data: Pick<Profile, "business_type"> | null };
+    .maybeSingle()) as { data: Pick<Profile, "business_type" | "plan"> | null };
 
   const labels = getLabels(profile?.business_type);
+  const plan = profile?.plan ?? "starter";
 
   const { data: products } = (await supabase
     .from("products")
@@ -33,6 +35,8 @@ export default async function ProductsPage() {
       stockTrackingDefault={labels.stockTrackingDefault}
       stockHint={labels.stockHint}
       itemHint={labels.itemHint}
+      plan={plan}
+      productLimit={getPlanFeatures(plan).limits.products}
     />
   );
 }

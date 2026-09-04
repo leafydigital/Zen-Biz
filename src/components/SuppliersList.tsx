@@ -72,12 +72,17 @@ export function SuppliersList({
         <div className="overflow-hidden rounded-xl2 border border-paper-fold bg-paper-card shadow-card">
           <ul className="divide-y divide-paper-fold">
             {filtered.map((s) => (
-              <li key={s.id} className="flex items-center justify-between gap-3 p-4">
-                <div className="min-w-0">
-                  <p className="truncate font-medium text-text">{s.name}</p>
-                  <p className="truncate text-xs text-text-soft">
-                    {[s.phone, s.email].filter(Boolean).join(" · ") || "No contact info"}
-                  </p>
+              <li key={s.id} className="flex items-center justify-between gap-3 p-4 transition hover:bg-paper/60">
+                <div className="flex min-w-0 items-center gap-3">
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-purple-50 text-sm font-semibold uppercase text-purple-600">
+                    {s.name.charAt(0)}
+                  </span>
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-text">{s.name}</p>
+                    <p className="truncate text-xs text-text-soft">
+                      {[s.phone, s.email].filter(Boolean).join(" · ") || "No contact info"}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex shrink-0 gap-2">
                   <button

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
+import { generateBillingRecordPdf } from "@/lib/generateBillingRecordPdfWrapper";
 import type { Customer, Invoice, InvoiceItem, Profile } from "@/types/database";
 
 export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
@@ -36,7 +37,14 @@ export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
       customer = data as Customer | null;
     }
 
-    await generateInvoicePdf({ invoice, items: items ?? [], customer, profile });
+    // Billing Records use their own dedicated PDF generator — kept
+    // completely separate from the Invoice one so Billing Record layout
+    // fixes can never change how an official Invoice PDF looks.
+    if (invoice.record_type === "billing_record") {
+      await generateBillingRecordPdf({ invoice, items: items ?? [], customer, profile });
+    } else {
+      await generateInvoicePdf({ invoice, items: items ?? [], customer, profile });
+    }
     setLoading(false);
   }
 

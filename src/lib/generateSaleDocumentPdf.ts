@@ -41,18 +41,19 @@ export interface PdfPartyInfo {
 }
 
 // Physical page dimensions in points (1pt = 1/72 inch). Thermal receipt
-// width follows the common 80mm printer standard; height grows with content
+// width follows common POS printer standards; height grows with content
 // so it isn't a fixed page size the way A4/A5 are.
 const PAPER_DIMENSIONS: Record<string, { width: number; height: number | "auto" }> = {
   a4: { width: 595, height: 842 },
   a5: { width: 420, height: 595 },
   thermal: { width: 227, height: "auto" }, // 80mm
+  thermal58: { width: 164, height: "auto" }, // 58mm
 };
 
 /**
  * jsPDF's addImage needs raw image data, not a remote URL — this fetches
- * the signature/seal image and converts it to a base64 data URL so it can
- * be embedded directly in the PDF. Returns null on any failure so the
+ * the signature/seal/logo image and converts it to a base64 data URL so it
+ * can be embedded directly in the PDF. Returns null on any failure so the
  * caller can skip the image gracefully rather than breaking PDF generation.
  */
 async function loadImageAsDataUrl(url: string): Promise<string | null> {
@@ -71,6 +72,62 @@ async function loadImageAsDataUrl(url: string): Promise<string | null> {
   }
 }
 
+/** Zen Biz brand palette for the redesigned document — navy text, blue
+ * accent, very light borders. Kept as plain RGB tuples since jsPDF's color
+ * setters take numbers, not CSS strings. */
+const BRAND = {
+  navy: [23, 37, 84] as [number, number, number],
+  navySoft: [71, 85, 105] as [number, number, number],
+  blue: [37, 99, 235] as [number, number, number],
+  blueDark: [29, 78, 216] as [number, number, number],
+  lightBlueBg: [239, 246, 255] as [number, number, number],
+  border: [226, 232, 240] as [number, number, number],
+  borderLight: [241, 245, 249] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  success: [16, 185, 129] as [number, number, number],
+  successBg: [236, 253, 245] as [number, number, number],
+  warn: [217, 119, 6] as [number, number, number],
+  warnBg: [255, 251, 235] as [number, number, number],
+  green: [5, 150, 105] as [number, number, number],
+  greenBg: [236, 253, 245] as [number, number, number],
+  orange: [194, 65, 12] as [number, number, number],
+  orangeBg: [255, 247, 237] as [number, number, number],
+};
+
+/** Monochrome palette used when style === "thermal_simple" — pure
+ * black/grey, ink-friendly and neutral for printing on any office
+ * printer, with no reliance on colour at all. */
+const MONO = {
+  navy: [26, 26, 26] as [number, number, number],
+  navySoft: [90, 90, 90] as [number, number, number],
+  blue: [26, 26, 26] as [number, number, number],
+  blueDark: [26, 26, 26] as [number, number, number],
+  lightBlueBg: [245, 245, 245] as [number, number, number],
+  border: [210, 210, 210] as [number, number, number],
+  borderLight: [235, 235, 235] as [number, number, number],
+  white: [255, 255, 255] as [number, number, number],
+  success: [26, 26, 26] as [number, number, number],
+  successBg: [240, 240, 240] as [number, number, number],
+  warn: [26, 26, 26] as [number, number, number],
+  warnBg: [240, 240, 240] as [number, number, number],
+  green: [26, 26, 26] as [number, number, number],
+  greenBg: [240, 240, 240] as [number, number, number],
+  orange: [26, 26, 26] as [number, number, number],
+  orangeBg: [240, 240, 240] as [number, number, number],
+};
+
+function statusPalette(status: string | undefined, colors: typeof BRAND) {
+  const s = (status ?? "").toLowerCase();
+  if (s === "paid" || s === "accepted" || s === "delivered") {
+    return { bg: colors.successBg, fg: colors.success };
+  }
+  if (s === "cancelled" || s === "rejected") {
+    return { bg: colors.warnBg, fg: colors.warn };
+  }
+  // unpaid / partial / draft / sent / dispatched / anything else
+  return { bg: colors.lightBlueBg, fg: colors.blue };
+}
+
 /**
  * Shared layout engine for every "sale-style" document Zen Biz produces —
  * invoices, quotations, and purchases. `design` controls paper size, visual
@@ -84,17 +141,22 @@ export async function generateSaleDocumentPdf({
   docDate,
   dueDate,
   status,
+  paymentMethod,
+  taxType,
+  placeOfSupply,
   partyLabel,
   party,
   shipTo,
   items,
   subtotal,
+  discountAmount,
   gstEnabled,
   gstPercent,
   gstAmount,
   cgstAmount,
   sgstAmount,
   igstAmount,
+  roundOff,
   total,
   notes,
   profile,
@@ -111,11 +173,21 @@ export async function generateSaleDocumentPdf({
   docDate: string;
   dueDate?: string | null;
   status?: string;
+  /** Cash / UPI / Bank / Card / Cheque / Other, shown in the info box. */
+  paymentMethod?: string | null;
+  /** The actual selected tax mode ("gst" | "non_gst" | "tax" | "non_tax",
+   * or a legacy value) — used only to label the info box and decide
+   * whether to show a tax row at all, never to recompute any amount. */
+  taxType?: string;
+  /** State name shown as "Place of Supply", when known. */
+  placeOfSupply?: string | null;
   partyLabel: string;
   party: PdfPartyInfo | null;
   shipTo?: { name?: string | null; address?: string | null } | null;
   items: PdfLineItem[];
   subtotal: number;
+  /** Optional — a document-level discount already deducted from subtotal. */
+  discountAmount?: number;
   gstEnabled: boolean;
   gstPercent: number;
   gstAmount: number;
@@ -125,6 +197,8 @@ export async function generateSaleDocumentPdf({
   cgstAmount?: number;
   sgstAmount?: number;
   igstAmount?: number;
+  /** Optional rounding adjustment applied to reach `total`. */
+  roundOff?: number;
   total: number;
   notes?: string | null;
   profile: Profile;
@@ -138,10 +212,11 @@ export async function generateSaleDocumentPdf({
     accountName?: string | null;
     accountNumber?: string | null;
     ifscOrSwift?: string | null;
+    upiId?: string | null;
   } | null;
   qrUrl?: string | null;
 }) {
-  if (design.paperSize === "thermal") {
+  if (design.paperSize === "thermal" || design.paperSize === "thermal58") {
     return renderThermalPdf({
       docLabel,
       docNumber,
@@ -154,10 +229,15 @@ export async function generateSaleDocumentPdf({
       gstEnabled,
       gstPercent,
       gstAmount,
+      cgstAmount,
+      sgstAmount,
+      igstAmount,
+      roundOff,
       total,
       notes,
       profile,
       filenamePrefix,
+      paperSize: design.paperSize,
       fontSize: design.fontSize,
       style: design.style,
       terms,
@@ -172,17 +252,22 @@ export async function generateSaleDocumentPdf({
     docDate,
     dueDate,
     status,
+    paymentMethod,
+    taxType,
+    placeOfSupply,
     partyLabel,
     party,
     shipTo,
     items,
     subtotal,
+    discountAmount,
     gstEnabled,
     gstPercent,
     gstAmount,
     cgstAmount,
     sgstAmount,
     igstAmount,
+    roundOff,
     total,
     notes,
     profile,
@@ -199,8 +284,11 @@ export async function generateSaleDocumentPdf({
 }
 
 // ---------------------------------------------------------------------------
-// Standard layout — used for A4 and A5. Scales margins and type size to fit
-// the smaller A5 page proportionally rather than just shrinking text.
+// Standard layout — used for A4 and A5. A4 uses the full design; A5 scales
+// margins and type down proportionally rather than just shrinking text.
+// Multi-page: the items table (via autoTable) breaks across pages and
+// repeats its header automatically. Everything drawn after the table
+// checks remaining space and starts a fresh page rather than overflowing.
 // ---------------------------------------------------------------------------
 async function renderStandardPdf(args: {
   docLabel: string;
@@ -208,17 +296,22 @@ async function renderStandardPdf(args: {
   docDate: string;
   dueDate?: string | null;
   status?: string;
+  paymentMethod?: string | null;
+  taxType?: string;
+  placeOfSupply?: string | null;
   partyLabel: string;
   party: PdfPartyInfo | null;
   shipTo?: { name?: string | null; address?: string | null } | null;
   items: PdfLineItem[];
   subtotal: number;
+  discountAmount?: number;
   gstEnabled: boolean;
   gstPercent: number;
   gstAmount: number;
   cgstAmount?: number;
   sgstAmount?: number;
   igstAmount?: number;
+  roundOff?: number;
   total: number;
   notes?: string | null;
   profile: Profile;
@@ -234,229 +327,344 @@ async function renderStandardPdf(args: {
     accountName?: string | null;
     accountNumber?: string | null;
     ifscOrSwift?: string | null;
+    upiId?: string | null;
   } | null;
   qrUrl?: string | null;
 }) {
   const {
-    docLabel, docNumber, docDate, dueDate, status, partyLabel, party, shipTo, items, subtotal,
-    gstEnabled, gstPercent, gstAmount, cgstAmount = 0, sgstAmount = 0, igstAmount = 0, total, notes, profile, filenamePrefix,
+    docLabel, docNumber, docDate, dueDate, status, paymentMethod, taxType, placeOfSupply,
+    partyLabel, party, shipTo, items, subtotal,
+    discountAmount = 0, gstEnabled, gstPercent, gstAmount, cgstAmount = 0, sgstAmount = 0, igstAmount = 0,
+    roundOff = 0, total, notes, profile, filenamePrefix,
     paperSize, fontSize, style, terms, signatureUrl, currency = "INR", bankDetails, qrUrl,
   } = args;
 
-  // "Default" uses the Zen Biz teal/brass palette throughout (table header,
-  // accent text, rules). "Simple" strips all colour to pure black/grey —
-  // ink-friendly and neutral for printing on any office printer.
-  const isSimple = style === "thermal_simple";
-  const colors = isSimple
-    ? {
-        accent: [26, 26, 26] as [number, number, number],
-        accentSoft: [86, 82, 72] as [number, number, number],
-        tableHeaderFill: [26, 26, 26] as [number, number, number],
-        tableHeaderText: [255, 255, 255] as [number, number, number],
-        tableAltRow: [245, 245, 245] as [number, number, number],
-        rule: [200, 200, 200] as [number, number, number],
-        metaBg: [248, 248, 248] as [number, number, number],
-        badgeBg: [238, 238, 238] as [number, number, number],
-      }
-    : {
-        accent: [15, 61, 62] as [number, number, number],
-        accentSoft: [86, 82, 72] as [number, number, number],
-        tableHeaderFill: [15, 61, 62] as [number, number, number],
-        tableHeaderText: [247, 245, 240] as [number, number, number],
-        tableAltRow: [247, 245, 240] as [number, number, number],
-        rule: [228, 224, 214] as [number, number, number],
-        metaBg: [247, 245, 240] as [number, number, number],
-        badgeBg: [225, 234, 233] as [number, number, number],
-      };
+  const isMono = style === "thermal_simple";
+  const colors = isMono ? MONO : BRAND;
 
   const dims = PAPER_DIMENSIONS[paperSize];
-  const scale = paperSize === "a5" ? 0.75 : 1; // proportionally smaller margins/type on A5
+  const scale = paperSize === "a5" ? 0.75 : 1;
   const pageWidth = dims.width as number;
+  const pageHeight = dims.height as number;
   const marginX = 40 * scale;
   const rightX = pageWidth - marginX;
-  let y = 50 * scale;
+  const bottomLimit = pageHeight - 58 * scale; // keep clear of the footer band
 
   const doc = new jsPDF({ unit: "pt", format: [dims.width, dims.height as number] });
 
-  const base = fontSize; // body text size, everything else scales relative to this
-  const titleSize = base + 14;
-  const headingSize = base + 16;
-  const smallSize = Math.max(base - 1.5, 7);
+  const base = fontSize;
+  const titleSize = base + 15;
+  const smallSize = Math.max(base - 1.5, 7.5);
+  const tinySize = Math.max(base - 2.5, 7);
 
-  // Header — business logo (if set) + name/address, left; big document
-  // title, right.
+  const planFeatures = getPlanFeatures(profile.plan);
+  const showHsn = planFeatures.gstBilling;
+  const showWatermark = planFeatures.invoiceWatermark;
+
+  let pageNum = 1;
+
+  /** Starts a new page and returns the y-coordinate to resume drawing at. */
+  function newPage(): number {
+    doc.addPage([dims.width, dims.height as number]);
+    pageNum += 1;
+    return 40 * scale;
+  }
+
+  /** Ensures `neededHeight` points remain before the bottom margin; if not,
+   * starts a new page and returns the (possibly reset) y position. */
+  function ensureSpace(currentY: number, neededHeight: number): number {
+    if (currentY + neededHeight > bottomLimit) {
+      return newPage();
+    }
+    return currentY;
+  }
+
+  let y = 46 * scale;
+
+  // ---- Header: logo + business identity (left), big document title
+  // and a bordered info card (right). Spacing here is deliberately
+  // generous rather than tightly fitted to one font's exact metrics —
+  // a short title like "BILL" and a long one like "QUOTATION" both
+  // need to sit cleanly clear of the logo above and the meta box
+  // below, without the layout depending on precisely how tall any one
+  // piece of text renders. ----
   let textStartX = marginX;
+  let logoBottom = y;
   if (profile.logo_url) {
-    const logoSize = 40 * scale;
+    // Scale the logo to the title text height rather than a fixed size —
+    // a fixed 42pt logo reads as oversized next to a small fontSize
+    // setting, and undersized next to a large one.
+    const logoSize = Math.min(Math.max(titleSize * 1.3, 26), 40) * scale;
     try {
       const logoData = await loadImageAsDataUrl(profile.logo_url);
       if (logoData) {
-                doc.addImage(logoData, marginX, y - 26 * scale, logoSize, logoSize);
-        textStartX = marginX + logoSize + 10 * scale;
+        doc.addImage(logoData, marginX, y, logoSize, logoSize);
+        textStartX = marginX + logoSize + 14 * scale;
       }
     } catch {
-      // If the logo can't be loaded, fall back to text-only header rather
-      // than failing the whole PDF.
+      // Falls back to text-only header if the logo can't be loaded.
     }
   }
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(titleSize);
-  doc.setTextColor(...colors.accent);
-  doc.text(profile.business_name || "Your Business", textStartX, y);
-  let leftY = y + 18 * scale;
+  doc.setTextColor(...colors.navy);
+  const leftColWidth = 220 * scale;
+  const businessNameLines = doc.splitTextToSize(profile.business_name || "Your Business", leftColWidth);
+  const nameBaselineY = y + titleSize * 0.78;
+  doc.text(businessNameLines, textStartX, nameBaselineY);
+  let leftY = nameBaselineY + (businessNameLines.length - 1) * (titleSize + 2) + 18 * scale;
+  logoBottom = leftY;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(smallSize);
-  doc.setTextColor(...colors.accentSoft);
+  doc.setTextColor(...colors.navySoft);
   if (profile.address) {
-    const addrLines = doc.splitTextToSize(profile.address, 220 * scale);
+    const addrLines = doc.splitTextToSize(profile.address, leftColWidth);
     doc.text(addrLines, textStartX, leftY);
-    leftY += addrLines.length * 11 * scale;
+    leftY += addrLines.length * 11.5 * scale;
   }
-  if (profile.phone) {
-    doc.text(`Tel: ${profile.phone}`, textStartX, leftY);
-    leftY += 11 * scale;
+  const contactBits: string[] = [];
+  if (profile.phone) contactBits.push(profile.phone);
+  if (contactBits.length) {
+    doc.text(contactBits.join("   |   "), textStartX, leftY);
+    leftY += 11.5 * scale;
   }
   if (profile.gst_number) {
     doc.text(`GSTIN: ${profile.gst_number}`, textStartX, leftY);
-    leftY += 11 * scale;
+    leftY += 11.5 * scale;
   }
 
+  // Right: document title as a solid navy pill — reads as a strong,
+  // premium label regardless of word length, since the pill's own
+  // padding (not the word) sets its shape.
+  const titleFontSize = titleSize - 2;
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(headingSize);
-  doc.setTextColor(...colors.accent);
-  doc.text(docLabel, rightX, y + 6 * scale, { align: "right" });
-
-  // Boxed metadata table (No. / Date / Due Date / Currency), right-aligned
-  // under the title — matches the reference invoice's info box.
-  const metaRows: [string, string][] = [
-    ["No.", docNumber],
-    ["Date", docDate],
-  ];
-  if (dueDate) metaRows.push([docLabel === "QUOTATION" ? "Valid Until" : "Due Date", dueDate]);
-  metaRows.push(["Currency", currency]);
-  if (status) metaRows.push(["Status", status.toUpperCase()]);
-
-  const metaBoxWidth = 190 * scale;
-  const metaRowHeight = 17 * scale;
-  const metaBoxX = rightX - metaBoxWidth;
-  let metaY = y + 22 * scale;
-
-  doc.setDrawColor(...colors.rule);
-  doc.setFillColor(...colors.metaBg);
-  doc.roundedRect(metaBoxX, metaY, metaBoxWidth, metaRowHeight * metaRows.length, 4, 4, "FD");
-
-  doc.setFontSize(smallSize);
-  metaRows.forEach(([label, value], i) => {
-    const rowY = metaY + metaRowHeight * i + metaRowHeight / 2 + 3 * scale;
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(26, 26, 26);
-    doc.text(label, metaBoxX + 10 * scale, rowY);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(...colors.accent);
-    doc.text(value, metaBoxX + metaBoxWidth - 10 * scale, rowY, { align: "right" });
-    if (i < metaRows.length - 1) {
-      doc.setDrawColor(...colors.rule);
-      doc.line(
-        metaBoxX,
-        metaY + metaRowHeight * (i + 1),
-        metaBoxX + metaBoxWidth,
-        metaY + metaRowHeight * (i + 1)
-      );
-    }
+  doc.setFontSize(titleFontSize);
+  const titlePadX = 16 * scale;
+  const titlePillHeight = titleFontSize + 14 * scale;
+  const titleTextWidth = doc.getTextWidth(docLabel);
+  const titlePillWidth = titleTextWidth + titlePadX * 2;
+  const titlePillX = rightX - titlePillWidth;
+  const titlePillY = y - 4 * scale;
+  doc.setFillColor(...colors.navy);
+  doc.roundedRect(titlePillX, titlePillY, titlePillWidth, titlePillHeight, 7 * scale, 7 * scale, "F");
+  doc.setTextColor(...colors.white);
+  doc.text(docLabel, rightX - titlePadX, titlePillY + titlePillHeight / 2 + titleFontSize * 0.32, {
+    align: "right",
   });
 
-  y = Math.max(leftY, metaY + metaRowHeight * metaRows.length) + 22 * scale;
+  const metaRows: [string, string][] = [
+    [docLabel === "PURCHASE" ? "Purchase No." : `${docLabel.charAt(0)}${docLabel.slice(1).toLowerCase()} No.`, docNumber],
+    ["Date", docDate],
+  ];
+  if (status) metaRows.push(["Payment Status", status.toUpperCase()]);
+  if (dueDate) metaRows.push([docLabel === "QUOTATION" ? "Valid Until" : "Due Date", dueDate]);
 
-  doc.setDrawColor(...colors.rule);
-  doc.line(marginX, y, rightX, y);
-  y += 22 * scale;
+  const metaBoxWidth = 225 * scale;
+  const metaRowHeight = 20 * scale;
+  const metaPad = 12 * scale;
+  const metaBoxX = rightX - metaBoxWidth;
+  let metaY = titlePillY + titlePillHeight + 14 * scale;
+  const metaBoxHeight = metaRowHeight * metaRows.length + metaPad * 2 - 4 * scale;
 
-  // Bill To (left) and Ship To (right, only if provided) — side by side,
-  // each with a small label badge, matching the reference layout.
-  const partyColWidth = shipTo ? (rightX - marginX) / 2 - 12 * scale : rightX - marginX;
+  doc.setDrawColor(...colors.border);
+  doc.setLineWidth(1);
+  doc.setFillColor(...colors.white);
+  doc.roundedRect(metaBoxX, metaY, metaBoxWidth, metaBoxHeight, 8 * scale, 8 * scale, "FD");
 
-  function drawBadge(x: number, yTop: number, kind: "person" | "truck") {
-    const size = 22 * scale;
-    doc.setFillColor(...colors.badgeBg);
-    doc.roundedRect(x, yTop, size, size, 5 * scale, 5 * scale, "F");
-    doc.setDrawColor(...colors.accent);
-    doc.setLineWidth(1.3);
-    const cx = x + size / 2;
-    const cy = yTop + size / 2;
-    if (kind === "person") {
-      // Simple head-and-shoulders glyph.
-      doc.circle(cx, cy - 3.5 * scale, 3.2 * scale, "S");
-      doc.line(cx - 5.5 * scale, cy + 7 * scale, cx - 3 * scale, cy + 1.5 * scale);
-      doc.line(cx - 3 * scale, cy + 1.5 * scale, cx + 3 * scale, cy + 1.5 * scale);
-      doc.line(cx + 3 * scale, cy + 1.5 * scale, cx + 5.5 * scale, cy + 7 * scale);
-      doc.line(cx - 5.5 * scale, cy + 7 * scale, cx + 5.5 * scale, cy + 7 * scale);
-    } else {
-      // Simple delivery-truck glyph: cab + box + two wheels.
-      doc.rect(cx - 6.5 * scale, cy - 3 * scale, 8 * scale, 6 * scale, "S");
-      doc.rect(cx + 1.5 * scale, cy - 1 * scale, 5 * scale, 4 * scale, "S");
-      doc.circle(cx - 3.5 * scale, cy + 4.5 * scale, 1.4 * scale, "S");
-      doc.circle(cx + 3.5 * scale, cy + 4.5 * scale, 1.4 * scale, "S");
+  let rowY = metaY + metaPad + smallSize * 0.6;
+  doc.setFontSize(smallSize);
+  metaRows.forEach(([label, value], i) => {
+    const isStatusRow = label === "Payment Status";
+    const pal = isStatusRow ? statusPalette(status, colors) : null;
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(...colors.navySoft);
+    doc.text(label, metaBoxX + metaPad, rowY);
+    doc.setFont("helvetica", "bold");
+    doc.setTextColor(...(pal ? pal.fg : colors.navy));
+    doc.text(value, metaBoxX + metaBoxWidth - metaPad, rowY, { align: "right" });
+    if (i < metaRows.length - 1) {
+      doc.setDrawColor(...colors.borderLight);
+      doc.setLineWidth(0.75);
+      doc.line(metaBoxX + metaPad, rowY + metaRowHeight - smallSize * 0.6, metaBoxX + metaBoxWidth - metaPad, rowY + metaRowHeight - smallSize * 0.6);
     }
-    return size;
+    rowY += metaRowHeight;
+  });
+
+  y = Math.max(logoBottom, leftY, metaY + metaBoxHeight) + 22 * scale;
+
+  // ---- Second info box: Document Type / Place of Supply / Tax Type /
+  // Payment Mode / Reference — full width, only rows with real data are
+  // shown. This mirrors the reference design's secondary details panel
+  // sitting between the header and the Bill To / Ship To cards. ----
+  const taxTypeLabel: Record<string, string> = {
+    gst: `GST${gstPercent ? ` (${gstPercent}%)` : ""}`,
+    non_gst: "Non-GST",
+    tax: `Tax${gstPercent ? ` (${gstPercent}%)` : ""}`,
+    non_tax: "Non-Tax",
+    // Legacy values, kept so older saved documents still show something
+    // sensible rather than nothing.
+    inclusive: `GST${gstPercent ? ` (${gstPercent}%)` : ""}`,
+    exclusive: `GST${gstPercent ? ` (${gstPercent}%)` : ""}`,
+    exempt: "Non-GST",
+  };
+  const infoRows: [string, string][] = [["Document Type", docLabel.charAt(0) + docLabel.slice(1).toLowerCase()]];
+  if (placeOfSupply) infoRows.push(["Place of Supply", placeOfSupply]);
+  if (taxType) infoRows.push(["Tax Type", taxTypeLabel[taxType] ?? taxType]);
+  if (paymentMethod) {
+    const methodLabel = paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1).replace(/_/g, " ");
+    infoRows.push(["Payment Mode", methodLabel]);
   }
 
-  function renderPartyBlock(
+  if (infoRows.length > 1 || placeOfSupply || taxType || paymentMethod) {
+    const infoBoxWidth = rightX - marginX;
+    const infoRowHeight = 18 * scale;
+    const infoPad = 14 * scale;
+    const infoIconSize = 34 * scale;
+    const infoBoxHeight = infoRows.length * infoRowHeight + infoPad * 2 - 4 * scale;
+    const infoBoxY = y;
+
+    doc.setDrawColor(...colors.border);
+    doc.setLineWidth(1);
+    doc.setFillColor(...colors.white);
+    doc.roundedRect(marginX, infoBoxY, infoBoxWidth, infoBoxHeight, 8 * scale, 8 * scale, "FD");
+
+    let infoRowY = infoBoxY + infoPad + smallSize * 0.6;
+    doc.setFontSize(smallSize);
+    infoRows.forEach(([label, value]) => {
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(...colors.navySoft);
+      doc.text(label, marginX + infoPad, infoRowY);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(...colors.navy);
+      doc.text(value, marginX + infoPad + 130 * scale, infoRowY);
+      infoRowY += infoRowHeight;
+    });
+
+    // Small circular icon badge on the right, matching the reference's
+    // document-icon accent — purely decorative, no data.
+    const iconCx = marginX + infoBoxWidth - infoPad - infoIconSize / 2;
+    const iconCy = infoBoxY + infoBoxHeight / 2;
+    doc.setFillColor(...colors.blue);
+    doc.circle(iconCx, iconCy, infoIconSize / 2, "F");
+    doc.setDrawColor(...colors.white);
+    doc.setLineWidth(1.4);
+    const iw = infoIconSize * 0.3;
+    doc.rect(iconCx - iw / 2, iconCy - iw * 0.65, iw, iw * 1.3, "S");
+    doc.line(iconCx - iw / 2 + 2, iconCy - iw * 0.3, iconCx + iw / 2 - 2, iconCy - iw * 0.3);
+    doc.line(iconCx - iw / 2 + 2, iconCy, iconCx + iw / 2 - 2, iconCy);
+
+    y = infoBoxY + infoBoxHeight + 20 * scale;
+  }
+
+  // ---- Bill To / Ship To — light bordered card(s) ----
+  const partyGap = 12 * scale;
+  const partyColWidth = shipTo ? (rightX - marginX - partyGap) / 2 : rightX - marginX;
+
+  function measurePartyBlockHeight(
+    label: string,
+    info: { name?: string | null; address?: string | null; phone?: string | null; email?: string | null; gstin?: string | null } | null,
+    width: number
+  ): number {
+    const innerWidth = width - 20 * scale;
+    // Header row now holds a 20pt icon badge (10pt top padding + 20pt
+    // badge + 12pt gap before the name), taller than the old plain text
+    // label row — must match renderPartyCard's actual layout exactly or
+    // the card either clips the name or leaves an unexplained gap.
+    let h = 32 * scale;
+    const nameLines = doc.splitTextToSize(info?.name || "Not specified", innerWidth);
+    h += nameLines.length * 13 * scale;
+    if (info?.address) {
+      const lines = doc.splitTextToSize(info.address, innerWidth);
+      h += lines.length * 11 * scale;
+    }
+    if (info?.phone) h += 11 * scale;
+    if (info?.email) h += 11 * scale;
+    if (info?.gstin) h += 11 * scale;
+    return h + 16 * scale; // bottom card padding (top padding already counted above)
+  }
+
+  function renderPartyCard(
     label: string,
     info: { name?: string | null; address?: string | null; phone?: string | null; email?: string | null; gstin?: string | null } | null,
     x: number,
-    badgeKind: "person" | "truck"
-  ) {
-    const badgeSize = drawBadge(x, y - 15 * scale, badgeKind);
-    const textX = x + badgeSize + 8 * scale;
+    width: number,
+    topY: number
+  ): number {
+    const innerWidth = width - 20 * scale;
+    const cardHeight = measurePartyBlockHeight(label, info, width);
 
+    doc.setFillColor(...colors.lightBlueBg);
+    doc.setDrawColor(...colors.border);
+    doc.roundedRect(x, topY, width, cardHeight, 6 * scale, 6 * scale, "FD");
+
+    // Small circular icon badge next to the section label, matching the
+    // reference's "person" icon for Bill To / Ship To / Supplier.
+    const badgeSize = 20 * scale;
+    const badgeCx = x + 10 * scale + badgeSize / 2;
+    const badgeCy = topY + 10 * scale + badgeSize / 2;
+    doc.setFillColor(...colors.blue);
+    doc.circle(badgeCx, badgeCy, badgeSize / 2, "F");
+    doc.setDrawColor(...colors.white);
+    doc.setLineWidth(1.2);
+    doc.circle(badgeCx, badgeCy - badgeSize * 0.12, badgeSize * 0.16, "S");
+    doc.setLineWidth(1);
+    doc.line(badgeCx - badgeSize * 0.22, badgeCy + badgeSize * 0.28, badgeCx - badgeSize * 0.1, badgeCy + badgeSize * 0.05);
+    doc.line(badgeCx - badgeSize * 0.1, badgeCy + badgeSize * 0.05, badgeCx + badgeSize * 0.1, badgeCy + badgeSize * 0.05);
+    doc.line(badgeCx + badgeSize * 0.1, badgeCy + badgeSize * 0.05, badgeCx + badgeSize * 0.22, badgeCy + badgeSize * 0.28);
+
+    const labelX = x + 14 * scale + badgeSize;
+    let py = topY + 10 * scale + smallSize;
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(smallSize);
-    doc.setTextColor(...colors.accent);
-    doc.text(label.toUpperCase(), textX, y);
-    let py = y + 15 * scale;
+    doc.setFontSize(tinySize + 1);
+    doc.setTextColor(...colors.blue);
+    doc.text(label.toUpperCase(), labelX, topY + badgeCy - topY - 2 * scale + tinySize * 0.35);
+    py = topY + 10 * scale + badgeSize + 12 * scale;
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(base);
-    doc.setTextColor(26, 26, 26);
-    doc.text(info?.name ?? "Not specified", x, py);
-    py += 14 * scale;
+    doc.setTextColor(...colors.navy);
+    const nameLines = doc.splitTextToSize(info?.name || "Not specified", innerWidth);
+    doc.text(nameLines, x + 10 * scale, py);
+    py += nameLines.length * 13 * scale;
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(smallSize);
-    doc.setTextColor(...colors.accentSoft);
+    doc.setTextColor(...colors.navySoft);
     if (info?.address) {
-      const lines = doc.splitTextToSize(info.address, partyColWidth);
-      doc.text(lines, x, py);
+      const lines = doc.splitTextToSize(info.address, innerWidth);
+      doc.text(lines, x + 10 * scale, py);
       py += lines.length * 11 * scale;
     }
-    if (info?.email) {
-      doc.text(info.email, x, py);
+    if (info?.phone) {
+      doc.text(`Phone: ${info.phone}`, x + 10 * scale, py);
       py += 11 * scale;
     }
-    if (info?.phone) {
-      doc.text(info.phone, x, py);
+    if (info?.email) {
+      doc.text(info.email, x + 10 * scale, py);
       py += 11 * scale;
     }
     if (info?.gstin) {
-      doc.text(`GSTIN: ${info.gstin}`, x, py);
+      doc.text(`GSTIN: ${info.gstin}`, x + 10 * scale, py);
       py += 11 * scale;
     }
-    return py;
+
+    return topY + cardHeight;
   }
 
-  const billBottom = renderPartyBlock(partyLabel, party, marginX, "person");
+  const billCardHeight = measurePartyBlockHeight(partyLabel, party, partyColWidth);
+  const shipCardHeight = shipTo ? measurePartyBlockHeight("Ship To", shipTo, partyColWidth) : 0;
+  y = ensureSpace(y, Math.max(billCardHeight, shipCardHeight) + 10 * scale);
+
+  const billBottom = renderPartyCard(partyLabel, party, marginX, partyColWidth, y);
   let shipBottom = billBottom;
   if (shipTo) {
-    const shipX = marginX + partyColWidth + 24 * scale;
-    shipBottom = renderPartyBlock("Ship To", shipTo, shipX, "truck");
+    shipBottom = renderPartyCard("Ship To", shipTo, marginX + partyColWidth + partyGap, partyColWidth, y);
   }
+  y = Math.max(billBottom, shipBottom) + 18 * scale;
 
-  y = Math.max(billBottom, shipBottom) + 14 * scale;
-
-  const planFeatures = getPlanFeatures(profile.plan);
-  const showHsn = planFeatures.gstBilling;
+  // ---- Items table ----
   const hasAnyTax = items.some((it) => Number(it.tax_percent ?? 0) > 0);
 
   autoTable(doc, {
@@ -464,11 +672,11 @@ async function renderStandardPdf(args: {
     head: [
       [
         "#",
-        "Item Description",
-        ...(showHsn ? ["HSN"] : []),
+        "Item / Description",
+        ...(showHsn ? ["HSN/SAC"] : []),
         "Qty",
         "Unit Price",
-        ...(hasAnyTax ? ["Tax (%)"] : []),
+        ...(hasAnyTax ? ["Tax"] : []),
         "Amount",
       ],
     ],
@@ -485,276 +693,387 @@ async function renderStandardPdf(args: {
       row.push(formatCurrencyForPdf(Number(item.line_total), currency));
       return row;
     }),
-    styles: { fontSize: smallSize, cellPadding: 8 * scale, textColor: [26, 26, 26] },
-    headStyles: { fillColor: colors.tableHeaderFill, textColor: colors.tableHeaderText },
-    alternateRowStyles: { fillColor: colors.tableAltRow },
-    columnStyles: {
-      0: { cellWidth: 22 * scale },
-      [showHsn ? 3 : 2]: { halign: "right" },
+    styles: {
+      fontSize: smallSize,
+      cellPadding: 7 * scale,
+      textColor: colors.navy,
+      lineColor: colors.border,
+      lineWidth: 0.75,
+      overflow: "linebreak",
     },
-    margin: { left: marginX, right: pageWidth - rightX },
+    headStyles: {
+      fillColor: colors.navy,
+      textColor: colors.white,
+      fontStyle: "bold",
+      lineWidth: 0,
+    },
+    alternateRowStyles: { fillColor: colors.borderLight },
+    columnStyles: (() => {
+      // Column order is always: # , Item , [HSN] , Qty , Unit Price ,
+      // [Tax] , Amount. Every column gets an explicit width — leaving any
+      // column unconstrained lets autoTable's auto-sizing squeeze the
+      // Item/Description column against a wide Amount value, or let a
+      // long description push the numeric columns toward the page edge.
+      // Fixed-width numeric columns are sized generously enough for real
+      // currency values (e.g. "Rs. 1,23,456.00") without wrapping; the
+      // Item column absorbs whatever width is left over.
+      const numCol = 62 * scale; // Qty / Unit Price / Amount
+      const hsnCol = 50 * scale;
+      const taxCol = 42 * scale;
+      const hashCol = 22 * scale;
+
+      let idx = 0;
+      const col: Record<number, { cellWidth?: number | "auto"; halign?: "left" | "center" | "right" }> = {};
+      col[idx] = { cellWidth: hashCol }; // #
+      idx += 1;
+      col[idx] = { cellWidth: "auto" }; // Item / Description — takes remaining space
+      idx += 1;
+      if (showHsn) {
+        col[idx] = { cellWidth: hsnCol };
+        idx += 1;
+      }
+      col[idx] = { cellWidth: numCol, halign: "right" }; // Qty
+      idx += 1;
+      col[idx] = { cellWidth: numCol, halign: "right" }; // Unit Price
+      idx += 1;
+      if (hasAnyTax) {
+        col[idx] = { cellWidth: taxCol, halign: "center" }; // Tax
+        idx += 1;
+      }
+      col[idx] = { cellWidth: numCol, halign: "right" }; // Amount
+      return col;
+    })(),
+    margin: { left: marginX, right: pageWidth - rightX, bottom: 40 * scale },
+    didDrawPage: () => {
+      // autoTable repeats the head row on every new page automatically;
+      // nothing extra to do here, this hook exists only so page breaks
+      // inside the table are visible to future maintainers reading this.
+    },
   });
 
   // @ts-expect-error - lastAutoTable is added by the plugin at runtime
-  let afterTableY = doc.lastAutoTable.finalY + 20 * scale;
+  let afterTableY: number = doc.lastAutoTable.finalY + 18 * scale;
+  // autoTable may have started new pages internally; keep our own page
+  // counter in sync so anything drawn after the table (which uses
+  // doc.setPage / newPage) lands on the right page.
+  pageNum = doc.getNumberOfPages();
+  doc.setPage(pageNum);
 
-  // Reserve enough space for the amount column based on the widest amount
-  // and label actually being printed, rather than a fixed offset — a fixed
-  // offset breaks on narrower pages (A5) or with bold/larger "Total" text,
-  // causing the label and the amount to visually overlap.
+  // ---- Totals summary card (right-aligned, only non-zero rows shown) ----
   const totalLineTax = items.reduce(
     (sum, it) => sum + Number(it.line_total) * (Number(it.tax_percent ?? 0) / 100),
     0
   );
-  // Shown as a single blended rate when every taxed line shares the same
-  // percentage (the common case); otherwise just labelled "Total Tax".
   const distinctTaxRates = Array.from(
     new Set(items.filter((it) => Number(it.tax_percent ?? 0) > 0).map((it) => Number(it.tax_percent)))
   );
-  const taxLabel =
-    distinctTaxRates.length === 1 ? `Total Tax (${distinctTaxRates[0]}%)` : "Total Tax";
-
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(base + 2);
-  const widestLabelWidth = doc.getTextWidth("Total");
-  const widestAmountWidth = Math.max(
-    doc.getTextWidth(formatCurrencyForPdf(subtotal, currency)),
-    doc.getTextWidth(formatCurrencyForPdf(gstAmount, currency)),
-    doc.getTextWidth(formatCurrencyForPdf(cgstAmount, currency)),
-    doc.getTextWidth(formatCurrencyForPdf(sgstAmount, currency)),
-    doc.getTextWidth(formatCurrencyForPdf(igstAmount, currency)),
-    doc.getTextWidth(formatCurrencyForPdf(totalLineTax, currency)),
-    doc.getTextWidth(formatCurrencyForPdf(total, currency))
-  );
-  const labelX = rightX - widestAmountWidth - widestLabelWidth - 24 * scale;
-
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(base);
-  doc.setTextColor(...colors.accentSoft);
-  doc.text("Subtotal", labelX, afterTableY, { align: "left" });
-  doc.text(formatCurrencyForPdf(subtotal, currency), rightX, afterTableY, { align: "right" });
-  afterTableY += 18 * scale;
-
+  const perLineTaxLabel =
+    distinctTaxRates.length === 1 ? `Tax (${distinctTaxRates[0]}%)` : "Tax";
   const hasGstSplit = cgstAmount > 0 || sgstAmount > 0 || igstAmount > 0;
 
-  // Show either the per-line "Total Tax" breakdown or the CGST/SGST/IGST
-  // split, never both — they represent the same tax amount computed two
-  // different ways, and showing both would visually double it.
-  if (!hasGstSplit && totalLineTax > 0) {
-    doc.text(taxLabel, labelX, afterTableY, { align: "left" });
-    doc.text(formatCurrencyForPdf(totalLineTax, currency), rightX, afterTableY, { align: "right" });
-    afterTableY += 18 * scale;
+  type TotalRow = { label: string; value: number; emphasis?: boolean };
+  const totalRows: TotalRow[] = [{ label: "Subtotal", value: subtotal }];
+  if (discountAmount > 0) totalRows.push({ label: "Discount", value: -discountAmount });
+  if (!hasGstSplit && totalLineTax > 0) totalRows.push({ label: perLineTaxLabel, value: totalLineTax });
+  if (cgstAmount > 0) totalRows.push({ label: "CGST", value: cgstAmount });
+  if (sgstAmount > 0) totalRows.push({ label: "SGST", value: sgstAmount });
+  if (igstAmount > 0) totalRows.push({ label: "IGST", value: igstAmount });
+  if (!hasGstSplit && igstAmount === 0 && cgstAmount === 0 && sgstAmount === 0 && gstEnabled && gstAmount > 0) {
+    // This only fires when the per-line tax rows above found nothing
+    // (totalLineTax === 0) but a document-level tax amount was still
+    // supplied — use the same generically-derived label rather than a
+    // hardcoded "GST" string, so a flat Tax-mode document never shows a
+    // misleading "GST (X%)" row.
+    const fallbackLabel = distinctTaxRates.length === 1 ? `Tax (${distinctTaxRates[0]}%)` : `Tax (${gstPercent}%)`;
+    totalRows.push({ label: fallbackLabel, value: gstAmount });
+  }
+  if (roundOff !== 0) totalRows.push({ label: "Round Off", value: roundOff });
+
+  const totalsBoxWidth = 230 * scale;
+  const totalsRowHeight = 16 * scale;
+  const totalsPad = 12 * scale;
+  const totalRowBoxHeight = 24 * scale;
+  const totalsBoxHeight =
+    totalsPad * 2 + totalRows.length * totalsRowHeight + 6 * scale + totalRowBoxHeight;
+  const totalsBoxX = rightX - totalsBoxWidth;
+
+  afterTableY = ensureSpace(afterTableY, totalsBoxHeight + 10 * scale);
+
+  doc.setDrawColor(...colors.border);
+  doc.setLineWidth(1);
+  doc.roundedRect(totalsBoxX, afterTableY, totalsBoxWidth, totalsBoxHeight, 6 * scale, 6 * scale, "S");
+
+  let trY = afterTableY + totalsPad + smallSize;
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(smallSize);
+  for (const row of totalRows) {
+    doc.setTextColor(...colors.navySoft);
+    doc.text(row.label, totalsBoxX + totalsPad, trY);
+    doc.setTextColor(...colors.navy);
+    const shown =
+      row.value < 0
+        ? `-${formatCurrencyForPdf(Math.abs(row.value), currency)}`
+        : formatCurrencyForPdf(row.value, currency);
+    doc.text(shown, totalsBoxX + totalsBoxWidth - totalsPad, trY, { align: "right" });
+    trY += totalsRowHeight;
   }
 
-  if (cgstAmount > 0 || sgstAmount > 0) {
-    doc.text("CGST", labelX, afterTableY, { align: "left" });
-    doc.text(formatCurrencyForPdf(cgstAmount, currency), rightX, afterTableY, { align: "right" });
-    afterTableY += 18 * scale;
-    doc.text("SGST", labelX, afterTableY, { align: "left" });
-    doc.text(formatCurrencyForPdf(sgstAmount, currency), rightX, afterTableY, { align: "right" });
-    afterTableY += 18 * scale;
-  } else if (igstAmount > 0) {
-    doc.text("IGST", labelX, afterTableY, { align: "left" });
-    doc.text(formatCurrencyForPdf(igstAmount, currency), rightX, afterTableY, { align: "right" });
-    afterTableY += 18 * scale;
-  } else if (gstEnabled) {
-    doc.text(`GST (${gstPercent}%)`, labelX, afterTableY, { align: "left" });
-    doc.text(formatCurrencyForPdf(gstAmount, currency), rightX, afterTableY, { align: "right" });
-    afterTableY += 18 * scale;
-  }
-
-  doc.setDrawColor(...colors.rule);
-  doc.line(labelX, afterTableY, rightX, afterTableY);
-  afterTableY += 18 * scale;
-
+  trY += 4 * scale;
+  const totalBarY = trY - totalsRowHeight / 2 - 2 * scale;
+  doc.setFillColor(...colors.navy);
+  doc.roundedRect(totalsBoxX, totalBarY, totalsBoxWidth, totalRowBoxHeight, 5 * scale, 5 * scale, "F");
   doc.setFont("helvetica", "bold");
-  doc.setFontSize(base + 2);
-  doc.setTextColor(...colors.accent);
-  doc.text("Total", labelX, afterTableY, { align: "left" });
-  doc.text(formatCurrencyForPdf(total, currency), rightX, afterTableY, { align: "right" });
-  afterTableY += 22 * scale;
+  doc.setFontSize(base + 1.5);
+  doc.setTextColor(...colors.white);
+  doc.text("TOTAL", totalsBoxX + totalsPad, totalBarY + totalRowBoxHeight / 2 + 4 * scale);
+  doc.text(
+    formatCurrencyForPdf(total, currency),
+    totalsBoxX + totalsBoxWidth - totalsPad,
+    totalBarY + totalRowBoxHeight / 2 + 4 * scale,
+    { align: "right" }
+  );
 
-  // Amount in words — printed on every INR document, right under the
-  // total. Skipped for other currencies since the "Rupees ... Only"
-  // phrasing is India-specific; a proper multi-currency version isn't
-  // built yet.
+  afterTableY = afterTableY + totalsBoxHeight + 20 * scale;
+
+  // ---- Amount in words — its own clearly-labelled block, full width,
+  // below both the table and the totals card (INR only — the "Rupees ...
+  // Only" phrasing is India-specific and a multi-currency version isn't
+  // built yet). ----
   if (currency === "INR") {
-    doc.setFont("helvetica", "italic");
-    doc.setFontSize(smallSize);
-    doc.setTextColor(...colors.accentSoft);
-    const wordsLines = doc.splitTextToSize(
-      `Amount in words: ${amountToWordsINR(total)}`,
-      pageWidth - marginX * 2
-    );
-    doc.text(wordsLines, marginX, afterTableY);
-    afterTableY += wordsLines.length * 12 * scale + 14 * scale;
-  }
+    afterTableY = ensureSpace(afterTableY, 34 * scale);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(tinySize);
+    doc.setTextColor(...colors.blue);
+    doc.text("AMOUNT IN WORDS", marginX, afterTableY);
+    afterTableY += 13 * scale;
 
-  if (notes) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(smallSize);
-    doc.setTextColor(86, 82, 72);
-    doc.text("Notes", marginX, afterTableY);
+    doc.setTextColor(...colors.navy);
+    const wordsLines = doc.splitTextToSize(amountToWordsINR(total), pageWidth - marginX * 2);
+    doc.text(wordsLines, marginX, afterTableY);
+    afterTableY += wordsLines.length * 12 * scale + 8 * scale;
+  }
+
+  // Small, subtle "Generated by Zen Biz" watermark — Starter plan only.
+  // Sits directly under Amount in Words (or in the same spot when there's
+  // no Amount in Words block, e.g. non-INR currency), not as a giant
+  // diagonal stamp and not buried in the page footer, so it's visible
+  // without being distracting or interfering with the printed figures.
+  if (showWatermark) {
+    afterTableY = ensureSpace(afterTableY, 16 * scale);
+    doc.setFont("helvetica", "italic");
+    doc.setFontSize(smallSize - 1.5);
+    doc.setTextColor(158, 158, 158);
+    doc.text("Generated by Zen Biz", marginX, afterTableY);
     afterTableY += 14 * scale;
+  }
+
+  // ---- Notes (if any) ----
+  if (notes) {
+    afterTableY = ensureSpace(afterTableY, 30 * scale);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(tinySize);
+    doc.setTextColor(...colors.blue);
+    doc.text("NOTES", marginX, afterTableY);
+    afterTableY += 13 * scale;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(smallSize);
+    doc.setTextColor(...colors.navySoft);
     const noteLines = doc.splitTextToSize(notes, pageWidth - marginX * 2);
     doc.text(noteLines, marginX, afterTableY);
     afterTableY += noteLines.length * 12 * scale + 10 * scale;
   }
 
-  // Terms & Conditions (left) and Signature/Seal (right), side by side —
-  // both optional and independent per document type.
-  if (terms || signatureUrl) {
-    afterTableY += 10 * scale;
-    doc.setDrawColor(...colors.rule);
-    doc.line(marginX, afterTableY, rightX, afterTableY);
-    afterTableY += 20 * scale;
-
-    const columnWidth = (rightX - marginX) / 2 - 10 * scale;
-    let termsBottomY = afterTableY;
-
-    if (terms) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(smallSize + 0.5);
-      doc.setTextColor(...colors.accent);
-      doc.text("Terms & Conditions", marginX, afterTableY);
-      let ty = afterTableY + 14 * scale;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(smallSize - 0.5);
-      doc.setTextColor(86, 82, 72);
-      const termsLines = doc.splitTextToSize(terms, columnWidth);
-      doc.text(termsLines, marginX, ty);
-      ty += termsLines.length * 10.5 * scale;
-      termsBottomY = ty;
-    }
-
-    if (signatureUrl) {
-      const sigX = marginX + columnWidth + 20 * scale;
-      const sigBoxWidth = columnWidth;
-      const sigBoxHeight = 60 * scale;
-      try {
-        const imageData = await loadImageAsDataUrl(signatureUrl);
-        if (imageData) {
-                    doc.addImage(imageData, sigX, afterTableY, sigBoxWidth, sigBoxHeight);
-        }
-      } catch {
-        // If the signature image can't be loaded (network hiccup, deleted
-        // file), the PDF still generates fine — just without the image.
-      }
-      doc.setDrawColor(...colors.rule);
-      doc.line(sigX, afterTableY + sigBoxHeight + 4 * scale, sigX + sigBoxWidth, afterTableY + sigBoxHeight + 4 * scale);
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(smallSize - 1);
-      doc.setTextColor(86, 82, 72);
-      doc.text("Authorized Signatory", sigX, afterTableY + sigBoxHeight + 16 * scale);
-      termsBottomY = Math.max(termsBottomY, afterTableY + sigBoxHeight + 16 * scale);
-    }
-
-    afterTableY = termsBottomY;
-  }
-
-  // Bank details (left) and payment QR (right) — shared business-wide,
-  // shown on every document when the owner has filled them in.
+  // ---- Three-column footer cards: Payment Information (green), Bank
+  // Details (blue), Terms & Conditions (orange) — each only shown when
+  // it has real content, and each independently sized to its own
+  // content so a short Payment Information card never gets padded out
+  // to match a long Terms block. ----
   const hasBankDetails =
     bankDetails &&
-    (bankDetails.bankName || bankDetails.accountName || bankDetails.accountNumber || bankDetails.ifscOrSwift);
-  if (hasBankDetails || qrUrl) {
-    afterTableY += 14 * scale;
-    doc.setDrawColor(...colors.rule);
-    doc.line(marginX, afterTableY, rightX, afterTableY);
-    afterTableY += 18 * scale;
+    (bankDetails.bankName || bankDetails.accountName || bankDetails.accountNumber || bankDetails.ifscOrSwift || bankDetails.upiId);
+  const hasPaymentInfo = Boolean(status) || Boolean(paymentMethod) || Boolean(dueDate);
 
-    let bankBottomY = afterTableY;
+  const footerCards: { key: string; title: string; accent: [number, number, number]; accentBg: [number, number, number]; lines: string[] }[] = [];
 
-    if (hasBankDetails) {
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(smallSize + 0.5);
-      doc.setTextColor(...colors.accent);
-      doc.text("Payment details", marginX, afterTableY);
-      let by = afterTableY + 14 * scale;
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(smallSize - 0.5);
-      doc.setTextColor(86, 82, 72);
-      const bankLines = [
-        bankDetails?.bankName ? `Bank: ${bankDetails.bankName}` : null,
-        bankDetails?.accountName ? `Account name: ${bankDetails.accountName}` : null,
-        bankDetails?.accountNumber ? `Account no: ${bankDetails.accountNumber}` : null,
-        bankDetails?.ifscOrSwift ? `IFSC/SWIFT: ${bankDetails.ifscOrSwift}` : null,
-      ].filter((l): l is string => Boolean(l));
-      for (const line of bankLines) {
-        doc.text(line, marginX, by);
-        by += 12 * scale;
-      }
-      by += 4 * scale;
-      doc.setFont("helvetica", "italic");
-      doc.setFontSize(smallSize - 1.5);
-      doc.setTextColor(...colors.accentSoft);
-      doc.text("We accept: Bank Transfer, UPI, Cash, Cheque", marginX, by);
-      by += 11 * scale;
-      bankBottomY = by;
-    }
-
-    if (qrUrl) {
-      const qrSize = 70 * scale;
-      const qrX = rightX - qrSize;
-      try {
-        const imageData = await loadImageAsDataUrl(qrUrl);
-        if (imageData) {
-                    doc.addImage(imageData, qrX, afterTableY, qrSize, qrSize);
-        }
-      } catch {
-        // Skip the QR image if it can't be loaded — the rest of the PDF
-        // still generates fine.
-      }
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(smallSize - 1.5);
-      doc.setTextColor(86, 82, 72);
-      doc.text("Scan to pay", qrX + qrSize / 2, afterTableY + qrSize + 12 * scale, {
-        align: "center",
-      });
-      bankBottomY = Math.max(bankBottomY, afterTableY + qrSize + 12 * scale);
-    }
-
-    afterTableY = bankBottomY;
+  if (hasPaymentInfo) {
+    const lines: string[] = [];
+    if (status) lines.push(`Payment Status: ${status.charAt(0).toUpperCase()}${status.slice(1).toLowerCase()}`);
+    if (paymentMethod) lines.push(`Payment Mode: ${paymentMethod.charAt(0).toUpperCase()}${paymentMethod.slice(1).replace(/_/g, " ")}`);
+    if (dueDate) lines.push(`Due Date: ${dueDate}`);
+    footerCards.push({ key: "payment", title: "Payment Information", accent: colors.green, accentBg: colors.greenBg, lines });
+  }
+  if (hasBankDetails) {
+    const lines = [
+      bankDetails?.bankName ? `Bank Name: ${bankDetails.bankName}` : null,
+      bankDetails?.accountName ? `A/C Name: ${bankDetails.accountName}` : null,
+      bankDetails?.accountNumber ? `A/C No: ${bankDetails.accountNumber}` : null,
+      bankDetails?.ifscOrSwift ? `IFSC: ${bankDetails.ifscOrSwift}` : null,
+      bankDetails?.upiId ? `UPI: ${bankDetails.upiId}` : null,
+    ].filter((l): l is string => Boolean(l));
+    footerCards.push({ key: "bank", title: "Bank Details", accent: colors.blue, accentBg: colors.lightBlueBg, lines });
+  }
+  if (terms) {
+    footerCards.push({ key: "terms", title: "Terms & Conditions", accent: colors.orange, accentBg: colors.orangeBg, lines: [] });
   }
 
-  doc.setFont("helvetica", "italic");
-  doc.setFontSize(smallSize - 1);
-  doc.setTextColor(150, 145, 135);
-  // Pin the footer near the bottom of the page, but never let it overlap
-  // content above it — a long Terms & Conditions block or many line items
-  // can push afterTableY past the usual footer position. This does not add
-  // a second page; on genuinely long documents the footer note will simply
-  // sit directly under the content instead of pagination (multi-page PDFs
-  // aren't implemented yet).
-  const footerY = Math.max((dims.height as number) - 30 * scale, afterTableY + 20 * scale);
-  doc.text("Generated with Zen Biz", marginX, footerY);
+  if (footerCards.length > 0) {
+    const cardGap = 10 * scale;
+    const cardCount = footerCards.length;
+    const cardWidth = (rightX - marginX - cardGap * (cardCount - 1)) / cardCount;
+    const cardPad = 12 * scale;
+    const cardInnerWidth = cardWidth - cardPad * 2;
 
-  if (planFeatures.invoiceWatermark) {
-    // Diagonal watermark across the page — Starter plan only. Drawn last
-    // so it layers over the content, but at low opacity so nothing becomes
-    // unreadable.
-    doc.saveGraphicsState();
-    // @ts-expect-error - GState is part of jsPDF's runtime API but not in
-    // the bundled type definitions for this version.
-    doc.setGState(new doc.GState({ opacity: 0.08 }));
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(60 * scale);
-    doc.setTextColor(15, 61, 62);
-    doc.text("ZEN BIZ", pageWidth / 2, (dims.height as number) / 2, {
-      align: "center",
-      angle: 35,
+    // Terms wraps to the card's own width, computed only now that we
+    // know how wide each card actually is.
+    const termsLines = terms ? doc.splitTextToSize(terms, cardInnerWidth) : [];
+    const termsCard = footerCards.find((c) => c.key === "terms");
+
+    // Measure each card's own height independently — cards are not
+    // forced to match each other's height, matching the reference where
+    // a short Payment Information card sits shorter than a longer Terms
+    // card.
+    function cardBodyLines(card: (typeof footerCards)[number]): string[] {
+      if (card.key === "terms") return termsLines;
+      return card.lines;
+    }
+    const cardHeights = footerCards.map((card) => {
+      const bodyLines = cardBodyLines(card);
+      const lineHeight = card.key === "terms" ? 11 * scale : 13 * scale;
+      return cardPad * 2 + 16 * scale + bodyLines.length * lineHeight;
     });
-    doc.restoreGraphicsState();
+    const rowHeight = Math.max(...cardHeights);
+
+    afterTableY = ensureSpace(afterTableY, rowHeight + 14 * scale);
+    afterTableY += 6 * scale;
+
+    footerCards.forEach((card, i) => {
+      const cardX = marginX + i * (cardWidth + cardGap);
+      const cardHeight = cardHeights[i];
+
+      doc.setFillColor(...card.accentBg);
+      doc.setDrawColor(...colors.border);
+      doc.setLineWidth(1);
+      doc.roundedRect(cardX, afterTableY, cardWidth, cardHeight, 7 * scale, 7 * scale, "FD");
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(tinySize + 0.5);
+      doc.setTextColor(...card.accent);
+      doc.text(card.title.toUpperCase(), cardX + cardPad, afterTableY + cardPad + smallSize * 0.6);
+
+      let cy = afterTableY + cardPad + 16 * scale;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(smallSize - 0.5);
+      doc.setTextColor(...colors.navySoft);
+      const bodyLines = cardBodyLines(card);
+      const lineStep = card.key === "terms" ? 11 * scale : 13 * scale;
+      for (const line of bodyLines) {
+        doc.text(line, cardX + cardPad, cy);
+        cy += lineStep;
+      }
+    });
+
+    afterTableY += rowHeight + 20 * scale;
+  }
+
+  // ---- QR code (if provided) — small, left-aligned, with a short label
+  // matching the reference's "Scan to Contact" / "Scan to pay" style. ----
+  if (qrUrl) {
+    const qrSize = 62 * scale;
+    afterTableY = ensureSpace(afterTableY, qrSize + 20 * scale);
+    try {
+      const imageData = await loadImageAsDataUrl(qrUrl);
+      if (imageData) {
+        doc.addImage(imageData, marginX, afterTableY, qrSize, qrSize);
+      }
+    } catch {
+      // Skip the QR image if it can't be loaded — the rest of the PDF
+      // still generates fine.
+    }
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(tinySize);
+    doc.setTextColor(...colors.navySoft);
+    doc.text("Scan to Contact", marginX + qrSize / 2, afterTableY + qrSize + 11 * scale, { align: "center" });
+    afterTableY += qrSize + 20 * scale;
+  }
+
+  // ---- Signature — bottom-right, "For {Business}" / image / line /
+  // "Authorized Signatory" ----
+  const sigBoxWidth = 170 * scale;
+  const sigBoxHeight = 46 * scale;
+  const sigBlockTotalHeight = 10 * scale + 8 * scale + sigBoxHeight + 12 * scale + 10 * scale;
+  afterTableY = ensureSpace(afterTableY, sigBlockTotalHeight + 8 * scale);
+  const sigX = rightX - sigBoxWidth;
+  let sigY = afterTableY;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(smallSize);
+  doc.setTextColor(...colors.navy);
+  doc.text(`For ${profile.business_name || "Your Business"}`, rightX, sigY, { align: "right" });
+  sigY += 8 * scale;
+
+  if (signatureUrl) {
+    try {
+      const imageData = await loadImageAsDataUrl(signatureUrl);
+      if (imageData) {
+        doc.addImage(imageData, sigX, sigY, sigBoxWidth, sigBoxHeight, undefined, undefined);
+      }
+    } catch {
+      // If the signature image can't be loaded, the PDF still generates
+      // fine — just without the image, leaving the line and label.
+    }
+  }
+  sigY += sigBoxHeight;
+
+  doc.setDrawColor(...colors.border);
+  doc.setLineWidth(1);
+  doc.line(sigX, sigY, rightX, sigY);
+  sigY += 12 * scale;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(tinySize);
+  doc.setTextColor(...colors.navySoft);
+  doc.text("Authorized Signatory", rightX, sigY, { align: "right" });
+
+  afterTableY = Math.max(afterTableY, sigY) + 20 * scale;
+
+  // ---- Footer — drawn on every page: a thin top rule, "Thank you" on the
+  // left, "Generated with Zen Biz" on the right. For the Starter plan,
+  // append a small watermark note instead of the old huge diagonal
+  // "ZEN BIZ" stamp across the page. ----
+  const totalPages = doc.getNumberOfPages();
+  for (let p = 1; p <= totalPages; p++) {
+    doc.setPage(p);
+    const footerY = pageHeight - 24 * scale;
+    doc.setDrawColor(...colors.border);
+    doc.setLineWidth(0.75);
+    doc.line(marginX, footerY - 10 * scale, rightX, footerY - 10 * scale);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(tinySize);
+    doc.setTextColor(...colors.navySoft);
+    doc.text("Thank you for your business.", marginX, footerY);
+    doc.text("Generated with Zen Biz", rightX, footerY, { align: "right" });
+
+    if (totalPages > 1) {
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(tinySize - 1);
+      doc.setTextColor(...colors.navySoft);
+      doc.text(`Page ${p} of ${totalPages}`, pageWidth / 2, footerY - 10 * scale - 4 * scale, {
+        align: "center",
+      });
+    }
   }
 
   doc.save(`${filenamePrefix}-${docNumber}.pdf`);
 }
 
 // ---------------------------------------------------------------------------
-// Thermal layout — narrow single-column receipt style, height grows with
-// content since receipt printers don't use a fixed page length.
+// Thermal layout — narrow single-column receipt style for 58mm and 80mm
+// printers. Height grows with content since receipt printers don't use a
+// fixed page length. Monochrome by nature (thermal printers can't render
+// colour), styled with rules and spacing rather than colour fills.
 // ---------------------------------------------------------------------------
 function renderThermalPdf(args: {
   docLabel: string;
@@ -768,10 +1087,15 @@ function renderThermalPdf(args: {
   gstEnabled: boolean;
   gstPercent: number;
   gstAmount: number;
+  cgstAmount?: number;
+  sgstAmount?: number;
+  igstAmount?: number;
+  roundOff?: number;
   total: number;
   notes?: string | null;
   profile: Profile;
   filenamePrefix: string;
+  paperSize: "thermal" | "thermal58";
   fontSize: number;
   style: string;
   terms?: string | null;
@@ -781,261 +1105,349 @@ function renderThermalPdf(args: {
     accountName?: string | null;
     accountNumber?: string | null;
     ifscOrSwift?: string | null;
+    upiId?: string | null;
   } | null;
 }) {
   const {
     docLabel, docNumber, docDate, status, partyLabel, party, items, subtotal,
-    gstEnabled, gstPercent, gstAmount, total, notes, profile, filenamePrefix, fontSize, style, terms,
+    gstEnabled, gstPercent, gstAmount, cgstAmount = 0, sgstAmount = 0, igstAmount = 0,
+    roundOff = 0, total, notes, profile, filenamePrefix, paperSize, fontSize, style, terms,
     currency = "INR", bankDetails,
   } = args;
 
-  // "Default" gives the business name a bold boxed banner and solid rules —
-  // reads like a proper till receipt. "Simple" drops the box and uses
-  // dashed minimal rules — the bare-bones fastest-to-print version. Both
-  // stay monochrome since thermal printers can't render colour.
+  // Thermal receipts are inherently monochrome — no colour fills, only
+  // rule weight and dashed-vs-solid lines distinguish "Default" from
+  // "Simple". "Default" uses solid double rules and a boxed TOTAL for a
+  // more finished look; "Simple" uses dashed rules throughout for the
+  // fastest, most ink-light print.
   const isSimple = style === "thermal_simple";
   const planFeatures = getPlanFeatures(profile.plan);
-  // HSN code is a GST compliance field — only Business-plan accounts see it
-  // printed on documents, even though it can be entered for free.
   const showHsn = planFeatures.gstBilling;
+  const showWatermark = planFeatures.invoiceWatermark;
+  const is58 = paperSize === "thermal58";
 
-  const pageWidth = PAPER_DIMENSIONS.thermal.width;
-  const marginX = 10;
+  const pageWidth = PAPER_DIMENSIONS[paperSize].width;
+  const marginX = is58 ? 8 : 10;
   const contentWidth = pageWidth - marginX * 2;
-  const base = fontSize;
+  const base = is58 ? Math.max(fontSize - 1, 7) : fontSize;
+  const centerX = pageWidth / 2;
 
-  // Thermal receipts have no fixed page length — estimate the final height
-  // from content up front (line-by-line) so the generated PDF page is
-  // trimmed to size rather than left with a large blank tail.
-  const lineHeight = 11;
-  let estimatedLines = 26; // header, party info, totals, amount-in-words, signature, footer
+  const hasAnyTax = items.some((it) => Number(it.tax_percent ?? 0) > 0);
+  const hasGstSplit = cgstAmount > 0 || sgstAmount > 0 || igstAmount > 0;
+  const totalLineTax = items.reduce(
+    (sum, it) => sum + Number(it.line_total) * (Number(it.tax_percent ?? 0) / 100),
+    0
+  );
+
+  // Estimate the final page height from content up front (line-by-line)
+  // so the generated PDF is trimmed to size rather than left with a large
+  // blank tail — thermal receipts have no fixed page length, and unlike
+  // A4/A5 there's no page-break mechanism here, so under-estimating this
+  // directly clips content off the bottom of the receipt.
+  const lineHeight = is58 ? 10 : 11;
+  // Fixed content that's always drawn, counted in line-equivalents:
+  // business name, up to 3 header contact lines, 2 rules + doc label,
+  // meta rows (No/Date/Currency + optional Status), party name, items
+  // table header, closing rule, "TOTAL" box, "Thank you" + For Business +
+  // Authorized Signatory + Generated with Zen Biz + optional watermark
+  // line, plus general line-spacing slop between sections.
+  let estimatedLines = 42;
   for (const item of items) {
-    const nameLines = Math.ceil(item.description.length / 28) || 1;
-    estimatedLines += nameLines + 1; // description line(s) + qty/price line
+    const nameLines = Math.ceil(item.description.length / (is58 ? 20 : 26)) || 1;
+    estimatedLines += nameLines + 1;
     if (item.item_code || (showHsn && item.hsn_code)) estimatedLines += 1;
   }
-  if (profile.address) estimatedLines += Math.ceil(profile.address.length / 32);
-  if (notes) estimatedLines += Math.ceil(notes.length / 32) + 1;
-  if (terms) estimatedLines += Math.ceil(terms.length / 32) + 2;
+  if (profile.address) estimatedLines += Math.ceil(profile.address.length / (is58 ? 24 : 30));
+  if (notes) estimatedLines += Math.ceil(notes.length / (is58 ? 24 : 30)) + 1;
+  if (terms) estimatedLines += Math.ceil(terms.length / (is58 ? 24 : 30)) + 2;
   if (bankDetails) {
     const bankFieldCount = [
-      bankDetails.bankName,
-      bankDetails.accountName,
-      bankDetails.accountNumber,
-      bankDetails.ifscOrSwift,
+      bankDetails.bankName, bankDetails.accountName, bankDetails.accountNumber,
+      bankDetails.ifscOrSwift, bankDetails.upiId,
     ].filter(Boolean).length;
     if (bankFieldCount > 0) estimatedLines += bankFieldCount + 2;
   }
+  if (currency === "INR") {
+    // "Amount in words:" label + up to ~3 wrapped lines for the amount
+    // itself — not previously counted at all.
+    estimatedLines += 4;
+  }
+  totalRowsEstimate: {
+    let n = 1; // subtotal
+    if (!hasGstSplit && totalLineTax > 0) n += 1;
+    if (cgstAmount > 0) n += 1;
+    if (sgstAmount > 0) n += 1;
+    if (igstAmount > 0) n += 1;
+    if (roundOff !== 0) n += 1;
+    estimatedLines += n;
+  }
 
-  const estimatedHeight = Math.max(230, estimatedLines * lineHeight + 60);
+  // A generous safety margin on top of the line estimate — better to
+  // trim a little blank space at the very bottom (harmless) than to clip
+  // real content (a broken receipt).
+  const estimatedHeight = Math.max(is58 ? 260 : 300, estimatedLines * lineHeight + 90);
   const doc = new jsPDF({ unit: "pt", format: [pageWidth, estimatedHeight] });
 
-  let y = 20;
+  let y = is58 ? 16 : 20;
 
-  if (!isSimple) {
-    // Boxed banner around the business name for the Default thermal style.
-    doc.setDrawColor(26, 26, 26);
-    doc.setLineWidth(1);
-    doc.rect(marginX, y - 12, contentWidth, 22);
+  function rule(dashed: boolean, weight = 1) {
+    doc.setLineWidth(weight);
+    doc.setDrawColor(60, 60, 60);
+    if (dashed) doc.setLineDashPattern([2, 1.5], 0);
+    else doc.setLineDashPattern([], 0);
+    doc.line(marginX, y, pageWidth - marginX, y);
   }
 
+  // ---- Centered header: business name, address, phone, GSTIN ----
   doc.setFont("courier", "bold");
   doc.setFontSize(base + 2);
-  doc.setTextColor(26, 26, 26);
-  doc.text(profile.business_name || "Your Business", pageWidth / 2, y, { align: "center" });
-  y += isSimple ? 14 : 20;
+  doc.setTextColor(20, 20, 20);
+  doc.text(profile.business_name || "Your Business", centerX, y, { align: "center" });
+  y += is58 ? 12 : 15;
 
   doc.setFont("courier", "normal");
   doc.setFontSize(base - 1);
-  if (profile.phone) {
-    doc.text(profile.phone, pageWidth / 2, y, { align: "center" });
-    y += 11;
-  }
+  doc.setTextColor(50, 50, 50);
   if (profile.address) {
     const lines = doc.splitTextToSize(profile.address, contentWidth);
-    doc.text(lines, pageWidth / 2, y, { align: "center" });
-    y += lines.length * 11;
+    doc.text(lines, centerX, y, { align: "center" });
+    y += lines.length * lineHeight;
+  }
+  if (profile.phone) {
+    doc.text(`Tel: ${profile.phone}`, centerX, y, { align: "center" });
+    y += lineHeight;
   }
   if (profile.gst_number) {
-    doc.text(`GSTIN: ${profile.gst_number}`, pageWidth / 2, y, { align: "center" });
-    y += 11;
+    doc.text(`GSTIN: ${profile.gst_number}`, centerX, y, { align: "center" });
+    y += lineHeight;
   }
 
-  y += 6;
-  if (isSimple) {
-    doc.setLineDashPattern([2, 1], 0);
-  } else {
-    doc.setLineDashPattern([], 0);
-    doc.setLineWidth(1.2);
-  }
-  doc.line(marginX, y, pageWidth - marginX, y);
-  doc.setLineWidth(1);
+  y += 4;
+  rule(isSimple, isSimple ? 1 : 1.4);
   y += 14;
 
   doc.setFont("courier", "bold");
-  doc.setFontSize(base);
-  doc.text(docLabel, marginX, y);
-  y += 13;
-
-  doc.setFont("courier", "normal");
-  doc.setFontSize(base - 1);
-  doc.text(`No: ${docNumber}`, marginX, y);
-  y += 11;
-  doc.text(`Date: ${docDate}`, marginX, y);
-  y += 11;
-  if (status) {
-    doc.text(`Status: ${status.toUpperCase()}`, marginX, y);
-    y += 11;
-  }
-  y += 3;
-
-  doc.text(`${partyLabel}: ${party?.name ?? "Not specified"}`, marginX, y);
-  y += 11;
-  if (party?.phone) {
-    doc.text(party.phone, marginX, y);
-    y += 11;
-  }
-
-  y += 6;
-  if (isSimple) {
-    doc.setLineDashPattern([2, 1], 0);
-  } else {
-    doc.setLineDashPattern([], 0);
-  }
-  doc.line(marginX, y, pageWidth - marginX, y);
+  doc.setFontSize(base + 1);
+  doc.text(docLabel, centerX, y, { align: "center" });
   y += 14;
 
+  rule(isSimple, isSimple ? 1 : 1.4);
+  y += 13;
+
+  // ---- Meta: No / Date / Currency / Status, label:value pairs ----
+  doc.setFont("courier", "normal");
+  doc.setFontSize(base - 1);
+  function metaLine(label: string, value: string) {
+    doc.text(label, marginX, y);
+    doc.text(value, pageWidth - marginX, y, { align: "right" });
+    y += lineHeight;
+  }
+  metaLine("No.", docNumber);
+  metaLine("Date", docDate);
+  metaLine("Currency", currency);
+  if (status) metaLine("Status", status.toUpperCase());
+
+  if (party?.name) {
+    y += 3;
+    doc.setFont("courier", "bold");
+    doc.text(`${partyLabel}:`, marginX, y);
+    y += lineHeight;
+    doc.setFont("courier", "normal");
+    const nameLines = doc.splitTextToSize(party.name, contentWidth);
+    doc.text(nameLines, marginX, y);
+    y += nameLines.length * lineHeight;
+    if (party.phone) {
+      doc.text(party.phone, marginX, y);
+      y += lineHeight;
+    }
+  }
+
+  y += 4;
+  rule(true);
+  y += 13;
+
+  // ---- Items ----
   doc.setFont("courier", "bold");
   doc.setFontSize(base - 1);
   doc.text("ITEM", marginX, y);
-  doc.text("TOTAL", pageWidth - marginX, y, { align: "right" });
+  doc.text("QTY", pageWidth - marginX - (is58 ? 60 : 75), y, { align: "right" });
+  doc.text(is58 ? "AMT" : "RATE/AMT", pageWidth - marginX, y, { align: "right" });
+  y += lineHeight + 2;
+  rule(true);
   y += 12;
 
   doc.setFont("courier", "normal");
   for (const item of items) {
-    const nameLines = doc.splitTextToSize(item.description, contentWidth - 50);
+    const nameLines = doc.splitTextToSize(item.description, contentWidth - (is58 ? 55 : 70));
     doc.text(nameLines, marginX, y);
+    doc.text(String(item.quantity), pageWidth - marginX - (is58 ? 60 : 75), y, { align: "right" });
     doc.text(formatCurrencyForPdf(Number(item.line_total), currency), pageWidth - marginX, y, {
       align: "right",
     });
-    y += nameLines.length * 11;
+    y += nameLines.length * lineHeight;
+
     doc.setFontSize(base - 2);
-    doc.text(
-      `  ${item.quantity} ${item.unit} x ${formatCurrencyForPdf(Number(item.unit_price), currency)}`,
-      marginX,
-      y
-    );
-    y += 11;
+    doc.setTextColor(90, 90, 90);
+    const rateLine = `  ${item.quantity} ${item.unit} x ${formatCurrencyForPdf(Number(item.unit_price), currency)}`;
+    doc.text(rateLine, marginX, y);
+    y += lineHeight;
     if (item.item_code || (showHsn && item.hsn_code)) {
       const codeParts = [
         item.item_code ? `Code: ${item.item_code}` : null,
         showHsn && item.hsn_code ? `HSN: ${item.hsn_code}` : null,
       ].filter(Boolean);
       doc.text(`  ${codeParts.join("  ")}`, marginX, y);
-      y += 11;
+      y += lineHeight;
     }
     doc.setFontSize(base - 1);
+    doc.setTextColor(20, 20, 20);
     y += 2;
   }
 
-  y += 4;
-  if (isSimple) {
-    doc.setLineDashPattern([2, 1], 0);
-  } else {
-    doc.setLineDashPattern([], 0);
+  y += 2;
+  rule(isSimple, isSimple ? 1 : 1.4);
+  y += 13;
+
+  // ---- Totals ----
+  doc.setFont("courier", "normal");
+  doc.setFontSize(base - 1);
+  function totalLine(label: string, value: number, bold = false) {
+    doc.setFont("courier", bold ? "bold" : "normal");
+    doc.text(label, marginX, y);
+    doc.text(formatCurrencyForPdf(value, currency), pageWidth - marginX, y, { align: "right" });
+    y += lineHeight + 1;
+  }
+  totalLine("Subtotal", subtotal);
+  if (!hasGstSplit && totalLineTax > 0) totalLine("Tax", totalLineTax);
+  if (cgstAmount > 0) totalLine("CGST", cgstAmount);
+  if (sgstAmount > 0) totalLine("SGST", sgstAmount);
+  if (igstAmount > 0) totalLine("IGST", igstAmount);
+  if (!hasGstSplit && !cgstAmount && !sgstAmount && !igstAmount && gstEnabled && gstAmount > 0) {
+    totalLine(`Tax (${gstPercent}%)`, gstAmount);
+  }
+  if (roundOff !== 0) totalLine("Round Off", roundOff);
+
+  y += 3;
+  rule(isSimple, isSimple ? 1 : 1.6);
+  y += 6;
+
+  if (!isSimple) {
+    // Boxed TOTAL row for the Default style, matching the reference's
+    // bordered TOTAL — Simple style skips the box for minimal ink use.
+    const boxHeight = lineHeight + 10;
+    doc.setDrawColor(20, 20, 20);
     doc.setLineWidth(1.2);
+    doc.rect(marginX, y, contentWidth, boxHeight);
+    y += boxHeight / 2 + 4;
+    doc.setFont("courier", "bold");
+    doc.setFontSize(base + 1);
+    doc.text("TOTAL", marginX + 6, y);
+    doc.text(formatCurrencyForPdf(total, currency), pageWidth - marginX - 6, y, { align: "right" });
+    y += boxHeight / 2 + 8;
+  } else {
+    doc.setFont("courier", "bold");
+    doc.setFontSize(base + 1);
+    doc.text("TOTAL", marginX, y);
+    doc.text(formatCurrencyForPdf(total, currency), pageWidth - marginX, y, { align: "right" });
+    y += lineHeight + 8;
   }
-  doc.line(marginX, y, pageWidth - marginX, y);
-  doc.setLineWidth(1);
-  y += 14;
 
-  doc.text("Subtotal", marginX, y);
-  doc.text(formatCurrencyForPdf(subtotal, currency), pageWidth - marginX, y, { align: "right" });
-  y += 12;
+  rule(isSimple, isSimple ? 1 : 1.4);
+  y += 13;
 
-  if (gstEnabled) {
-    doc.text(`GST (${gstPercent}%)`, marginX, y);
-    doc.text(formatCurrencyForPdf(gstAmount, currency), pageWidth - marginX, y, { align: "right" });
-    y += 12;
-  }
-
-  doc.setFont("courier", "bold");
-  doc.setFontSize(base + 1);
-  doc.text("TOTAL", marginX, y);
-  doc.text(formatCurrencyForPdf(total, currency), pageWidth - marginX, y, { align: "right" });
-  y += 16;
-
+  // ---- Amount in words (INR only) ----
   if (currency === "INR") {
     doc.setFont("courier", "normal");
     doc.setFontSize(base - 2);
-    const wordsLines = doc.splitTextToSize(
-      `Amount in words: ${amountToWordsINR(total)}`,
-      contentWidth
-    );
+    doc.setTextColor(50, 50, 50);
+    doc.text("Amount in words:", marginX, y);
+    y += lineHeight;
+    const wordsLines = doc.splitTextToSize(amountToWordsINR(total), contentWidth);
+    doc.setFont("courier", "bold");
+    doc.setTextColor(20, 20, 20);
     doc.text(wordsLines, marginX, y);
-    y += wordsLines.length * 10 + 10;
+    y += wordsLines.length * lineHeight + 6;
   }
 
   if (notes) {
     doc.setFont("courier", "normal");
     doc.setFontSize(base - 2);
+    doc.setTextColor(50, 50, 50);
     const noteLines = doc.splitTextToSize(notes, contentWidth);
     doc.text(noteLines, marginX, y);
-    y += noteLines.length * 10 + 10;
-  }
-
-  if (terms) {
-    doc.setLineDashPattern(isSimple ? [2, 1] : [], 0);
-    doc.line(marginX, y, pageWidth - marginX, y);
-    y += 12;
-    doc.setFont("courier", "bold");
-    doc.setFontSize(base - 2);
-    doc.text("Terms & Conditions", marginX, y);
-    y += 11;
-    doc.setFont("courier", "normal");
-    const termsLines = doc.splitTextToSize(terms, contentWidth);
-    doc.text(termsLines, marginX, y);
-    y += termsLines.length * 10 + 14;
+    y += noteLines.length * lineHeight + 8;
   }
 
   const bankLines = [
     bankDetails?.bankName ? `Bank: ${bankDetails.bankName}` : null,
-    bankDetails?.accountName ? `A/c name: ${bankDetails.accountName}` : null,
-    bankDetails?.accountNumber ? `A/c no: ${bankDetails.accountNumber}` : null,
-    bankDetails?.ifscOrSwift ? `IFSC/SWIFT: ${bankDetails.ifscOrSwift}` : null,
+    bankDetails?.accountName ? `A/c Name: ${bankDetails.accountName}` : null,
+    bankDetails?.accountNumber ? `A/c No: ${bankDetails.accountNumber}` : null,
+    bankDetails?.ifscOrSwift ? `IFSC: ${bankDetails.ifscOrSwift}` : null,
+    bankDetails?.upiId ? `UPI: ${bankDetails.upiId}` : null,
   ].filter((l): l is string => Boolean(l));
   if (bankLines.length > 0) {
-    doc.setLineDashPattern(isSimple ? [2, 1] : [], 0);
-    doc.line(marginX, y, pageWidth - marginX, y);
+    rule(true);
     y += 12;
     doc.setFont("courier", "bold");
-    doc.setFontSize(base - 2);
-    doc.text("Payment details", marginX, y);
-    y += 11;
+    doc.setFontSize(base - 1);
+    doc.setTextColor(20, 20, 20);
+    doc.text("PAYMENT DETAILS", marginX, y);
+    y += lineHeight + 2;
     doc.setFont("courier", "normal");
+    doc.setFontSize(base - 2);
+    doc.setTextColor(50, 50, 50);
     for (const line of bankLines) {
       doc.text(line, marginX, y);
-      y += 10;
+      y += lineHeight;
     }
     y += 4;
   }
 
-  doc.setFont("courier", "normal");
-  doc.text("Authorized Signatory: ____________", marginX, y);
+  if (terms) {
+    rule(true);
+    y += 12;
+    doc.setFont("courier", "bold");
+    doc.setFontSize(base - 1);
+    doc.setTextColor(20, 20, 20);
+    doc.text("TERMS & CONDITIONS", marginX, y);
+    y += lineHeight + 2;
+    doc.setFont("courier", "normal");
+    doc.setFontSize(base - 2);
+    doc.setTextColor(50, 50, 50);
+    const termsLines = doc.splitTextToSize(terms, contentWidth);
+    doc.text(termsLines, marginX, y);
+    y += termsLines.length * lineHeight + 6;
+  }
+
+  y += 6;
+  rule(isSimple, isSimple ? 1 : 1.4);
   y += 16;
 
-  doc.setFont("courier", "normal");
-  doc.setFontSize(base - 2);
-  doc.text("Generated with Zen Biz", pageWidth / 2, y, { align: "center" });
+  doc.setFont("courier", "bold");
+  doc.setFontSize(base);
+  doc.setTextColor(20, 20, 20);
+  doc.text("Thank you!", centerX, y, { align: "center" });
+  y += lineHeight + 2;
 
-  if (planFeatures.invoiceWatermark) {
-    y += 12;
+  doc.setFont("courier", "normal");
+  doc.setFontSize(base - 1);
+  doc.text(`For ${profile.business_name || "Your Business"}`, centerX, y, { align: "center" });
+  y += lineHeight;
+  doc.setFontSize(base - 2);
+  doc.setTextColor(70, 70, 70);
+  doc.text("Authorized Signatory", centerX, y, { align: "center" });
+  y += lineHeight + 6;
+
+  doc.setFontSize(base - 2);
+  doc.setTextColor(90, 90, 90);
+  doc.text("Generated with Zen Biz", centerX, y, { align: "center" });
+
+  if (showWatermark) {
+    y += lineHeight;
     doc.setFont("courier", "italic");
     doc.setFontSize(base - 3);
-    doc.setTextColor(180, 175, 165);
-    doc.text("Unwatermarked receipts on Professional+", pageWidth / 2, y, {
-      align: "center",
-    });
+    doc.setTextColor(140, 140, 140);
+    doc.text("Generated by Zen Biz", centerX, y, { align: "center" });
   }
 
   doc.save(`${filenamePrefix}-${docNumber}.pdf`);

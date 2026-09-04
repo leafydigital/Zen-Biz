@@ -30,6 +30,9 @@ export async function generateInvoicePdf({
     docDate: invoice.invoice_date,
     dueDate: invoice.due_date,
     status: invoice.status,
+    paymentMethod: invoice.payment_method,
+    taxType: invoice.tax_type,
+    placeOfSupply: invoice.place_of_supply_state,
     partyLabel: "Bill to",
     party: customer
       ? { name: customer.name, phone: customer.phone, address: customer.address, gstin: customer.gstin }
@@ -45,6 +48,7 @@ export async function generateInvoicePdf({
     cgstAmount: Number(invoice.cgst_amount ?? 0),
     sgstAmount: Number(invoice.sgst_amount ?? 0),
     igstAmount: Number(invoice.igst_amount ?? 0),
+    roundOff: Number(invoice.round_off ?? 0),
     total: Number(invoice.total),
     notes: invoice.notes,
     profile,

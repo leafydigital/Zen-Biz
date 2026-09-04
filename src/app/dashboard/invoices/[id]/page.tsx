@@ -19,6 +19,7 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
     .from("invoices" as never)
     .select("*")
     .eq("id", params.id)
+    .eq("record_type", "invoice")
     .maybeSingle()) as { data: Invoice | null };
 
   if (!invoice) notFound();
