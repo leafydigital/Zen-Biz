@@ -543,9 +543,19 @@ async function renderStandardPdf(args: {
       const lines = doc.splitTextToSize(info.address, innerWidth);
       h += lines.length * 11 * scale;
     }
-    if (info?.phone) h += 11 * scale;
+    if (info?.phone) {
+      // Matches the small extra gap renderPartyCard adds before Phone
+      // when an address precedes it.
+      if (info?.address) h += 4 * scale;
+      h += 11 * scale;
+    }
     if (info?.email) h += 11 * scale;
-    if (info?.gstin) h += 11 * scale;
+    if (info?.gstin) {
+      // Matches the small extra gap renderPartyCard adds before GSTIN
+      // when Phone or email precedes it.
+      if (info?.phone || info?.email) h += 4 * scale;
+      h += 11 * scale;
+    }
     return h + 16 * scale; // bottom card padding (top padding already counted above)
   }
 
@@ -602,6 +612,11 @@ async function renderStandardPdf(args: {
       py += lines.length * 11 * scale;
     }
     if (info?.phone) {
+      // A small extra gap here (on top of the normal line step) separates
+      // the phone number from the address block above it, so it doesn't
+      // read as just another address line — same fix as the company
+      // header above.
+      if (info?.address) py += 4 * scale;
       doc.text(`Phone: ${info.phone}`, x + 10 * scale, py);
       py += 11 * scale;
     }
@@ -610,6 +625,9 @@ async function renderStandardPdf(args: {
       py += 11 * scale;
     }
     if (info?.gstin) {
+      // Same small gap before GSTIN, so it reads as its own line rather
+      // than running straight on from Phone/email above it.
+      if (info?.phone || info?.email) py += 4 * scale;
       doc.text(`GSTIN: ${info.gstin}`, x + 10 * scale, py);
       py += 11 * scale;
     }

@@ -111,7 +111,13 @@ export function generateDeliveryChallanPdf({
   let cardHeight = 16 + nameLines.length * 13;
   const addrLines = customer?.address ? doc.splitTextToSize(customer.address, innerWidth) : [];
   if (customer?.address) cardHeight += addrLines.length * 11;
-  if (customer?.phone) cardHeight += 11;
+  if (customer?.phone) {
+    // Small extra gap so the phone number doesn't read as just another
+    // address line — matches the same fix applied to Invoice/Bill/
+    // Quotation/Purchase's shared recipient card.
+    if (customer?.address) cardHeight += 4;
+    cardHeight += 11;
+  }
   cardHeight += 20;
 
   doc.setFillColor(239, 246, 255);
@@ -139,6 +145,7 @@ export function generateDeliveryChallanPdf({
     py += addrLines.length * 11;
   }
   if (customer?.phone) {
+    if (customer?.address) py += 4;
     doc.text(`Phone: ${customer.phone}`, marginX + 10, py);
     py += 11;
   }
