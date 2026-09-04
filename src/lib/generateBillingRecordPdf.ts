@@ -454,18 +454,42 @@ async function renderStandardPdf(args: {
     align: "right",
   });
 
+  const taxTypeLabel: Record<string, string> = {
+    gst: `GST${gstPercent ? ` ${gstPercent}%` : ""}`,
+    non_gst: "Non-GST",
+    tax: `Tax${gstPercent ? ` ${gstPercent}%` : ""}`,
+    non_tax: "Non-Tax",
+    // Legacy values, kept so older saved documents still show something
+    // sensible rather than nothing.
+    inclusive: `GST${gstPercent ? ` ${gstPercent}%` : ""}`,
+    exclusive: `GST${gstPercent ? ` ${gstPercent}%` : ""}`,
+    exempt: "Non-GST",
+  };
+
+  // A single compact info card holds document number, date, status, and
+  // — folded in as ordinary rows rather than a separate heading block —
+  // payment mode, tax type, and place of supply. Keeping this as one
+  // card instead of two removes roughly 140pt of header height that
+  // was pushing normal single-page documents onto a second page for no
+  // real reason, and matches the request that tax type read as a plain
+  // field here, not a prominent standalone line.
   const metaRows: [string, string][] = [
     [docLabel === "PURCHASE" ? "Purchase No." : `${docLabel.charAt(0)}${docLabel.slice(1).toLowerCase()} No.`, docNumber],
     ["Date", docDate],
   ];
   if (status) metaRows.push(["Payment Status", status.toUpperCase()]);
   if (dueDate) metaRows.push([docLabel === "QUOTATION" ? "Valid Until" : "Due Date", dueDate]);
+  if (paymentMethod) {
+    metaRows.push(["Payment Mode", paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1).replace(/_/g, " ")]);
+  }
+  if (taxType) metaRows.push(["Tax Type", taxTypeLabel[taxType] ?? taxType]);
+  if (placeOfSupply) metaRows.push(["Place of Supply", placeOfSupply]);
 
   const metaBoxWidth = 225 * scale;
-  const metaRowHeight = 20 * scale;
-  const metaPad = 12 * scale;
+  const metaRowHeight = 16 * scale;
+  const metaPad = 10 * scale;
   const metaBoxX = rightX - metaBoxWidth;
-  let metaY = titlePillY + titlePillHeight + 14 * scale;
+  let metaY = titlePillY + titlePillHeight + 10 * scale;
   const metaBoxHeight = metaRowHeight * metaRows.length + metaPad * 2 - 4 * scale;
 
   doc.setDrawColor(...colors.border);
@@ -473,8 +497,8 @@ async function renderStandardPdf(args: {
   doc.setFillColor(...colors.white);
   doc.roundedRect(metaBoxX, metaY, metaBoxWidth, metaBoxHeight, 8 * scale, 8 * scale, "FD");
 
-  let rowY = metaY + metaPad + smallSize * 0.6;
-  doc.setFontSize(smallSize);
+  let rowY = metaY + metaPad + tinySize * 0.6;
+  doc.setFontSize(tinySize);
   metaRows.forEach(([label, value], i) => {
     const isStatusRow = label === "Payment Status";
     const pal = isStatusRow ? statusPalette(status, colors) : null;
@@ -487,76 +511,12 @@ async function renderStandardPdf(args: {
     if (i < metaRows.length - 1) {
       doc.setDrawColor(...colors.borderLight);
       doc.setLineWidth(0.75);
-      doc.line(metaBoxX + metaPad, rowY + metaRowHeight - smallSize * 0.6, metaBoxX + metaBoxWidth - metaPad, rowY + metaRowHeight - smallSize * 0.6);
+      doc.line(metaBoxX + metaPad, rowY + metaRowHeight - tinySize * 0.6, metaBoxX + metaBoxWidth - metaPad, rowY + metaRowHeight - tinySize * 0.6);
     }
     rowY += metaRowHeight;
   });
 
-  y = Math.max(logoBottom, leftY, metaY + metaBoxHeight) + 22 * scale;
-
-  // ---- Second info box: Document Type / Place of Supply / Tax Type /
-  // Payment Mode / Reference — full width, only rows with real data are
-  // shown. This mirrors the reference design's secondary details panel
-  // sitting between the header and the Bill To / Ship To cards. ----
-  const taxTypeLabel: Record<string, string> = {
-    gst: `GST${gstPercent ? ` (${gstPercent}%)` : ""}`,
-    non_gst: "Non-GST",
-    tax: `Tax${gstPercent ? ` (${gstPercent}%)` : ""}`,
-    non_tax: "Non-Tax",
-    // Legacy values, kept so older saved documents still show something
-    // sensible rather than nothing.
-    inclusive: `GST${gstPercent ? ` (${gstPercent}%)` : ""}`,
-    exclusive: `GST${gstPercent ? ` (${gstPercent}%)` : ""}`,
-    exempt: "Non-GST",
-  };
-  const infoRows: [string, string][] = [["Document Type", docLabel.charAt(0) + docLabel.slice(1).toLowerCase()]];
-  if (placeOfSupply) infoRows.push(["Place of Supply", placeOfSupply]);
-  if (taxType) infoRows.push(["Tax Type", taxTypeLabel[taxType] ?? taxType]);
-  if (paymentMethod) {
-    const methodLabel = paymentMethod.charAt(0).toUpperCase() + paymentMethod.slice(1).replace(/_/g, " ");
-    infoRows.push(["Payment Mode", methodLabel]);
-  }
-
-  if (infoRows.length > 1 || placeOfSupply || taxType || paymentMethod) {
-    const infoBoxWidth = rightX - marginX;
-    const infoRowHeight = 18 * scale;
-    const infoPad = 14 * scale;
-    const infoIconSize = 34 * scale;
-    const infoBoxHeight = infoRows.length * infoRowHeight + infoPad * 2 - 4 * scale;
-    const infoBoxY = y;
-
-    doc.setDrawColor(...colors.border);
-    doc.setLineWidth(1);
-    doc.setFillColor(...colors.white);
-    doc.roundedRect(marginX, infoBoxY, infoBoxWidth, infoBoxHeight, 8 * scale, 8 * scale, "FD");
-
-    let infoRowY = infoBoxY + infoPad + smallSize * 0.6;
-    doc.setFontSize(smallSize);
-    infoRows.forEach(([label, value]) => {
-      doc.setFont("helvetica", "normal");
-      doc.setTextColor(...colors.navySoft);
-      doc.text(label, marginX + infoPad, infoRowY);
-      doc.setFont("helvetica", "bold");
-      doc.setTextColor(...colors.navy);
-      doc.text(value, marginX + infoPad + 130 * scale, infoRowY);
-      infoRowY += infoRowHeight;
-    });
-
-    // Small circular icon badge on the right, matching the reference's
-    // document-icon accent — purely decorative, no data.
-    const iconCx = marginX + infoBoxWidth - infoPad - infoIconSize / 2;
-    const iconCy = infoBoxY + infoBoxHeight / 2;
-    doc.setFillColor(...colors.blue);
-    doc.circle(iconCx, iconCy, infoIconSize / 2, "F");
-    doc.setDrawColor(...colors.white);
-    doc.setLineWidth(1.4);
-    const iw = infoIconSize * 0.3;
-    doc.rect(iconCx - iw / 2, iconCy - iw * 0.65, iw, iw * 1.3, "S");
-    doc.line(iconCx - iw / 2 + 2, iconCy - iw * 0.3, iconCx + iw / 2 - 2, iconCy - iw * 0.3);
-    doc.line(iconCx - iw / 2 + 2, iconCy, iconCx + iw / 2 - 2, iconCy);
-
-    y = infoBoxY + infoBoxHeight + 20 * scale;
-  }
+  y = Math.max(logoBottom, leftY, metaY + metaBoxHeight) + 16 * scale;
 
   // ---- Bill To / Ship To — light bordered card(s) ----
   const partyGap = 12 * scale;
@@ -974,7 +934,7 @@ async function renderStandardPdf(args: {
       }
     });
 
-    afterTableY += rowHeight + 20 * scale;
+    afterTableY += rowHeight + 14 * scale;
   }
 
   // ---- QR code (if provided) — small, left-aligned, with a short label
@@ -998,12 +958,15 @@ async function renderStandardPdf(args: {
     afterTableY += qrSize + 20 * scale;
   }
 
-  // ---- Signature — bottom-right, "For {Business}" / image / line /
-  // "Authorized Signatory" ----
+  // ---- Signature — bottom-right, "For {Business}" / image (only if one
+  // exists) / line / "Authorized Signatory". Reserving a fixed image-sized
+  // gap even when there's no signature image wastes real vertical space
+  // for the common case (no signature uploaded), so the box only takes
+  // its full height when there's an actual image to place. ----
   const sigBoxWidth = 170 * scale;
-  const sigBoxHeight = 46 * scale;
-  const sigBlockTotalHeight = 10 * scale + 8 * scale + sigBoxHeight + 12 * scale + 10 * scale;
-  afterTableY = ensureSpace(afterTableY, sigBlockTotalHeight + 8 * scale);
+  const sigBoxHeight = signatureUrl ? 40 * scale : 8 * scale;
+  const sigBlockTotalHeight = 9 * scale + 6 * scale + sigBoxHeight + 10 * scale + 9 * scale;
+  afterTableY = ensureSpace(afterTableY, sigBlockTotalHeight + 6 * scale);
   const sigX = rightX - sigBoxWidth;
   let sigY = afterTableY;
 
@@ -1011,7 +974,7 @@ async function renderStandardPdf(args: {
   doc.setFontSize(smallSize);
   doc.setTextColor(...colors.navy);
   doc.text(`For ${profile.business_name || "Your Business"}`, rightX, sigY, { align: "right" });
-  sigY += 8 * scale;
+  sigY += 6 * scale;
 
   if (signatureUrl) {
     try {
@@ -1029,14 +992,14 @@ async function renderStandardPdf(args: {
   doc.setDrawColor(...colors.border);
   doc.setLineWidth(1);
   doc.line(sigX, sigY, rightX, sigY);
-  sigY += 12 * scale;
+  sigY += 10 * scale;
 
   doc.setFont("helvetica", "normal");
   doc.setFontSize(tinySize);
   doc.setTextColor(...colors.navySoft);
   doc.text("Authorized Signatory", rightX, sigY, { align: "right" });
 
-  afterTableY = Math.max(afterTableY, sigY) + 20 * scale;
+  afterTableY = Math.max(afterTableY, sigY) + 14 * scale;
 
   // ---- Footer — drawn on every page: a thin top rule, "Thank you" on the
   // left, "Generated with Zen Biz" on the right. For the Starter plan,
