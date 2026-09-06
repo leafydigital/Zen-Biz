@@ -81,6 +81,7 @@ function formatCurrency(n: number, currency: string) {
 
 export function NewInvoiceForm({
   ownerId,
+  businessId,
   profile,
   customers,
   products,
@@ -91,6 +92,7 @@ export function NewInvoiceForm({
   recordType = "invoice",
 }: {
   ownerId: string;
+  businessId: string;
   profile: Profile;
   customers: Customer[];
   products: Product[];
@@ -360,7 +362,7 @@ export function NewInvoiceForm({
     } else {
       const { data: created, error: invErr } = await supabase
         .from("invoices" as never)
-        .insert({ owner_id: ownerId, ...commonFields } as never)
+        .insert({ owner_id: ownerId, business_id: businessId, ...commonFields } as never)
         .select()
         .single();
 
@@ -381,6 +383,7 @@ export function NewInvoiceForm({
       );
       return {
         owner_id: ownerId,
+        business_id: businessId,
         invoice_id: invoice!.id,
         product_id: l.productId,
         description: l.description.trim(),
@@ -412,6 +415,7 @@ export function NewInvoiceForm({
           items: itemsPayload.map((it, i) => ({
             id: String(i),
             owner_id: ownerId,
+            business_id: businessId,
             invoice_id: invoice!.id,
             product_id: it.product_id,
             description: it.description,

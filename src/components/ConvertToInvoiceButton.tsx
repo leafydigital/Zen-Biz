@@ -18,11 +18,13 @@ import type { Plan } from "@/types/database";
 export function ConvertToInvoiceButton({
   recordId,
   ownerId,
+  businessId,
   plan,
   invoicesThisMonth,
 }: {
   recordId: string;
   ownerId: string;
+  businessId: string;
   plan: Plan;
   invoicesThisMonth: number;
 }) {
@@ -47,6 +49,7 @@ export function ConvertToInvoiceButton({
       const { count } = await supabase
         .from("invoices" as never)
         .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .eq("record_type", "invoice")
         .gte("created_at", monthStart.toISOString());
       if ((count ?? 0) >= limit) {
@@ -58,10 +61,13 @@ export function ConvertToInvoiceButton({
     setConverting(true);
 
     // Next sequential invoice number, same scheme as new-invoice creation
-    // (INV-0001, INV-0002, ...), counting official invoices only.
+    // (INV-0001, INV-0002, ...), counting official invoices only, scoped
+    // to this same business — each business has its own numbering
+    // sequence, not shared across every business the user belongs to.
     const { count: invoiceCount } = await supabase
       .from("invoices" as never)
       .select("id", { count: "exact", head: true })
+      .eq("business_id", businessId)
       .eq("record_type", "invoice");
     const nextNumber = `INV-${String((invoiceCount ?? 0) + 1).padStart(4, "0")}`;
 

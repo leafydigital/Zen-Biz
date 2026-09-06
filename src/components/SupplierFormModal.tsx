@@ -8,10 +8,12 @@ import type { Supplier } from "@/types/database";
 
 export function SupplierFormModal({
   ownerId,
+  businessId,
   supplier,
   onClose,
 }: {
   ownerId: string;
+  businessId: string;
   supplier?: Supplier | null;
   onClose: () => void;
 }) {
@@ -35,6 +37,7 @@ export function SupplierFormModal({
 
     const payload = {
       owner_id: ownerId,
+      business_id: businessId,
       name: name.trim(),
       phone: phone.trim() || null,
       email: email.trim() || null,

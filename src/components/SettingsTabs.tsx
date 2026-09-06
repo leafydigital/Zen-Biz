@@ -2,20 +2,37 @@
 
 import { useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { Profile } from "@/types/database";
+import type { Business, Plan, Profile } from "@/types/database";
 import { SettingsForm } from "@/components/SettingsForm";
 import { DocumentDesignForm } from "@/components/DocumentDesignForm";
 import { TermsForm } from "@/components/TermsForm";
 import { BankDetailsForm } from "@/components/BankDetailsForm";
 import { PlanBillingTab } from "@/components/PlanBillingTab";
+import { BusinessManagementTab } from "@/components/BusinessManagementTab";
+import { TeamManagementTab } from "@/components/TeamManagementTab";
 import { useTranslation } from "@/lib/i18n/I18nContext";
+import type { BusinessMemberWithEmail } from "@/lib/getActiveBusiness";
 
-type Tab = "general" | "appearance" | "terms" | "bank" | "plan";
+type Tab = "general" | "businesses" | "team" | "appearance" | "terms" | "bank" | "plan";
 
-export function SettingsTabs({ profile }: { profile: Profile }) {
+export function SettingsTabs({
+  profile,
+  business,
+  businesses,
+  members,
+  currentUserId,
+}: {
+  profile: Profile;
+  business: Business;
+  businesses: (Business & { role: "owner" | "member" })[];
+  members: BusinessMemberWithEmail[];
+  currentUserId: string;
+}) {
   const { t } = useTranslation();
   const TABS: { id: Tab; label: string }[] = [
     { id: "general", label: t.settings.general },
+    { id: "businesses", label: "Businesses" },
+    { id: "team", label: "Team" },
     { id: "appearance", label: t.settings.documentAppearance },
     { id: "terms", label: t.settings.termsConditions },
     { id: "bank", label: t.settings.bankPayment },
@@ -46,8 +63,20 @@ export function SettingsTabs({ profile }: { profile: Profile }) {
       </div>
 
       <div className="max-w-3xl rounded-xl2 border border-paper-fold bg-paper-card p-6 shadow-card">
-        {tab === "general" && <SettingsForm profile={profile} />}
-        {tab === "appearance" && <DocumentDesignForm profile={profile} />}
+        {tab === "general" && <SettingsForm profile={profile} business={business} />}
+        {tab === "businesses" && (
+          <BusinessManagementTab businesses={businesses} activeBusinessId={business.id} plan={profile.plan} />
+        )}
+        {tab === "team" && (
+          <TeamManagementTab
+            businessId={business.id}
+            members={members}
+            currentUserId={currentUserId}
+            isOwner={businesses.find((b) => b.id === business.id)?.role === "owner"}
+            plan={profile.plan}
+          />
+        )}
+        {tab === "appearance" && <DocumentDesignForm business={business} />}
         {tab === "terms" && (
           <div className="flex flex-col gap-6">
             <div>
@@ -60,26 +89,26 @@ export function SettingsTabs({ profile }: { profile: Profile }) {
               </p>
             </div>
             <TermsForm
-              profile={profile}
+              business={business}
               docType="invoice"
               title="Invoice terms"
               placeholder={`e.g. Payment due within 15 days.\nGoods once sold will not be taken back.`}
             />
             <TermsForm
-              profile={profile}
+              business={business}
               docType="quotation"
               title="Quotation terms"
               placeholder={`e.g. This quotation is valid for 30 days.\nPrices subject to change without notice.`}
             />
             <TermsForm
-              profile={profile}
+              business={business}
               docType="purchase"
               title="Purchase terms"
               placeholder={`e.g. Goods must be delivered within 7 days.\nPayment on delivery.`}
             />
           </div>
         )}
-        {tab === "bank" && <BankDetailsForm profile={profile} />}
+        {tab === "bank" && <BankDetailsForm business={business} />}
         {tab === "plan" && <PlanBillingTab profile={profile} />}
       </div>
     </div>

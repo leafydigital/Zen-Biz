@@ -11,6 +11,7 @@ const OTHER_UNIT = "__other__";
 
 export function ProductFormModal({
   ownerId,
+  businessId,
   product,
   itemLabel,
   defaultUnit,
@@ -21,6 +22,7 @@ export function ProductFormModal({
   onClose,
 }: {
   ownerId: string;
+  businessId: string;
   product?: Product | null;
   itemLabel: string;
   defaultUnit: string;
@@ -100,7 +102,8 @@ export function ProductFormModal({
       if (limit !== null) {
         const { count } = await supabase
           .from("products")
-          .select("id", { count: "exact", head: true });
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", businessId);
         if ((count ?? 0) >= limit) {
           setSaving(false);
           setError(getLimitMessage("products", limit).title);
@@ -134,6 +137,7 @@ export function ProductFormModal({
 
     const payload = {
       owner_id: ownerId,
+      business_id: businessId,
       name: name.trim(),
       price: parseFloat(price) || 0,
       tax_percent: parseFloat(taxPercent) || 0,

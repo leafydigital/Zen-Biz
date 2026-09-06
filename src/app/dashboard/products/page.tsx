@@ -1,8 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
 import { getLabels } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
 import { ProductsList } from "@/components/ProductsList";
-import type { Product, Profile } from "@/types/database";
+import type { Product } from "@/types/database";
 
 export default async function ProductsPage() {
   const supabase = createClient();
@@ -10,23 +12,25 @@ export default async function ProductsPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { data: profile } = (await supabase
-    .from("profiles" as never)
-    .select("business_type, plan")
-    .eq("id", user!.id)
-    .maybeSingle()) as { data: Pick<Profile, "business_type" | "plan"> | null };
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
+
+  const [profile, { data: products }] = await Promise.all([
+    getCurrentProfile(),
+    supabase
+      .from("products")
+      .select("*")
+      .eq("business_id", businessId)
+      .order("created_at", { ascending: false }) as unknown as Promise<{ data: Product[] | null }>,
+  ]);
 
   const labels = getLabels(profile?.business_type);
   const plan = profile?.plan ?? "starter";
 
-  const { data: products } = (await supabase
-    .from("products")
-    .select("*")
-    .order("created_at", { ascending: false })) as { data: Product[] | null };
-
   return (
     <ProductsList
       ownerId={user!.id}
+      businessId={businessId}
       products={products ?? []}
       itemLabel={labels.itemSingular}
       itemLabelPlural={labels.itemPlural}

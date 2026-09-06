@@ -1,7 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
 import { CustomersList } from "@/components/CustomersList";
 import { getPlanFeatures } from "@/lib/planFeatures";
-import type { Customer, Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import type { Customer } from "@/types/database";
 
 export default async function CustomersPage() {
   const supabase = createClient();
@@ -9,16 +11,16 @@ export default async function CustomersPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [{ data: customers }, { data: profile }] = await Promise.all([
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
+
+  const [{ data: customers }, profile] = await Promise.all([
     supabase
       .from("customers" as never)
       .select("*")
+      .eq("business_id", businessId)
       .order("created_at", { ascending: false }) as unknown as Promise<{ data: Customer[] | null }>,
-    supabase
-      .from("profiles" as never)
-      .select("plan")
-      .eq("id", user!.id)
-      .maybeSingle() as unknown as Promise<{ data: Pick<Profile, "plan"> | null }>,
+    getCurrentProfile(),
   ]);
 
   const plan = profile?.plan ?? "starter";
@@ -26,6 +28,7 @@ export default async function CustomersPage() {
   return (
     <CustomersList
       ownerId={user!.id}
+      businessId={businessId}
       customers={customers ?? []}
       plan={plan}
       customerLimit={getPlanFeatures(plan).limits.customers}

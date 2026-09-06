@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY_SYMBOLS } from "@/types/database";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -9,10 +10,12 @@ function formatCurrency(n: number, currency: string = "INR") {
 
 export default async function BillingRecordsPage() {
   const supabase = createClient();
+  const activeBusiness = await getActiveBusiness();
 
   const { data: records } = (await supabase
     .from("invoices" as never)
     .select("id, total, currency, invoice_date, converted_invoice_id, customers(name)")
+    .eq("business_id", activeBusiness?.id ?? "")
     .eq("record_type", "billing_record")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 

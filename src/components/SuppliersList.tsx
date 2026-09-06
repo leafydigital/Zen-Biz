@@ -8,9 +8,11 @@ import { SupplierFormModal } from "@/components/SupplierFormModal";
 
 export function SuppliersList({
   ownerId,
+  businessId,
   suppliers,
 }: {
   ownerId: string;
+  businessId: string;
   suppliers: Supplier[];
 }) {
   const router = useRouter();
@@ -111,6 +113,7 @@ export function SuppliersList({
       {modalOpen && (
         <SupplierFormModal
           ownerId={ownerId}
+          businessId={businessId}
           supplier={editing}
           onClose={() => setModalOpen(false)}
         />

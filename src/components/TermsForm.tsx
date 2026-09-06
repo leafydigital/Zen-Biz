@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Profile } from "@/types/database";
+import type { Business } from "@/types/database";
 
 const TERMS_FIELD: Record<"invoice" | "quotation" | "purchase", "invoice_terms" | "quotation_terms" | "purchase_terms"> = {
   invoice: "invoice_terms",
@@ -12,12 +12,12 @@ const TERMS_FIELD: Record<"invoice" | "quotation" | "purchase", "invoice_terms" 
 };
 
 export function TermsForm({
-  profile,
+  business,
   docType,
   title,
   placeholder,
 }: {
-  profile: Profile;
+  business: Business;
   docType: "invoice" | "quotation" | "purchase";
   title: string;
   placeholder: string;
@@ -26,7 +26,7 @@ export function TermsForm({
   const supabase = createClient();
   const field = TERMS_FIELD[docType];
 
-  const [terms, setTerms] = useState(profile[field] ?? "");
+  const [terms, setTerms] = useState(business[field] ?? "");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -35,9 +35,9 @@ export function TermsForm({
     setSaving(true);
     setError(null);
     const { error } = await supabase
-      .from("profiles" as never)
+      .from("businesses" as never)
      .update({ [field]: terms.trim() || null } as never)
-      .eq("id", profile.id);
+      .eq("id", business.id);
     setSaving(false);
     if (error) {
       console.error(`Zen Biz: failed to save ${field}`, error);

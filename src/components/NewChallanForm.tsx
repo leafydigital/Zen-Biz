@@ -28,12 +28,14 @@ function newLine(): LineItem {
 
 export function NewChallanForm({
   ownerId,
+  businessId,
   profile,
   customers,
   products,
   suggestedChallanNumber,
 }: {
   ownerId: string;
+  businessId: string;
   profile: Profile;
   customers: Customer[];
   products: Product[];
@@ -92,6 +94,7 @@ export function NewChallanForm({
       .from("delivery_challans" as never)
       .insert({
         owner_id: ownerId,
+        business_id: businessId,
         customer_id: customerId || null,
         challan_number: challanNumber.trim(),
         challan_date: challanDate,
@@ -112,6 +115,7 @@ export function NewChallanForm({
 
     const itemsPayload = validLines.map((l) => ({
       owner_id: ownerId,
+      business_id: businessId,
       challan_id: challan.id,
       product_id: l.productId,
       description: l.description.trim(),
@@ -137,6 +141,7 @@ export function NewChallanForm({
         items: itemsPayload.map((it, i) => ({
           id: String(i),
           owner_id: ownerId,
+          business_id: businessId,
           challan_id: challan.id,
           product_id: it.product_id,
           description: it.description,

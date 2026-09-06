@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateQuotationPdf } from "@/lib/generateQuotationPdf";
-import type { Customer, Profile, Quotation, QuotationItem } from "@/types/database";
+import type { Business, Customer, Profile, Quotation, QuotationItem } from "@/types/database";
 
 export function DownloadQuotationButton({ quotationId }: { quotationId: string }) {
   const supabase = createClient();
@@ -26,6 +26,17 @@ export function DownloadQuotationButton({ quotationId }: { quotationId: string }
       return;
     }
 
+    // Branding must come from THIS quotation's own business, not
+    // whichever business the signed-in user happens to have created
+    // first — see the identical fix in DownloadInvoiceButton.
+    const { data: businessData } = await supabase
+      .from("businesses" as never)
+      .select("*")
+      .eq("id", quotation.business_id)
+      .maybeSingle();
+    const business = businessData as Business | null;
+    const profileForPdf: Profile = business ? { ...profile, ...business, id: profile.id } : profile;
+
     let customer: Customer | null = null;
     if (quotation.customer_id) {
       const { data } = await supabase
@@ -36,7 +47,7 @@ export function DownloadQuotationButton({ quotationId }: { quotationId: string }
       customer = data as Customer | null;
     }
 
-    await generateQuotationPdf({ quotation, items: items ?? [], customer, profile });
+    await generateQuotationPdf({ quotation, items: items ?? [], customer, profile: profileForPdf });
     setLoading(false);
   }
 

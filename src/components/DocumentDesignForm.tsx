@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateSaleDocumentPdf } from "@/lib/generateSaleDocumentPdf";
-import type { DocDesignSettings, DocFontSize, DocPaperSize, DocStyle, Profile } from "@/types/database";
+import type { Business, DocDesignSettings, DocFontSize, DocPaperSize, DocStyle } from "@/types/database";
 import { DEFAULT_DOCUMENT_DESIGN } from "@/types/database";
 
 const SAMPLE_ITEMS = [
@@ -27,14 +27,14 @@ const STYLE_OPTIONS: { value: DocStyle; label: string; hint: string; locked?: bo
 
 const FONT_SIZE_OPTIONS: DocFontSize[] = [9, 10, 11, 12, 13, 14];
 
-export function DocumentDesignForm({ profile }: { profile: Profile }) {
+export function DocumentDesignForm({ business }: { business: Business }) {
   const router = useRouter();
   const supabase = createClient();
 
   const [design, setDesign] = useState<DocDesignSettings>(
-    profile.document_design ?? DEFAULT_DOCUMENT_DESIGN
+    business.document_design ?? DEFAULT_DOCUMENT_DESIGN
   );
-  const [signaturePreview, setSignaturePreview] = useState<string | null>(profile.signature_url);
+  const [signaturePreview, setSignaturePreview] = useState<string | null>(business.signature_url);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +58,10 @@ export function DocumentDesignForm({ profile }: { profile: Profile }) {
         gstAmount: 0,
         total: 1750,
         notes: "This is a preview using sample data.",
-        profile,
+        profile: business as never,
         filenamePrefix: "Preview",
         design,
-        terms: profile.invoice_terms,
+        terms: business.invoice_terms,
         signatureUrl: signaturePreview,
       });
     } finally {
@@ -95,7 +95,8 @@ export function DocumentDesignForm({ profile }: { profile: Profile }) {
     let signatureUrl = signaturePreview;
     if (signatureFile) {
       const ext = signatureFile.name.split(".").pop();
-      const path = `${profile.id}/signature.${ext}`;
+      // Keyed by business id — each business has its own signature file.
+      const path = `${business.id}/signature.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from("signatures")
         .upload(path, signatureFile, { upsert: true });
@@ -110,13 +111,13 @@ export function DocumentDesignForm({ profile }: { profile: Profile }) {
       signatureUrl = publicUrlData.publicUrl;
     }
 
-        const { error } = await supabase
-      .from("profiles")
-            .update({
+    const { error } = await supabase
+      .from("businesses" as never)
+      .update({
         document_design: design,
         signature_url: signatureUrl,
       } as never)
-      .eq("id", profile.id);
+      .eq("id", business.id);
     setSaving(false);
     if (error) {
       console.error("Zen Biz: failed to save document design", error);

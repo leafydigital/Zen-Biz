@@ -56,6 +56,79 @@ export const CURRENCY_SYMBOLS: Record<string, string> = {
   CAD: "CAD ",
 };
 
+/**
+ * A business a user owns or belongs to. Holds everything that's genuinely
+ * business-specific — a single login can now own or be a member of more
+ * than one of these. Profile above is intentionally left untouched (still
+ * carries the same fields) so every existing page that reads
+ * profile.business_name / profile.gst_number / etc. keeps working exactly
+ * as before; new business-aware pages should read from the active
+ * Business object instead (see getActiveBusiness()).
+ */
+export interface Business {
+  id: string;
+  owner_id: string;
+  business_name: string;
+  business_type: string;
+  logo_url: string | null;
+  address: string | null;
+  state: string | null;
+  gst_number: string | null;
+  phone: string | null;
+  document_design: DocDesignSettings;
+  signature_url: string | null;
+  invoice_terms: string | null;
+  quotation_terms: string | null;
+  purchase_terms: string | null;
+  bank_name: string | null;
+  bank_account_name: string | null;
+  bank_account_number: string | null;
+  bank_ifsc_or_swift: string | null;
+  payment_qr_url: string | null;
+  default_currency: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export type BusinessRole = "owner" | "member";
+
+export interface BusinessMember {
+  id: string;
+  business_id: string;
+  user_id: string;
+  role: BusinessRole;
+  created_at: string;
+}
+
+export type AnalyticsChartId =
+  | "profitLoss"
+  | "expenseBreakdown"
+  | "salesVsPurchases"
+  | "outstandingCollected"
+  | "topProducts"
+  | "invoiceStatus";
+
+export type AnalyticsDateRange = "thisMonth" | "3months" | "6months" | "thisYear";
+
+export interface AnalyticsPreferences {
+  visibleCharts: AnalyticsChartId[];
+  chartTypes: Partial<Record<AnalyticsChartId, "line" | "bar" | "pie">>;
+  dateRange: AnalyticsDateRange;
+}
+
+export const DEFAULT_ANALYTICS_PREFERENCES: AnalyticsPreferences = {
+  visibleCharts: [
+    "profitLoss",
+    "expenseBreakdown",
+    "salesVsPurchases",
+    "outstandingCollected",
+    "topProducts",
+    "invoiceStatus",
+  ],
+  chartTypes: { profitLoss: "line", salesVsPurchases: "bar", outstandingCollected: "bar" },
+  dateRange: "thisMonth",
+};
+
 export interface Profile {
   id: string;
   business_name: string;
@@ -70,6 +143,7 @@ export interface Profile {
   plan_renews_at: string | null;
   onboarding_complete: boolean;
   language: string;
+  analytics_preferences: AnalyticsPreferences;
   // Shared across Invoice, Quotation, and Purchase — one paper size/style/
   // font/signature setting rather than three separate ones.
   document_design: DocDesignSettings;
@@ -92,6 +166,7 @@ export interface Profile {
 export interface Product {
   id: string;
   owner_id: string;
+  business_id: string;
   name: string;
   description: string | null;
   price: number;
@@ -110,6 +185,7 @@ export interface Product {
 export interface Customer {
   id: string;
   owner_id: string;
+  business_id: string;
   name: string;
   phone: string | null;
   email: string | null;
@@ -126,6 +202,7 @@ export type RecordType = "invoice" | "billing_record";
 export interface Invoice {
   id: string;
   owner_id: string;
+  business_id: string;
   customer_id: string | null;
   record_type: RecordType;
   converted_invoice_id: string | null;
@@ -160,6 +237,7 @@ export interface Invoice {
 export interface InvoiceItem {
   id: string;
   owner_id: string;
+  business_id: string;
   invoice_id: string;
   product_id: string | null;
   description: string;
@@ -178,6 +256,7 @@ export interface InvoiceItem {
 export interface Quotation {
   id: string;
   owner_id: string;
+  business_id: string;
   customer_id: string | null;
   quotation_number: string;
   quotation_date: string;
@@ -208,6 +287,7 @@ export interface Quotation {
 export interface QuotationItem {
   id: string;
   owner_id: string;
+  business_id: string;
   quotation_id: string;
   product_id: string | null;
   description: string;
@@ -226,6 +306,7 @@ export interface QuotationItem {
 export interface Supplier {
   id: string;
   owner_id: string;
+  business_id: string;
   name: string;
   phone: string | null;
   email: string | null;
@@ -240,6 +321,7 @@ export interface Supplier {
 export interface Purchase {
   id: string;
   owner_id: string;
+  business_id: string;
   supplier_id: string | null;
   purchase_number: string;
   purchase_date: string;
@@ -269,6 +351,7 @@ export interface Purchase {
 export interface PurchaseItem {
   id: string;
   owner_id: string;
+  business_id: string;
   purchase_id: string;
   product_id: string | null;
   description: string;
@@ -287,6 +370,7 @@ export interface PurchaseItem {
 export interface DeliveryChallan {
   id: string;
   owner_id: string;
+  business_id: string;
   customer_id: string | null;
   challan_number: string;
   challan_date: string;
@@ -299,6 +383,7 @@ export interface DeliveryChallan {
 export interface DeliveryChallanItem {
   id: string;
   owner_id: string;
+  business_id: string;
   challan_id: string;
   product_id: string | null;
   description: string;
@@ -314,6 +399,7 @@ export type PayablePlan = "professional" | "business";
 export interface SubscriptionPayment {
   id: string;
   owner_id: string;
+  business_id: string;
   plan: PayablePlan;
   billing_cycle: BillingCycle;
   amount: number;
@@ -408,6 +494,7 @@ export interface Database {
         Row: SubscriptionPayment;
         Insert: Partial<SubscriptionPayment> & {
           owner_id: string;
+          business_id: string;
           plan: PayablePlan;
           billing_cycle: BillingCycle;
           amount: number;

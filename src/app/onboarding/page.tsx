@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { Logo } from "@/components/Logo";
 import { OnboardingForm } from "@/components/OnboardingForm";
 import { BackToHomeLink } from "@/components/BackToHomeLink";
+import { getUserBusinesses } from "@/lib/getActiveBusiness";
 
 export default async function OnboardingPage() {
   const supabase = createClient();
@@ -24,14 +25,36 @@ export default async function OnboardingPage() {
     .maybeSingle() as { data: { onboarding_complete: boolean } | null; error: unknown };
 
   if (existingProfile?.onboarding_complete) {
-    redirect("/dashboard");
+    // onboarding_complete alone isn't enough to trust — an account that
+    // finished onboarding before businesses/business_members existed (or
+    // hit a partial failure) can have that flag set with no actual
+    // business behind it. getUserBusinesses() is the SAME function the
+    // dashboard layout uses, and it self-heals this exact case (a real
+    // owned business with a missing business_members link) rather than
+    // just counting membership rows directly — using a separate,
+    // non-healing count query here (as this page previously did) meant
+    // a genuinely onboarded user could still see this form again even
+    // right after the self-heal fix shipped, since that fix only ever
+    // ran from the dashboard side.
+    const businesses = await getUserBusinesses();
+    if (businesses.length > 0) {
+      redirect("/dashboard");
+    }
   }
 
   if (!existingProfile) {
     // Self-heal: create the missing profile row rather than losing track of
     // this account. If it already exists (a race with the trigger), this is
     // a no-op thanks to the ON CONFLICT rule in the database.
-    await supabase.from("profiles" as never).insert({ id: user.id, onboarding_complete: false } as never);
+    // The phone number collected at signup is passed through as auth
+    // metadata (Supabase's own user record has no phone field wired up
+    // for email/password auth), so it's picked up here the first time
+    // this account's profile row is actually created.
+    const signupPhone =
+      typeof user.user_metadata?.phone === "string" ? user.user_metadata.phone : null;
+    await supabase
+      .from("profiles" as never)
+      .insert({ id: user.id, onboarding_complete: false, phone: signupPhone } as never);
   }
 
   return (

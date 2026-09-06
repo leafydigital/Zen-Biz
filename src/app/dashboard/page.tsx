@@ -3,7 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { getLabels } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { getTranslations } from "@/lib/i18n/translations";
-import type { Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import { AnalyticsSection } from "@/components/analytics/AnalyticsSection";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -15,15 +17,9 @@ function formatCurrency(n: number) {
 
 export default async function DashboardHome() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = (await supabase
-    .from("profiles" as never)
-    .select("*")
-    .eq("id", user!.id)
-    .maybeSingle()) as { data: Profile | null };
+  const profile = await getCurrentProfile();
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
 
   const labels = getLabels(profile?.business_type);
   const t = getTranslations(profile?.language ?? "en");
@@ -34,17 +30,19 @@ export default async function DashboardHome() {
 
   const [{ count: productCount }, { count: customerCount }, invoicesResult, { count: invoicesThisMonth }] =
     await Promise.all([
-      supabase.from("products").select("id", { count: "exact", head: true }),
-      supabase.from("customers" as never).select("id", { count: "exact", head: true }),
+      supabase.from("products").select("id", { count: "exact", head: true }).eq("business_id", businessId),
+      supabase.from("customers" as never).select("id", { count: "exact", head: true }).eq("business_id", businessId),
       supabase
         .from("invoices" as never)
         .select("id, total, status, invoice_number, invoice_date, currency, customers(name)")
+        .eq("business_id", businessId)
         .eq("record_type", "invoice")
         .order("created_at", { ascending: false })
         .limit(5),
       supabase
         .from("invoices" as never)
         .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .eq("record_type", "invoice")
         .gte("created_at", monthStart.toISOString()),
     ]);
@@ -64,6 +62,7 @@ export default async function DashboardHome() {
   const { data: totals } = (await supabase
     .from("invoices" as never)
     .select("total, status, amount_paid")
+    .eq("business_id", businessId)
     .eq("record_type", "invoice")) as {
     data: { total: number; status: string; amount_paid: number }[] | null;
   };
@@ -84,6 +83,7 @@ export default async function DashboardHome() {
   const { data: purchaseTotals } = (await supabase
     .from("purchases" as never)
     .select("total")
+    .eq("business_id", businessId)
     .neq("status", "cancelled")) as { data: { total: number }[] | null };
   const totalPurchased = (purchaseTotals ?? []).reduce(
     (sum, p) => sum + Number(p.total),
@@ -435,6 +435,12 @@ export default async function DashboardHome() {
           </>
         )}
       </div>
+
+      <AnalyticsSection
+        plan={profile?.plan ?? "starter"}
+        businessId={businessId}
+        preferences={profile?.analytics_preferences}
+      />
     </div>
   );
 }

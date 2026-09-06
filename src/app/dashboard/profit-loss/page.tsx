@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { LockedFeature } from "@/components/LockedFeature";
 import { getPlanFeatures } from "@/lib/planFeatures";
-import type { Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -26,15 +27,7 @@ function monthLabel(key: string) {
 
 export default async function ProfitLossPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = (await supabase
-    .from("profiles" as never)
-    .select("plan")
-    .eq("id", user!.id)
-    .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
+  const profile = await getCurrentProfile();
 
   if (!getPlanFeatures(profile?.plan ?? "starter").profitAndLoss) {
     return (
@@ -46,13 +39,21 @@ export default async function ProfitLossPage() {
     );
   }
 
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
+
   const [{ data: invoices }, { data: purchases }] = await Promise.all([
     supabase
       .from("invoices" as never)
       .select("invoice_date, total")
+      .eq("business_id", businessId)
       .eq("record_type", "invoice")
       .eq("status", "paid"),
-    supabase.from("purchases" as never).select("purchase_date, total").eq("status", "paid"),
+    supabase
+      .from("purchases" as never)
+      .select("purchase_date, total")
+      .eq("business_id", businessId)
+      .eq("status", "paid"),
   ]);
 
   const months = new Map<string, { sales: number; purchases: number }>();

@@ -4,19 +4,12 @@ import { ChallanStatusSelect } from "@/components/ChallanStatusSelect";
 import { DownloadChallanButton } from "@/components/DownloadChallanButton";
 import { LockedFeature } from "@/components/LockedFeature";
 import { getPlanFeatures } from "@/lib/planFeatures";
-import type { Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
 
 export default async function DeliveryChallansPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = (await supabase
-    .from("profiles" as never)
-    .select("plan")
-    .eq("id", user!.id)
-    .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
+  const profile = await getCurrentProfile();
 
   if (!getPlanFeatures(profile?.plan ?? "starter").deliveryChallans) {
     return (
@@ -28,9 +21,12 @@ export default async function DeliveryChallansPage() {
     );
   }
 
+  const activeBusiness = await getActiveBusiness();
+
   const { data: challans } = (await supabase
     .from("delivery_challans" as never)
     .select("*, customers(name)")
+    .eq("business_id", activeBusiness?.id ?? "")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 
   return (

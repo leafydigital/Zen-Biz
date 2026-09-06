@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NewQuotationForm } from "@/components/NewQuotationForm";
-import type { Customer, Product, Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import type { Customer, Product } from "@/types/database";
 
 export default async function NewQuotationPage() {
   const supabase = createClient();
@@ -8,15 +10,17 @@ export default async function NewQuotationPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [profileResult, customersResult, productsResult, { count }] =
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
+
+  const [profile, customersResult, productsResult, { count }] =
     await Promise.all([
-      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
-      supabase.from("customers" as never).select("*").order("name"),
-      supabase.from("products").select("*").eq("is_active", true).order("name"),
-      supabase.from("quotations" as never).select("id", { count: "exact", head: true }),
+      getCurrentProfile(),
+      supabase.from("customers" as never).select("*").eq("business_id", businessId).order("name"),
+      supabase.from("products").select("*").eq("business_id", businessId).eq("is_active", true).order("name"),
+      supabase.from("quotations" as never).select("id", { count: "exact", head: true }).eq("business_id", businessId),
     ]);
 
-  const profile = profileResult.data as Profile | null;
   const customers = customersResult.data as Customer[] | null;
   const products = productsResult.data as Product[] | null;
 
@@ -30,6 +34,7 @@ export default async function NewQuotationPage() {
       </div>
       <NewQuotationForm
         ownerId={user!.id}
+        businessId={businessId}
         profile={profile!}
         customers={customers ?? []}
         products={products ?? []}

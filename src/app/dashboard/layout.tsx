@@ -5,14 +5,21 @@ import { Logo } from "@/components/Logo";
 import { SignOutButton } from "@/components/SignOutButton";
 import { PlanBadge } from "@/components/PlanBadge";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { BusinessSwitcher } from "@/components/BusinessSwitcher";
 import { I18nProvider } from "@/lib/i18n/I18nContext";
-import type { Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
 
 export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  // auth.getUser() reads the session from cookies (no database round-trip
+  // for the profiles table), so checking it here alongside the cached
+  // profile fetch below costs nothing extra — it's the only way to tell
+  // "not signed in" apart from "signed in but onboarding not finished
+  // yet", since both cases return a null profile.
   const supabase = createClient();
   const {
     data: { user },
@@ -20,18 +27,24 @@ export default async function DashboardLayout({
 
   if (!user) redirect("/login");
 
-  const { data: profile } = (await supabase
-    .from("profiles" as never)
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle()) as { data: Profile | null };
+  const profile = await getCurrentProfile();
 
   if (!profile || !profile.onboarding_complete) redirect("/onboarding");
+
+  const [activeBusiness, businesses] = await Promise.all([getActiveBusiness(), getUserBusinesses()]);
+
+  // A signed-in, onboarded user with zero businesses shouldn't be
+  // possible under normal signup — onboarding itself creates the first
+  // one — but if it ever happens (a very old account from before this
+  // feature, a partially-failed backfill), send them back through
+  // onboarding rather than rendering a dashboard with no business to
+  // scope any of its data to.
+  if (!activeBusiness) redirect("/onboarding");
 
   return (
     <I18nProvider initialLanguage={profile.language}>
       <div className="flex min-h-screen flex-col bg-paper md:flex-row">
-        <DashboardNav businessType={profile.business_type} plan={profile.plan} />
+        <DashboardNav businessType={activeBusiness.business_type} plan={profile.plan} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
@@ -41,31 +54,12 @@ export default async function DashboardLayout({
 
             <div className="ml-auto flex shrink-0 items-center gap-3">
               <PlanBadge plan={profile.plan} className="hidden sm:inline-flex" />
-              <div className="hidden items-center gap-2 border-l border-paper-fold pl-3 md:flex">
-                {profile.logo_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                  src={profile.logo_url}
-                  alt={profile.business_name || "Business logo"}
-                  className="h-8 w-8 shrink-0 rounded-full border border-paper-fold object-contain"
-                />
-              ) : (
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-ink text-xs font-semibold uppercase text-white">
-                  {(profile.business_name || "Z").charAt(0)}
-                </div>
-              )}
-              <div>
-                <p className="text-sm font-semibold leading-tight text-text">
-                  {profile.business_name || "Your business"}
-                </p>
-                <p className="text-xs capitalize leading-tight text-text-soft">
-                  {profile.business_type}
-                </p>
+              <div className="hidden md:block">
+                <BusinessSwitcher activeBusiness={activeBusiness} businesses={businesses} />
               </div>
+              <SignOutButton className="hidden md:block" />
             </div>
-            <SignOutButton className="hidden md:block" />
-          </div>
-        </header>
+          </header>
 
         <div className="border-b border-paper-fold bg-paper-card px-4 py-3 sm:px-6 md:hidden">
           <GlobalSearch />

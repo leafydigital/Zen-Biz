@@ -76,16 +76,53 @@ export function OnboardingForm({ userId }: { userId: string }) {
       logoUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
     }
 
-    const { error: dbError } = await supabase
-      .from("profiles" as never)
-      .update({
+    // Create the actual business row — this used to be missing entirely,
+    // which meant a completed onboarding left profiles.onboarding_complete
+    // = true but zero rows in businesses/business_members. The dashboard
+    // layout requires an active business to render at all and sends
+    // anyone without one back to /onboarding, while /onboarding itself
+    // only checks onboarding_complete and sends anyone who already
+    // finished it straight to /dashboard — with no business ever created,
+    // those two checks disagreed forever and bounced the user in a loop.
+    const { data: business, error: businessError } = await supabase
+      .from("businesses" as never)
+      .insert({
+        owner_id: userId,
         business_name: businessName.trim(),
         business_type: finalBusinessType,
         phone: phone.trim() || null,
         address: address.trim() || null,
         gst_number: gstNumber.trim() || null,
         logo_url: logoUrl,
-                onboarding_complete: true,
+      } as never)
+      .select("id")
+      .single();
+
+    if (businessError || !business) {
+      setSaving(false);
+      console.error("Zen Biz: failed to create business", businessError);
+      setError(
+        businessError?.message ||
+          "Something went wrong setting up your business. Please try again."
+      );
+      return;
+    }
+
+    const { error: memberError } = await supabase
+      .from("business_members" as never)
+      .insert({ business_id: (business as { id: string }).id, user_id: userId, role: "owner" } as never);
+
+    if (memberError) {
+      setSaving(false);
+      console.error("Zen Biz: failed to add business owner membership", memberError);
+      setError(memberError.message || "Something went wrong setting up your business. Please try again.");
+      return;
+    }
+
+    const { error: dbError } = await supabase
+      .from("profiles" as never)
+      .update({
+        onboarding_complete: true,
       } as never)
       .eq("id", userId);
       

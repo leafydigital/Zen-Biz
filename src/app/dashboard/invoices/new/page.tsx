@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { NewInvoiceForm } from "@/components/NewInvoiceForm";
-import type { Customer, Product, Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import type { Customer, Product } from "@/types/database";
 
 export default async function NewInvoicePage({
   searchParams,
@@ -13,6 +15,9 @@ export default async function NewInvoicePage({
     data: { user },
   } = await supabase.auth.getUser();
 
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
+
   // Start of the current calendar month, in the server's local time — the
   // 50-invoice Starter limit resets on the 1st, not on a rolling 30-day
   // window. Only official invoices count toward it, so this count
@@ -21,23 +26,24 @@ export default async function NewInvoicePage({
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
 
-  const [profileResult, customersResult, productsResult, { count }, { count: monthCount }] =
+  const [profile, customersResult, productsResult, { count }, { count: monthCount }] =
     await Promise.all([
-      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
-      supabase.from("customers" as never).select("*").order("name"),
-      supabase.from("products").select("*").eq("is_active", true).order("name"),
+      getCurrentProfile(),
+      supabase.from("customers" as never).select("*").eq("business_id", businessId).order("name"),
+      supabase.from("products").select("*").eq("business_id", businessId).eq("is_active", true).order("name"),
       supabase
         .from("invoices" as never)
         .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .eq("record_type", "invoice"),
       supabase
         .from("invoices" as never)
         .select("id", { count: "exact", head: true })
+        .eq("business_id", businessId)
         .eq("record_type", "invoice")
         .gte("created_at", monthStart.toISOString()),
     ]);
 
-  const profile = profileResult.data as Profile | null;
   const customers = customersResult.data as Customer[] | null;
   const products = productsResult.data as Product[] | null;
   const plan = profile?.plan ?? "starter";
@@ -58,6 +64,7 @@ export default async function NewInvoicePage({
       </div>
       <NewInvoiceForm
         ownerId={user!.id}
+        businessId={businessId}
         profile={profile!}
         customers={customers ?? []}
         products={products ?? []}

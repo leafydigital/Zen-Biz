@@ -3,23 +3,20 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { ProductDetailView } from "@/components/ProductDetailView";
 import { getLabels } from "@/lib/businessLabels";
-import type { Product, Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import type { Product } from "@/types/database";
 
 export default async function ProductDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
-  const [productResult, profileResult] = await Promise.all([
+  const [productResult, profile] = await Promise.all([
     supabase.from("products").select("*").eq("id", params.id).maybeSingle(),
-    supabase.from("profiles" as never).select("*").eq("id", user!.id).maybeSingle(),
+    getCurrentProfile(),
   ]);
 
   const product = productResult.data as Product | null;
   if (!product) notFound();
 
-  const profile = profileResult.data as Profile | null;
   const labels = getLabels(profile?.business_type);
 
   return (

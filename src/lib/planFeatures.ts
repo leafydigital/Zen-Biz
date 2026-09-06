@@ -68,7 +68,7 @@ const PROFESSIONAL_FEATURES: PlanFeatures = {
   convertQuotationToInvoice: true,
   purchases: true,
   deliveryChallans: true,
-  profitAndLoss: false,
+  profitAndLoss: true,
   gstBilling: false,
   gstReport: false,
   colourfulStyles: false,

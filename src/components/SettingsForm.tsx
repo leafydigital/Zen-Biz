@@ -8,33 +8,33 @@ import { BUSINESS_TYPE_OPTIONS } from "@/lib/businessLabels";
 import { CURRENCY_OPTIONS } from "@/types/database";
 import { LANGUAGES } from "@/lib/i18n/languages";
 import { useTranslation } from "@/lib/i18n/I18nContext";
-import type { Profile } from "@/types/database";
+import type { Business, Profile } from "@/types/database";
 
 const OTHER_VALUE = "__other__";
 
-export function SettingsForm({ profile }: { profile: Profile }) {
+export function SettingsForm({ profile, business }: { profile: Profile; business: Business }) {
   const router = useRouter();
   const supabase = createClient();
   const { t, language, setLanguage } = useTranslation();
 
   const isKnownType = (BUSINESS_TYPE_OPTIONS as readonly string[]).includes(
-    profile.business_type
+    business.business_type
   );
 
   const [businessTypeSelect, setBusinessTypeSelect] = useState<string>(
-    isKnownType ? profile.business_type : profile.business_type ? OTHER_VALUE : ""
+    isKnownType ? business.business_type : business.business_type ? OTHER_VALUE : ""
   );
   const [customBusinessType, setCustomBusinessType] = useState(
-    isKnownType ? "" : profile.business_type
+    isKnownType ? "" : business.business_type
   );
-  const [businessName, setBusinessName] = useState(profile.business_name);
-  const [phone, setPhone] = useState(profile.phone ?? "");
-  const [address, setAddress] = useState(profile.address ?? "");
-  const [state, setState] = useState(profile.state ?? "");
-  const [gstNumber, setGstNumber] = useState(profile.gst_number ?? "");
-  const [defaultCurrency, setDefaultCurrency] = useState(profile.default_currency ?? "INR");
+  const [businessName, setBusinessName] = useState(business.business_name);
+  const [phone, setPhone] = useState(business.phone ?? "");
+  const [address, setAddress] = useState(business.address ?? "");
+  const [state, setState] = useState(business.state ?? "");
+  const [gstNumber, setGstNumber] = useState(business.gst_number ?? "");
+  const [defaultCurrency, setDefaultCurrency] = useState(business.default_currency ?? "INR");
   const [logoFile, setLogoFile] = useState<File | null>(null);
-  const [logoPreview, setLogoPreview] = useState<string | null>(profile.logo_url);
+  const [logoPreview, setLogoPreview] = useState<string | null>(business.logo_url);
   const [logoRemoved, setLogoRemoved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -72,12 +72,14 @@ export function SettingsForm({ profile }: { profile: Profile }) {
     setSaved(false);
     setSaving(true);
 
-    let logoUrl = profile.logo_url;
+    let logoUrl = business.logo_url;
     if (logoRemoved) {
       logoUrl = null;
     } else if (logoFile) {
       const ext = logoFile.name.split(".").pop();
-      const path = `${profile.id}/logo.${ext}`;
+      // Keyed by business id, not user id — each business has its own
+      // logo file, since a user can now have more than one business.
+      const path = `${business.id}/logo.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from("business-logos")
         .upload(path, logoFile, { upsert: true });
@@ -96,8 +98,11 @@ export function SettingsForm({ profile }: { profile: Profile }) {
       logoUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
     }
 
-    const { error: dbError } = await supabase
-      .from("profiles" as never)
+    // Business-specific fields go on the businesses row for THIS
+    // business — not profiles, which now only holds settings that follow
+    // the signed-in user across every business they belong to.
+    const { error: businessError } = await supabase
+      .from("businesses" as never)
       .update({
         business_name: businessName.trim(),
         business_type: finalBusinessType,
@@ -107,16 +112,32 @@ export function SettingsForm({ profile }: { profile: Profile }) {
         gst_number: gstNumber.trim() || null,
         default_currency: defaultCurrency,
         logo_url: logoUrl,
-        language,
       } as never)
+      .eq("id", business.id);
+
+    if (businessError) {
+      setSaving(false);
+      console.error("Zen Biz: failed to save business", businessError);
+      setError(
+        businessError.message ||
+          "Something went wrong saving your business. Please try again."
+      );
+      return;
+    }
+
+    // Language is a per-user preference, so it still lives on profiles —
+    // unaffected by which business is currently active.
+    const { error: profileError } = await supabase
+      .from("profiles" as never)
+      .update({ language } as never)
       .eq("id", profile.id);
 
     setSaving(false);
-    if (dbError) {
-      console.error("Zen Biz: failed to save business profile", dbError);
+    if (profileError) {
+      console.error("Zen Biz: failed to save language preference", profileError);
       setError(
-        dbError.message ||
-          "Something went wrong saving your business. Please try again."
+        profileError.message ||
+          "Something went wrong saving your language preference. Please try again."
       );
       return;
     }

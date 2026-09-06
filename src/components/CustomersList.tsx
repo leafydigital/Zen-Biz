@@ -10,11 +10,13 @@ import { LimitReachedModal } from "@/components/LimitReachedModal";
 
 export function CustomersList({
   ownerId,
+  businessId,
   customers,
   plan,
   customerLimit,
 }: {
   ownerId: string;
+  businessId: string;
   customers: Customer[];
   plan: Plan;
   customerLimit: number | null;
@@ -144,6 +146,7 @@ export function CustomersList({
       {modalOpen && (
         <CustomerFormModal
           ownerId={ownerId}
+          businessId={businessId}
           customer={editing}
           plan={plan}
           onClose={() => setModalOpen(false)}

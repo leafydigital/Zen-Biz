@@ -1,7 +1,8 @@
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NewInvoiceForm } from "@/components/NewInvoiceForm";
-import type { Customer, Invoice, InvoiceItem, Product, Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import type { Customer, Invoice, InvoiceItem, Product } from "@/types/database";
 
 export default async function EditInvoicePage({ params }: { params: { id: string } }) {
   const supabase = createClient();
@@ -9,14 +10,11 @@ export default async function EditInvoicePage({ params }: { params: { id: string
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [invoiceResult, itemsResult, profileResult, customersResult, productsResult] =
-    await Promise.all([
-      supabase.from("invoices" as never).select("*").eq("id", params.id).maybeSingle(),
-      supabase.from("invoice_items" as never).select("*").eq("invoice_id", params.id).order("created_at"),
-      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
-      supabase.from("customers" as never).select("*").order("name"),
-      supabase.from("products").select("*").eq("is_active", true).order("name"),
-    ]);
+  const [invoiceResult, itemsResult, profile] = await Promise.all([
+    supabase.from("invoices" as never).select("*").eq("id", params.id).maybeSingle(),
+    supabase.from("invoice_items" as never).select("*").eq("invoice_id", params.id).order("created_at"),
+    getCurrentProfile(),
+  ]);
 
   const invoice = invoiceResult.data as Invoice | null;
   if (!invoice) notFound();
@@ -26,8 +24,17 @@ export default async function EditInvoicePage({ params }: { params: { id: string
   // could be wrong or missing if someone bookmarks/shares the link.
   const isBillingRecord = invoice.record_type === "billing_record";
 
+  // Scoped to the invoice's OWN business — not necessarily whichever one
+  // happens to be active right now, since this page can be reached via a
+  // direct link regardless of the current switcher selection. RLS still
+  // independently enforces that this only returns data if the signed-in
+  // user is actually a member of that business.
+  const [customersResult, productsResult] = await Promise.all([
+    supabase.from("customers" as never).select("*").eq("business_id", invoice.business_id).order("name"),
+    supabase.from("products").select("*").eq("business_id", invoice.business_id).eq("is_active", true).order("name"),
+  ]);
+
   const items = itemsResult.data as InvoiceItem[] | null;
-  const profile = profileResult.data as Profile | null;
   const customers = customersResult.data as Customer[] | null;
   const products = productsResult.data as Product[] | null;
 
@@ -41,6 +48,7 @@ export default async function EditInvoicePage({ params }: { params: { id: string
       </div>
       <NewInvoiceForm
         ownerId={user!.id}
+        businessId={invoice.business_id}
         profile={profile!}
         customers={customers ?? []}
         products={products ?? []}

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generatePurchasePdf } from "@/lib/generatePurchasePdf";
-import type { Profile, Purchase, PurchaseItem, Supplier } from "@/types/database";
+import type { Business, Profile, Purchase, PurchaseItem, Supplier } from "@/types/database";
 
 export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
   const supabase = createClient();
@@ -26,6 +26,17 @@ export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
       return;
     }
 
+    // Branding must come from THIS purchase's own business, not
+    // whichever business the signed-in user happens to have created
+    // first — see the identical fix in DownloadInvoiceButton.
+    const { data: businessData } = await supabase
+      .from("businesses" as never)
+      .select("*")
+      .eq("id", purchase.business_id)
+      .maybeSingle();
+    const business = businessData as Business | null;
+    const profileForPdf: Profile = business ? { ...profile, ...business, id: profile.id } : profile;
+
     let supplier: Supplier | null = null;
     if (purchase.supplier_id) {
       const { data } = await supabase
@@ -36,7 +47,7 @@ export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
       supplier = data as Supplier | null;
     }
 
-    await generatePurchasePdf({ purchase, items: items ?? [], supplier, profile });
+    await generatePurchasePdf({ purchase, items: items ?? [], supplier, profile: profileForPdf });
     setLoading(false);
   }
 

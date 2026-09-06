@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { QuotationStatusSelect } from "@/components/QuotationStatusSelect";
 import { DownloadQuotationButton } from "@/components/DownloadQuotationButton";
 import { CURRENCY_SYMBOLS } from "@/types/database";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -11,10 +12,12 @@ function formatCurrency(n: number, currency: string = "INR") {
 
 export default async function QuotationsPage() {
   const supabase = createClient();
+  const activeBusiness = await getActiveBusiness();
 
   const { data: quotations } = (await supabase
     .from("quotations" as never)
     .select("*, customers(name)")
+    .eq("business_id", activeBusiness?.id ?? "")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 
   return (

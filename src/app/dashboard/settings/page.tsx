@@ -3,7 +3,8 @@ import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsTabs } from "@/components/SettingsTabs";
 import { getTranslations } from "@/lib/i18n/translations";
-import type { Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness, getUserBusinesses, getBusinessMembers } from "@/lib/getActiveBusiness";
 
 export default async function SettingsPage() {
   const supabase = createClient();
@@ -13,13 +14,15 @@ export default async function SettingsPage() {
 
   if (!user) redirect("/login");
 
-  const { data: profile } = (await supabase
-    .from("profiles" as never)
-    .select("*")
-    .eq("id", user.id)
-    .maybeSingle()) as { data: Profile | null };
+  const [profile, business, businesses] = await Promise.all([
+    getCurrentProfile(),
+    getActiveBusiness(),
+    getUserBusinesses(),
+  ]);
 
-  if (!profile) redirect("/onboarding");
+  if (!profile || !business) redirect("/onboarding");
+
+  const members = await getBusinessMembers(business.id);
 
   const t = getTranslations(profile.language);
 
@@ -34,7 +37,13 @@ export default async function SettingsPage() {
         </p>
       </div>
       <Suspense>
-        <SettingsTabs profile={profile} />
+        <SettingsTabs
+          profile={profile}
+          business={business}
+          businesses={businesses}
+          members={members}
+          currentUserId={user.id}
+        />
       </Suspense>
     </div>
   );

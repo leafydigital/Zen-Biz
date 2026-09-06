@@ -4,6 +4,7 @@ import { InvoiceStatusSelect } from "@/components/InvoiceStatusSelect";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
 import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
 import { CURRENCY_SYMBOLS } from "@/types/database";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -12,10 +13,12 @@ function formatCurrency(n: number, currency: string = "INR") {
 
 export default async function InvoicesPage() {
   const supabase = createClient();
+  const activeBusiness = await getActiveBusiness();
 
   const { data: invoices } = (await supabase
     .from("invoices" as never)
     .select("*, customers(name)")
+    .eq("business_id", activeBusiness?.id ?? "")
     .eq("record_type", "invoice")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 

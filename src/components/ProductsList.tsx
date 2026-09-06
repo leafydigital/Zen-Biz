@@ -18,6 +18,7 @@ function formatCurrency(n: number) {
 
 export function ProductsList({
   ownerId,
+  businessId,
   products,
   itemLabel,
   itemLabelPlural,
@@ -30,6 +31,7 @@ export function ProductsList({
   productLimit,
 }: {
   ownerId: string;
+  businessId: string;
   products: Product[];
   itemLabel: string;
   itemLabelPlural: string;
@@ -193,6 +195,7 @@ export function ProductsList({
       {modalOpen && (
         <ProductFormModal
           ownerId={ownerId}
+          businessId={businessId}
           product={editing}
           itemLabel={itemLabel}
           defaultUnit={defaultUnit}

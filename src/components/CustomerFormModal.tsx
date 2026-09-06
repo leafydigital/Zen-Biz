@@ -9,11 +9,13 @@ import type { Customer, Plan } from "@/types/database";
 
 export function CustomerFormModal({
   ownerId,
+  businessId,
   customer,
   plan,
   onClose,
 }: {
   ownerId: string;
+  businessId: string;
   customer?: Customer | null;
   plan: Plan;
   onClose: () => void;
@@ -45,7 +47,8 @@ export function CustomerFormModal({
       if (limit !== null) {
         const { count } = await supabase
           .from("customers" as never)
-          .select("id", { count: "exact", head: true });
+          .select("id", { count: "exact", head: true })
+          .eq("business_id", businessId);
         if ((count ?? 0) >= limit) {
           setSaving(false);
           setError(getLimitMessage("customers", limit).title);
@@ -56,6 +59,7 @@ export function CustomerFormModal({
 
     const payload = {
       owner_id: ownerId,
+      business_id: businessId,
       name: name.trim(),
       phone: phone.trim() || null,
       email: email.trim() || null,

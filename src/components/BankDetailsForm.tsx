@@ -3,17 +3,17 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Profile } from "@/types/database";
+import type { Business } from "@/types/database";
 
-export function BankDetailsForm({ profile }: { profile: Profile }) {
+export function BankDetailsForm({ business }: { business: Business }) {
   const router = useRouter();
   const supabase = createClient();
 
-  const [bankName, setBankName] = useState(profile.bank_name ?? "");
-  const [accountName, setAccountName] = useState(profile.bank_account_name ?? "");
-  const [accountNumber, setAccountNumber] = useState(profile.bank_account_number ?? "");
-  const [ifscOrSwift, setIfscOrSwift] = useState(profile.bank_ifsc_or_swift ?? "");
-  const [qrPreview, setQrPreview] = useState<string | null>(profile.payment_qr_url);
+  const [bankName, setBankName] = useState(business.bank_name ?? "");
+  const [accountName, setAccountName] = useState(business.bank_account_name ?? "");
+  const [accountNumber, setAccountNumber] = useState(business.bank_account_number ?? "");
+  const [ifscOrSwift, setIfscOrSwift] = useState(business.bank_ifsc_or_swift ?? "");
+  const [qrPreview, setQrPreview] = useState<string | null>(business.payment_qr_url);
   const [qrFile, setQrFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,7 +40,7 @@ export function BankDetailsForm({ profile }: { profile: Profile }) {
     let qrUrl = qrPreview;
     if (qrFile) {
       const ext = qrFile.name.split(".").pop();
-      const path = `${profile.id}/qr.${ext}`;
+      const path = `${business.id}/qr.${ext}`;
       const { error: uploadErr } = await supabase.storage
         .from("payment-qr")
         .upload(path, qrFile, { upsert: true });
@@ -54,7 +54,7 @@ export function BankDetailsForm({ profile }: { profile: Profile }) {
     }
 
     const { error } = await supabase
-      .from("profiles" as never)
+      .from("businesses" as never)
             .update({
         bank_name: bankName.trim() || null,
         bank_account_name: accountName.trim() || null,
@@ -62,7 +62,7 @@ export function BankDetailsForm({ profile }: { profile: Profile }) {
         bank_ifsc_or_swift: ifscOrSwift.trim() || null,
         payment_qr_url: qrUrl,
       } as never)
-      .eq("id", profile.id);
+      .eq("id", business.id);
     setSaving(false);
     if (error) {
       console.error("Zen Biz: failed to save bank details", error);

@@ -26,6 +26,7 @@ alter table public.profiles add column if not exists billing_cycle text;
 alter table public.profiles add column if not exists plan_renews_at timestamptz;
 alter table public.profiles add column if not exists onboarding_complete boolean not null default false;
 alter table public.profiles add column if not exists language text not null default 'en';
+alter table public.profiles add column if not exists analytics_preferences jsonb not null default '{"visibleCharts": ["profitLoss", "expenseBreakdown", "salesVsPurchases", "outstandingCollected", "topProducts", "invoiceStatus"], "chartTypes": {"profitLoss": "line", "salesVsPurchases": "bar", "outstandingCollected": "bar"}, "dateRange": "thisMonth"}'::jsonb;
 alter table public.profiles add column if not exists document_design jsonb not null default '{"paperSize": "a4", "style": "default", "fontSize": 10}'::jsonb;
 alter table public.profiles add column if not exists signature_url text;
 alter table public.profiles add column if not exists invoice_terms text;

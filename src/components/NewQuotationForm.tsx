@@ -50,12 +50,14 @@ function formatCurrency(n: number, currency: string) {
 
 export function NewQuotationForm({
   ownerId,
+  businessId,
   profile,
   customers,
   products,
   suggestedQuotationNumber,
 }: {
   ownerId: string;
+  businessId: string;
   profile: Profile;
   customers: Customer[];
   products: Product[];
@@ -164,6 +166,7 @@ export function NewQuotationForm({
       .from("quotations" as never)
       .insert({
         owner_id: ownerId,
+        business_id: businessId,
         customer_id: customerId || null,
         quotation_number: quotationNumber.trim(),
         quotation_date: quotationDate,
@@ -208,6 +211,7 @@ export function NewQuotationForm({
       );
       return {
         owner_id: ownerId,
+        business_id: businessId,
         quotation_id: quotation.id,
         product_id: l.productId,
         description: l.description.trim(),
@@ -238,6 +242,7 @@ export function NewQuotationForm({
         items: itemsPayload.map((it, i) => ({
           id: String(i),
           owner_id: ownerId,
+          business_id: businessId,
           quotation_id: quotation.id,
           product_id: it.product_id,
           description: it.description,

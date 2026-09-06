@@ -60,12 +60,14 @@ function formatCurrency(n: number, currency: string) {
 
 export function NewPurchaseForm({
   ownerId,
+  businessId,
   profile,
   suppliers,
   products,
   suggestedPurchaseNumber,
 }: {
   ownerId: string;
+  businessId: string;
   profile: Profile;
   suppliers: Supplier[];
   products: Product[];
@@ -196,6 +198,7 @@ export function NewPurchaseForm({
       .from("purchases" as never)
       .insert({
         owner_id: ownerId,
+        business_id: businessId,
         supplier_id: supplierId || null,
         purchase_number: purchaseNumber.trim(),
         purchase_date: purchaseDate,
@@ -240,6 +243,7 @@ export function NewPurchaseForm({
       );
       return {
         owner_id: ownerId,
+        business_id: businessId,
         purchase_id: purchase.id,
         product_id: l.productId,
         description: l.description.trim(),
@@ -273,6 +277,7 @@ export function NewPurchaseForm({
         items: itemsPayload.map((it, i) => ({
           id: String(i),
           owner_id: ownerId,
+          business_id: businessId,
           purchase_id: purchase.id,
           product_id: it.product_id,
           description: it.description,

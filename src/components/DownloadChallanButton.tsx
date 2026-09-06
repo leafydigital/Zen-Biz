@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateDeliveryChallanPdf } from "@/lib/generateDeliveryChallanPdf";
-import type { Customer, DeliveryChallan, DeliveryChallanItem, Profile } from "@/types/database";
+import type { Business, Customer, DeliveryChallan, DeliveryChallanItem, Profile } from "@/types/database";
 
 export function DownloadChallanButton({ challanId }: { challanId: string }) {
   const supabase = createClient();
@@ -26,6 +26,17 @@ export function DownloadChallanButton({ challanId }: { challanId: string }) {
       return;
     }
 
+    // Branding must come from THIS challan's own business, not whichever
+    // business the signed-in user happens to have created first — see
+    // the identical fix in DownloadInvoiceButton.
+    const { data: businessData } = await supabase
+      .from("businesses" as never)
+      .select("*")
+      .eq("id", challan.business_id)
+      .maybeSingle();
+    const business = businessData as Business | null;
+    const profileForPdf: Profile = business ? { ...profile, ...business, id: profile.id } : profile;
+
     let customer: Customer | null = null;
     if (challan.customer_id) {
       const { data } = await supabase
@@ -36,7 +47,7 @@ export function DownloadChallanButton({ challanId }: { challanId: string }) {
       customer = data as Customer | null;
     }
 
-    await generateDeliveryChallanPdf({ challan, items: items ?? [], customer, profile });
+    await generateDeliveryChallanPdf({ challan, items: items ?? [], customer, profile: profileForPdf });
     setLoading(false);
   }
 

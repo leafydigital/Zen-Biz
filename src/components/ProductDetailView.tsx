@@ -146,6 +146,7 @@ export function ProductDetailView({
       {editOpen && (
         <ProductFormModal
           ownerId={product.owner_id}
+          businessId={product.business_id}
           product={product}
           itemLabel={itemLabel}
           defaultUnit={defaultUnit}

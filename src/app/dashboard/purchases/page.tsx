@@ -5,7 +5,8 @@ import { DownloadPurchaseButton } from "@/components/DownloadPurchaseButton";
 import { LockedFeature } from "@/components/LockedFeature";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { CURRENCY_SYMBOLS } from "@/types/database";
-import type { Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -14,15 +15,7 @@ function formatCurrency(n: number, currency: string = "INR") {
 
 export default async function PurchasesPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  const { data: profile } = (await supabase
-    .from("profiles" as never)
-    .select("plan")
-    .eq("id", user!.id)
-    .maybeSingle()) as { data: Pick<Profile, "plan"> | null };
+  const profile = await getCurrentProfile();
 
   if (!getPlanFeatures(profile?.plan ?? "starter").purchases) {
     return (
@@ -34,9 +27,12 @@ export default async function PurchasesPage() {
     );
   }
 
+  const activeBusiness = await getActiveBusiness();
+
   const { data: purchases } = (await supabase
     .from("purchases" as never)
     .select("*, suppliers(name)")
+    .eq("business_id", activeBusiness?.id ?? "")
     .order("created_at", { ascending: false })) as { data: any[] | null };
 
   return (

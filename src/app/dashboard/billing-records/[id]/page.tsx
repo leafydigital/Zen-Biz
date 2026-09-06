@@ -6,7 +6,8 @@ import { ConvertToInvoiceButton } from "@/components/ConvertToInvoiceButton";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
 import { PrintButton } from "@/components/PrintButton";
 import { CURRENCY_SYMBOLS } from "@/types/database";
-import type { Invoice, InvoiceItem, Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import type { Invoice, InvoiceItem } from "@/types/database";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -15,9 +16,6 @@ function formatCurrency(n: number, currency: string = "INR") {
 
 export default async function BillingRecordDetailPage({ params }: { params: { id: string } }) {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
 
   const { data: record } = (await supabase
     .from("invoices" as never)
@@ -28,17 +26,13 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
 
   if (!record) notFound();
 
-  const [{ data: items }, { data: profile }, { count: invoicesThisMonth }] = await Promise.all([
+  const [{ data: items }, profile, { count: invoicesThisMonth }] = await Promise.all([
     supabase
       .from("invoice_items" as never)
       .select("*")
       .eq("invoice_id", record.id)
       .order("created_at", { ascending: true }) as unknown as Promise<{ data: InvoiceItem[] | null }>,
-    supabase
-      .from("profiles" as never)
-      .select("plan")
-      .eq("id", user!.id)
-      .maybeSingle() as unknown as Promise<{ data: Pick<Profile, "plan"> | null }>,
+    getCurrentProfile(),
     (() => {
       const monthStart = new Date();
       monthStart.setDate(1);
@@ -46,6 +40,7 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
       return supabase
         .from("invoices" as never)
         .select("id", { count: "exact", head: true })
+        .eq("business_id", record.business_id)
         .eq("record_type", "invoice")
         .gte("created_at", monthStart.toISOString());
     })(),
@@ -169,6 +164,7 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
               <ConvertToInvoiceButton
                 recordId={record.id}
                 ownerId={record.owner_id}
+                businessId={record.business_id}
                 plan={plan}
                 invoicesThisMonth={invoicesThisMonth ?? 0}
               />

@@ -77,6 +77,7 @@ export function CustomerDetailView({ customer, plan }: { customer: Customer; pla
       {editOpen && (
         <CustomerFormModal
           ownerId={customer.owner_id}
+          businessId={customer.business_id}
           customer={customer}
           plan={plan}
           onClose={() => setEditOpen(false)}

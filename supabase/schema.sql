@@ -4,15 +4,29 @@
 -- Run this once in your Supabase project's SQL Editor (Project > SQL Editor).
 --
 -- SECURITY MODEL (important — read this):
--- Every business table has an `owner_id` column pointing to the signed-in
--- user (auth.users.id). Row Level Security (RLS) policies below make sure
--- that NO ROW is ever visible or writable except by its own owner_id.
+-- Every business-data table (products, customers, invoices, etc.) has a
+-- `business_id` column pointing to a row in `businesses`. Row Level
+-- Security (RLS) policies below make sure NO ROW is ever visible or
+-- writable except to someone who is a member of that specific business
+-- (see `business_members` and the `is_business_member()` helper function).
 --
--- This is enforced by the database itself — not by the app's UI. So even if
--- two different Gmail accounts log into the same browser, or someone calls
--- the API directly, Supabase will only ever return that signed-in user's own
--- rows. This is what makes "one Gmail sees only its own data, another Gmail
--- starts fresh" actually secure rather than just a UI trick.
+-- A single signed-in user (auth.users.id) can own or belong to more than
+-- one business — `profiles` now holds only genuinely per-login settings
+-- (plan, language, phone); everything business-specific (name, address,
+-- GSTIN, bank details, document design) lives on `businesses` instead.
+--
+-- This is enforced by the database itself — not by the app's UI. So even
+-- if two different Gmail accounts log into the same browser, or someone
+-- calls the API directly, Supabase will only ever return rows for
+-- businesses that account is actually a member of. This is what makes
+-- "one login sees only the businesses it belongs to" actually secure
+-- rather than just a UI trick — and what keeps two different businesses'
+-- data from ever mixing, even when the same person owns both.
+--
+-- If you are running this against a database that already has data (i.e.
+-- you're not doing a brand new install), do NOT run this file — instead
+-- run supabase/migration_17.sql followed by supabase/migration_18.sql,
+-- which carry existing rows over into this same shape safely.
 -- =============================================================================
 
 -- ---------------------------------------------------------------------------

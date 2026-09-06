@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NewPurchaseForm } from "@/components/NewPurchaseForm";
 import { getPlanFeatures } from "@/lib/planFeatures";
-import type { Product, Profile, Supplier } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import type { Product, Supplier } from "@/types/database";
 
 export default async function NewPurchasePage() {
   const supabase = createClient();
@@ -10,15 +12,16 @@ export default async function NewPurchasePage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [profileResult, suppliersResult, productsResult, { count }] =
-    await Promise.all([
-      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
-      supabase.from("suppliers" as never).select("*").order("name"),
-      supabase.from("products").select("*").eq("is_active", true).order("name"),
-      supabase.from("purchases" as never).select("id", { count: "exact", head: true }),
-    ]);
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
 
-  const profile = profileResult.data as Profile | null;
+  const [profile, suppliersResult, productsResult, { count }] =
+    await Promise.all([
+      getCurrentProfile(),
+      supabase.from("suppliers" as never).select("*").eq("business_id", businessId).order("name"),
+      supabase.from("products").select("*").eq("business_id", businessId).eq("is_active", true).order("name"),
+      supabase.from("purchases" as never).select("id", { count: "exact", head: true }).eq("business_id", businessId),
+    ]);
 
   if (!getPlanFeatures(profile?.plan ?? "starter").purchases) {
     redirect("/dashboard/purchases");
@@ -37,6 +40,7 @@ export default async function NewPurchasePage() {
       </div>
       <NewPurchaseForm
         ownerId={user!.id}
+        businessId={businessId}
         profile={profile!}
         suppliers={suppliers ?? []}
         products={products ?? []}

@@ -2,7 +2,9 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NewChallanForm } from "@/components/NewChallanForm";
 import { getPlanFeatures } from "@/lib/planFeatures";
-import type { Customer, Product, Profile } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import type { Customer, Product } from "@/types/database";
 
 export default async function NewChallanPage() {
   const supabase = createClient();
@@ -10,15 +12,16 @@ export default async function NewChallanPage() {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const [profileResult, customersResult, productsResult, { count }] =
-    await Promise.all([
-      supabase.from("profiles" as never).select("*").eq("id", user!.id).single(),
-      supabase.from("customers" as never).select("*").order("name"),
-      supabase.from("products").select("*").eq("is_active", true).order("name"),
-      supabase.from("delivery_challans" as never).select("id", { count: "exact", head: true }),
-    ]);
+  const activeBusiness = await getActiveBusiness();
+  const businessId = activeBusiness?.id ?? "";
 
-  const profile = profileResult.data as Profile | null;
+  const [profile, customersResult, productsResult, { count }] =
+    await Promise.all([
+      getCurrentProfile(),
+      supabase.from("customers" as never).select("*").eq("business_id", businessId).order("name"),
+      supabase.from("products").select("*").eq("business_id", businessId).eq("is_active", true).order("name"),
+      supabase.from("delivery_challans" as never).select("id", { count: "exact", head: true }).eq("business_id", businessId),
+    ]);
 
   if (!getPlanFeatures(profile?.plan ?? "starter").deliveryChallans) {
     redirect("/dashboard/delivery-challans");
@@ -39,6 +42,7 @@ export default async function NewChallanPage() {
       </div>
       <NewChallanForm
         ownerId={user!.id}
+        businessId={businessId}
         profile={profile!}
         customers={customers ?? []}
         products={products ?? []}
