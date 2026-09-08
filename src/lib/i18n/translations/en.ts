@@ -26,7 +26,7 @@ const en = {
   },
   dashboard: {
     title: "Good to see you",
-    subtitle: "Here's what's happening in your business today.",
+    subtitle: "Here's a quick look at how things are going.",
     newInvoice: "Invoice",
     newQuotation: "Quotation",
     collected: "Collected",
