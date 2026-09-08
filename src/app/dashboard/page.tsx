@@ -4,8 +4,9 @@ import { getLabels } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { getTranslations } from "@/lib/i18n/translations";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
-import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
 import { AnalyticsSection } from "@/components/analytics/AnalyticsSection";
+import { BusinessManagementTab } from "@/components/BusinessManagementTab";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -19,9 +20,10 @@ export default async function DashboardHome() {
   const supabase = createClient();
   const profile = await getCurrentProfile();
   const activeBusiness = await getActiveBusiness();
+  const businesses = await getUserBusinesses();
   const businessId = activeBusiness?.id ?? "";
 
-  const labels = getLabels(profile?.business_type);
+  const labels = getLabels(activeBusiness?.business_type);
   const t = getTranslations(profile?.language ?? "en");
 
   const monthStart = new Date();
@@ -239,6 +241,37 @@ export default async function DashboardHome() {
           </Link>
         </div>
       </div>
+
+      {(getPlanFeatures(profile?.plan ?? "starter").limits.businesses === null ||
+        (getPlanFeatures(profile?.plan ?? "starter").limits.businesses ?? 1) > 1 ||
+        businesses.length > 1) && (
+        <details className="group rounded-xl2 border border-paper-fold bg-white shadow-card">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-4 py-3.5 sm:px-5">
+            <span className="text-sm font-semibold text-text">
+              Your businesses ({businesses.length})
+            </span>
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="text-text-soft transition-transform group-open:rotate-180"
+              aria-hidden="true"
+            >
+              <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </summary>
+          <div className="border-t border-paper-fold px-4 py-4 sm:px-5">
+            <BusinessManagementTab
+              businesses={businesses}
+              activeBusinessId={businessId}
+              plan={profile?.plan ?? "starter"}
+            />
+          </div>
+        </details>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-5">
         {stats.map((s) => {

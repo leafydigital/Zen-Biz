@@ -20,9 +20,9 @@ export default async function OnboardingPage() {
   // screen even though their data was safe all along.
   const { data: existingProfile } = await supabase
     .from("profiles" as never)
-    .select("onboarding_complete")
+    .select("onboarding_complete, phone")
     .eq("id", user.id)
-    .maybeSingle() as { data: { onboarding_complete: boolean } | null; error: unknown };
+    .maybeSingle() as { data: { onboarding_complete: boolean; phone: string | null } | null; error: unknown };
 
   if (existingProfile?.onboarding_complete) {
     // onboarding_complete alone isn't enough to trust — an account that
@@ -31,11 +31,7 @@ export default async function OnboardingPage() {
     // business behind it. getUserBusinesses() is the SAME function the
     // dashboard layout uses, and it self-heals this exact case (a real
     // owned business with a missing business_members link) rather than
-    // just counting membership rows directly — using a separate,
-    // non-healing count query here (as this page previously did) meant
-    // a genuinely onboarded user could still see this form again even
-    // right after the self-heal fix shipped, since that fix only ever
-    // ran from the dashboard side.
+    // just counting membership rows directly.
     const businesses = await getUserBusinesses();
     if (businesses.length > 0) {
       redirect("/dashboard");
@@ -70,7 +66,7 @@ export default async function OnboardingPage() {
             This only appears once. You can change these details later in
             Settings.
           </p>
-          <OnboardingForm userId={user.id} />
+          <OnboardingForm userId={user.id} initialPhone={existingProfile?.phone} />
         </div>
       </div>
     </main>

@@ -24,7 +24,7 @@ export default async function ProductsPage() {
       .order("created_at", { ascending: false }) as unknown as Promise<{ data: Product[] | null }>,
   ]);
 
-  const labels = getLabels(profile?.business_type);
+  const labels = getLabels(activeBusiness?.business_type);
   const plan = profile?.plan ?? "starter";
 
   return (

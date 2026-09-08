@@ -17,13 +17,18 @@ export const getUserBusinesses = cache(async (): Promise<(Business & { role: Bus
   } = await supabase.auth.getUser();
   if (!user) return [];
 
-  const { data } = (await supabase
+  const { data, error: membersError } = (await supabase
     .from("business_members" as never)
     .select("role, businesses(*)")
     .eq("user_id", user.id)
     .order("created_at", { ascending: true })) as {
     data: { role: BusinessMember["role"]; businesses: Business }[] | null;
+    error: { message: string } | null;
   };
+
+  if (membersError) {
+    console.error("Zen Biz: business_members lookup failed", membersError);
+  }
 
   const memberships = (data ?? [])
     .filter((row) => row.businesses)
@@ -39,10 +44,14 @@ export const getUserBusinesses = cache(async (): Promise<(Business & { role: Bus
   // real business gets treated as having none at all and bounced to
   // /onboarding indefinitely, even though nothing about their business
   // or account data is actually missing — just this one link row.
-  const { data: owned } = (await supabase
+  const { data: owned, error: ownedError } = (await supabase
     .from("businesses" as never)
     .select("*")
-    .eq("owner_id", user.id)) as { data: Business[] | null };
+    .eq("owner_id", user.id)) as { data: Business[] | null; error: { message: string } | null };
+
+  if (ownedError) {
+    console.error("Zen Biz: owned-businesses self-heal lookup failed", ownedError);
+  }
 
   if (!owned || owned.length === 0) return [];
 

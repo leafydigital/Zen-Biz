@@ -93,7 +93,38 @@ export async function createBusiness(input: {
     .insert({ business_id: businessId, user_id: user.id, role: "owner" } as never);
 
   if (memberErr) {
-    return { error: memberErr.message, business: null };
+    // Roll back the orphaned business row rather than leaving a business
+    // with no membership link behind — that exact state (a real business
+    // with nobody able to see it, since RLS requires membership) is what
+    // repeatedly caused the "already created a business but the app
+    // won't recognize it" problem. Failing loudly and cleanly here is
+    // safer than silently leaving a broken row for a self-heal to find
+    // later.
+    await supabase.from("businesses" as never).delete().eq("id", businessId);
+    return {
+      error: `Could not finish setting up the business (${memberErr.message}). Nothing was created — please try again.`,
+      business: null,
+    };
+  }
+
+  // Verify the membership row actually exists before declaring success —
+  // insert() can return no error in edge cases (e.g. a policy silently
+  // filtering the row) while still not leaving a row behind. This is the
+  // single check that would have caught every instance of "business
+  // created but not recognized" in this app so far, rather than trusting
+  // the absence of an error alone.
+  const { count: verifyCount } = await supabase
+    .from("business_members" as never)
+    .select("id", { count: "exact", head: true })
+    .eq("business_id", businessId)
+    .eq("user_id", user.id);
+
+  if (!verifyCount || verifyCount === 0) {
+    await supabase.from("businesses" as never).delete().eq("id", businessId);
+    return {
+      error: "Something went wrong linking your account to the new business. Nothing was created — please try again.",
+      business: null,
+    };
   }
 
   revalidatePath("/dashboard", "layout");

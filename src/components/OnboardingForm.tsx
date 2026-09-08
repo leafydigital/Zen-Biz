@@ -7,14 +7,14 @@ import { BUSINESS_TYPE_OPTIONS } from "@/lib/businessLabels";
 
 const OTHER_VALUE = "__other__";
 
-export function OnboardingForm({ userId }: { userId: string }) {
+export function OnboardingForm({ userId, initialPhone }: { userId: string; initialPhone?: string | null }) {
   const router = useRouter();
   const supabase = createClient();
 
   const [businessTypeSelect, setBusinessTypeSelect] = useState<string>("");
   const [customBusinessType, setCustomBusinessType] = useState("");
   const [businessName, setBusinessName] = useState("");
-  const [phone, setPhone] = useState("");
+  const [phone, setPhone] = useState(initialPhone ?? "");
   const [address, setAddress] = useState("");
   const [gstNumber, setGstNumber] = useState("");
   const [logoFile, setLogoFile] = useState<File | null>(null);
@@ -119,10 +119,23 @@ export function OnboardingForm({ userId }: { userId: string }) {
       return;
     }
 
+    // Also save the phone number to profiles — this is what phone-based
+    // login actually looks up (get_email_by_phone), separate from
+    // businesses.phone (the business's own contact number shown on
+    // invoices). Previously this only ever got saved here for email/
+    // password signups that collected it on the signup form itself —
+    // a Google sign-in never has a phone number at all (Google doesn't
+    // provide one, and there's no way to ask for it before handing off
+    // to Google's own consent screen), and this onboarding form's phone
+    // field was only ever written to businesses.phone, never here. That
+    // meant a phone number typed in at onboarding never actually worked
+    // for a later phone login, regardless of signup method — this is
+    // what actually fixes that, for both cases.
     const { error: dbError } = await supabase
       .from("profiles" as never)
       .update({
         onboarding_complete: true,
+        phone: phone.trim() || null,
       } as never)
       .eq("id", userId);
       
@@ -243,7 +256,7 @@ export function OnboardingForm({ userId }: { userId: string }) {
           <input
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
-            placeholder="For your invoices"
+            placeholder="For your invoices, and signing in"
             className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
           />
         </label>

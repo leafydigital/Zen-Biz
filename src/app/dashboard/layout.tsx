@@ -33,18 +33,54 @@ export default async function DashboardLayout({
 
   const [activeBusiness, businesses] = await Promise.all([getActiveBusiness(), getUserBusinesses()]);
 
-  // A signed-in, onboarded user with zero businesses shouldn't be
-  // possible under normal signup — onboarding itself creates the first
-  // one — but if it ever happens (a very old account from before this
-  // feature, a partially-failed backfill), send them back through
-  // onboarding rather than rendering a dashboard with no business to
-  // scope any of its data to.
-  if (!activeBusiness) redirect("/onboarding");
+  // EMERGENCY FALLBACK: normally getActiveBusiness() should always find a
+  // business for anyone with onboarding_complete = true (onboarding
+  // itself creates one, and getActiveBusiness() self-heals a missing
+  // link for an already-owned business). Some accounts have still hit a
+  // redirect loop here despite that — the underlying cause hasn't been
+  // pinned down yet. Rather than keep blocking dashboard access entirely
+  // while that's investigated, fall back to a minimal business built
+  // from the person's own profile data (business_name, GST, etc. still
+  // live there) so the dashboard renders instead of bouncing them to
+  // /onboarding indefinitely. This is a stopgap, not a real fix — a
+  // business built this way has no real id and won't support switching,
+  // inviting members, or any multi-business feature until the actual
+  // business/business_members link is repaired.
+  const resolvedBusiness =
+    activeBusiness ??
+    (profile.business_name
+      ? {
+          id: "",
+          owner_id: user.id,
+          business_name: profile.business_name,
+          business_type: profile.business_type,
+          logo_url: profile.logo_url,
+          address: profile.address,
+          state: profile.state,
+          gst_number: profile.gst_number,
+          phone: profile.phone,
+          document_design: profile.document_design,
+          signature_url: profile.signature_url,
+          invoice_terms: profile.invoice_terms,
+          quotation_terms: profile.quotation_terms,
+          purchase_terms: profile.purchase_terms,
+          bank_name: profile.bank_name,
+          bank_account_name: profile.bank_account_name,
+          bank_account_number: profile.bank_account_number,
+          bank_ifsc_or_swift: profile.bank_ifsc_or_swift,
+          payment_qr_url: profile.payment_qr_url,
+          default_currency: profile.default_currency,
+          created_at: profile.created_at ?? new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        }
+      : null);
+
+  if (!resolvedBusiness) redirect("/onboarding");
 
   return (
     <I18nProvider initialLanguage={profile.language}>
       <div className="flex min-h-screen flex-col bg-paper md:flex-row">
-        <DashboardNav businessType={activeBusiness.business_type} plan={profile.plan} />
+        <DashboardNav businessType={resolvedBusiness.business_type} plan={profile.plan} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
@@ -55,7 +91,7 @@ export default async function DashboardLayout({
             <div className="ml-auto flex shrink-0 items-center gap-3">
               <PlanBadge plan={profile.plan} className="hidden sm:inline-flex" />
               <div className="hidden md:block">
-                <BusinessSwitcher activeBusiness={activeBusiness} businesses={businesses} />
+                <BusinessSwitcher activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />
               </div>
               <SignOutButton className="hidden md:block" />
             </div>

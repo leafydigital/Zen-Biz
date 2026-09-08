@@ -37,11 +37,6 @@ export default function LoginPage() {
               what's written in it.
             </p>
           </div>
-          <div className="flex gap-6 text-xs text-paper/50">
-            <span>Products</span>
-            <span>Customers</span>
-            <span>Invoices</span>
-          </div>
         </div>
 
         {/* Right panel — the form, styled as the open page with a stitched fold */}

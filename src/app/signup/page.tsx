@@ -36,11 +36,6 @@ export default function SignupPage() {
               account, always.
             </p>
           </div>
-          <div className="flex gap-6 text-xs text-paper/50">
-            <span>Products</span>
-            <span>Customers</span>
-            <span>Invoices</span>
-          </div>
         </div>
 
         <div className="relative flex flex-col justify-center px-6 py-10 sm:px-10 md:shadow-fold">

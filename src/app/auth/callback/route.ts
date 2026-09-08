@@ -10,7 +10,19 @@ export async function GET(request: Request) {
 
   if (code) {
     const supabase = createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (error) {
+      // The code was invalid, expired, or the exchange otherwise failed —
+      // silently redirecting to /dashboard anyway (the previous behavior)
+      // would send someone with no real session there, where they'd get
+      // bounced to /onboarding looking like a fresh account with no
+      // business, even if they already have one. Send them back to login
+      // with a clear reason instead of into a confusing dead end.
+      console.error("Zen Biz: auth code exchange failed", error);
+      return NextResponse.redirect(
+        `${origin}/login?error=${encodeURIComponent("Sign-in failed. Please try again.")}`
+      );
+    }
   }
 
   return NextResponse.redirect(`${origin}${next}`);

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { COUNTRY_CODES, DEFAULT_COUNTRY } from "@/lib/countryCodes";
 
 type Mode = "login" | "signup";
 
@@ -13,26 +14,42 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
   const [email, setEmail] = useState("");
   const [loginIdentifier, setLoginIdentifier] = useState("");
-  const [phone, setPhone] = useState("");
+  const [countryDialCode, setCountryDialCode] = useState(DEFAULT_COUNTRY.dialCode);
+  const [localPhone, setLocalPhone] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState<"google" | "email" | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(searchParams.get("error"));
   const [notice, setNotice] = useState<string | null>(null);
 
   const supabase = createClient();
 
   /**
-   * Accepts a 10-digit Indian mobile number (optionally with +91 / 91 /
-   * 0 prefix, and common separators), or a more general international
-   * number of 8–15 digits — loose enough not to reject real numbers from
-   * outside India, strict enough to catch obvious typos.
+   * The phone number's local part only needs to be real digits, 4–14 of
+   * them — the country code prefix is a separate, guaranteed-correct
+   * dropdown selection, so this no longer has to guess a country from
+   * the number's shape the way a single free-text field did.
    */
-  function isValidPhone(value: string): boolean {
+  function isValidLocalPhone(value: string): boolean {
     const digitsOnly = value.replace(/[\s\-().]/g, "");
-    const indianMobile = /^(?:\+91|91|0)?[6-9]\d{9}$/;
-    const generalInternational = /^\+?\d{8,15}$/;
-    return indianMobile.test(digitsOnly) || generalInternational.test(digitsOnly);
+    return /^\d{4,14}$/.test(digitsOnly);
+  }
+
+  function fullPhoneNumber(): string {
+    return `${countryDialCode}${localPhone.replace(/[\s\-().]/g, "")}`;
+  }
+
+  /**
+   * Standard security requirement: at least 8 characters, one uppercase
+   * letter, and one symbol. Returns the specific reason it fails so the
+   * message can tell the person exactly what's missing, rather than a
+   * generic "invalid password".
+   */
+  function passwordIssue(value: string): string | null {
+    if (value.length < 8) return "Password must be at least 8 characters.";
+    if (!/[A-Z]/.test(value)) return "Password must include at least one capital letter.";
+    if (!/[^A-Za-z0-9]/.test(value)) return "Password must include at least one symbol (e.g. ! @ # $ %).";
+    return null;
   }
 
   async function handleGoogle() {
@@ -58,17 +75,61 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setLoading("email");
 
     if (mode === "signup") {
-      if (!isValidPhone(phone)) {
+      if (!isValidLocalPhone(localPhone)) {
         setError("Please enter a valid phone number.");
         setLoading(null);
         return;
       }
+
+      const pwIssue = passwordIssue(password);
+      if (pwIssue) {
+        setError(pwIssue);
+        setLoading(null);
+        return;
+      }
+
+      const phone = fullPhoneNumber();
+
+      // Supabase's signUp() does NOT return an error for an email that's
+      // already registered — by design, so an attacker can't use signup
+      // to discover which emails have accounts. That's normally fine,
+      // but it meant a real returning user just saw "Account created,
+      // check your email" and got quietly stuck, with no way to tell
+      // they should have logged in instead. get_user_id_by_email is the
+      // same narrow, already-existing lookup used elsewhere in the app
+      // (never exposes anything beyond "does an account with this email
+      // exist") — checking it here up front gives an honest, specific
+      // message instead.
+      const { data: existingUserForEmail } = await supabase.rpc(
+        "get_user_id_by_email" as never,
+        { lookup_email: email.trim().toLowerCase() } as never
+      ) as unknown as { data: string | null };
+
+      if (existingUserForEmail) {
+        setError("This Gmail/email is already registered. Please log in instead.");
+        setLoading(null);
+        return;
+      }
+
+      const { data: existingEmailForPhone } = await supabase.rpc(
+        "get_email_by_phone" as never,
+        { lookup_phone: phone } as never
+      ) as unknown as { data: string | null };
+
+      if (existingEmailForPhone) {
+        setError(
+          "An account with this phone number already exists. Please log in instead."
+        );
+        setLoading(null);
+        return;
+      }
+
       const { error } = await supabase.auth.signUp({
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
-          data: { phone: phone.trim() },
+          data: { phone },
         },
       });
       setLoading(null);
@@ -77,7 +138,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         return;
       }
       setNotice(
-        "Account created. Check your email to confirm it, then log in."
+        "Account created. Check your email for a verification link, then log in."
       );
       return;
     }
@@ -178,15 +239,29 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">Phone Number</span>
-              <input
-                type="tel"
-                required
-                autoComplete="tel"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="98765 43210"
-                className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
-              />
+              <div className="flex gap-2">
+                <select
+                  value={countryDialCode}
+                  onChange={(e) => setCountryDialCode(e.target.value)}
+                  aria-label="Country code"
+                  className="w-[110px] shrink-0 rounded-xl border border-paper-fold bg-white px-2.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+                >
+                  {COUNTRY_CODES.map((c) => (
+                    <option key={c.iso} value={c.dialCode}>
+                      {c.dialCode} {c.iso}
+                    </option>
+                  ))}
+                </select>
+                <input
+                  type="tel"
+                  required
+                  autoComplete="tel-national"
+                  value={localPhone}
+                  onChange={(e) => setLocalPhone(e.target.value)}
+                  placeholder="98765 43210"
+                  className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
+                />
+              </div>
             </label>
           </>
         )}
@@ -197,11 +272,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
             <input
               type={showPassword ? "text" : "password"}
               required
-              minLength={6}
+              minLength={8}
               autoComplete={mode === "signup" ? "new-password" : "current-password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="At least 6 characters"
+              placeholder={mode === "signup" ? "At least 8 characters, 1 capital, 1 symbol" : "Enter your password"}
               className="w-full rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 pr-11 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
             />
             <button
