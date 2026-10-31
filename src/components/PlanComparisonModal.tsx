@@ -17,7 +17,7 @@ const FEATURES: FeatureRow[] = [
   { label: "Products & services", starter: "75", professional: "Unlimited", business: "Unlimited" },
   { label: "Businesses", starter: "1", professional: "2", business: "Up to 5" },
   { label: "Users", starter: "1", professional: "2", business: "5+" },
-  { label: "Invoices (with watermark on Starter)", starter: true, professional: true, business: true },
+  { label: "No watermark on invoices", starter: false, professional: true, business: true },
   { label: "Quotations, convert to Invoice", starter: true, professional: true, business: true },
   { label: "A4 / A5 / Thermal paper sizes", starter: true, professional: true, business: true },
   { label: "Terms & Conditions, signature, bank details", starter: true, professional: true, business: true },
@@ -26,11 +26,13 @@ const FEATURES: FeatureRow[] = [
   { label: "Share via WhatsApp / email", starter: false, professional: true, business: true },
   { label: "Expense tracking", starter: false, professional: true, business: true },
   { label: "Invoice tracking (Sent/Viewed/Overdue)", starter: false, professional: true, business: true },
+  { label: "POS print support", starter: true, professional: true, business: true },
   { label: "Colourful document styles", starter: false, professional: false, business: true },
   { label: "GST billing & GST report", starter: false, professional: false, business: true },
   { label: "Profit & Loss report", starter: false, professional: false, business: true },
   { label: "Multiple users & roles", starter: false, professional: false, business: true },
   { label: "Low stock alerts", starter: false, professional: false, business: true },
+  { label: "Barcode scanning", starter: false, professional: true, business: true },
 ];
 
 function Check() {

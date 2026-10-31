@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import { I18nProvider } from "@/lib/i18n/I18nContext";
+import { GlobalLoaderProvider } from "@/lib/GlobalLoaderContext";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -132,7 +133,9 @@ export default function RootLayout({
         />
       </head>
       <body className="font-body antialiased">
-        <I18nProvider>{children}</I18nProvider>
+        <GlobalLoaderProvider>
+          <I18nProvider>{children}</I18nProvider>
+        </GlobalLoaderProvider>
       </body>
     </html>
   );

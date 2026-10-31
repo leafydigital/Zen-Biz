@@ -4,13 +4,22 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateQuotationPdf } from "@/lib/generateQuotationPdf";
 import type { Business, Customer, Profile, Quotation, QuotationItem } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function DownloadQuotationButton({ quotationId }: { quotationId: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
 
   async function handleDownload() {
     setLoading(true);
+    showLoader("Preparing PDF…");
+
+    function stopLoading() {
+      setLoading(false);
+      hideLoader();
+    }
+
     const [quotationResult, itemsResult, profileResult] = await Promise.all([
       supabase.from("quotations" as never).select("*").eq("id", quotationId).single(),
       supabase.from("quotation_items" as never).select("*").eq("quotation_id", quotationId),
@@ -22,7 +31,7 @@ export function DownloadQuotationButton({ quotationId }: { quotationId: string }
     const profile = profileResult.data as Profile | null;
 
     if (!quotation || !profile) {
-      setLoading(false);
+      stopLoading();
       return;
     }
 
@@ -48,7 +57,7 @@ export function DownloadQuotationButton({ quotationId }: { quotationId: string }
     }
 
     await generateQuotationPdf({ quotation, items: items ?? [], customer, profile: profileForPdf });
-    setLoading(false);
+    stopLoading();
   }
 
   return (

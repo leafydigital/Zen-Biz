@@ -23,6 +23,13 @@ export interface PlanFeatures {
   multipleUsers: boolean;
   stockLowAlerts: boolean;
   customerOutstandingReport: boolean;
+  /** POS-style compact receipt printing (thermal 80mm/58mm layouts) —
+   * Professional and Business only. */
+  posPrintSupport: boolean;
+  /** Barcode scanning for quickly adding items to an invoice/sale —
+   * Business only. Flag only for now; the scanning feature itself isn't
+   * built yet. */
+  barcodeScanning: boolean;
   /**
    * Usage ceilings for this plan. `null` means unlimited. These are the
    * actual enforced limits — checked at creation time for customers,
@@ -54,6 +61,8 @@ const STARTER_FEATURES: PlanFeatures = {
   multipleUsers: false,
   stockLowAlerts: false,
   customerOutstandingReport: false,
+  posPrintSupport: true,
+  barcodeScanning: false,
   limits: {
     invoicesPerMonth: 50,
     customers: 75,
@@ -79,6 +88,8 @@ const PROFESSIONAL_FEATURES: PlanFeatures = {
   multipleUsers: false,
   stockLowAlerts: false,
   customerOutstandingReport: false,
+  posPrintSupport: true,
+  barcodeScanning: true,
   limits: {
     invoicesPerMonth: null,
     customers: null,
@@ -104,6 +115,8 @@ const BUSINESS_FEATURES: PlanFeatures = {
   multipleUsers: true,
   stockLowAlerts: true,
   customerOutstandingReport: true,
+  posPrintSupport: true,
+  barcodeScanning: true,
   limits: {
     invoicesPerMonth: null,
     customers: null,

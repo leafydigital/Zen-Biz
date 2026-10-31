@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Customer, Plan } from "@/types/database";
 import { CustomerFormModal } from "@/components/CustomerFormModal";
 import { LimitReachedModal } from "@/components/LimitReachedModal";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function CustomersList({
   ownerId,
@@ -23,6 +24,7 @@ export function CustomersList({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [modalOpen, setModalOpen] = useState(false);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [editing, setEditing] = useState<Customer | null>(null);
@@ -39,8 +41,10 @@ export function CustomersList({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
+    showLoader("Deleting customer…");
     await supabase.from("customers" as never).delete().eq("id", id);
     setDeletingId(null);
+    hideLoader();
     router.refresh();
   }
 

@@ -8,6 +8,7 @@ import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS } from "@/types/database";
 import { PAYMENT_METHOD_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/lib/paymentOptions";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { LimitReachedModal } from "@/components/LimitReachedModal";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import {
   TAX_TYPE_OPTIONS,
   TAX_PERCENT_OPTIONS,
@@ -181,6 +182,7 @@ export function NewInvoiceForm({
       : [newLine()]
   );
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [showLimitModal, setShowLimitModal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
@@ -289,6 +291,12 @@ export function NewInvoiceForm({
     }
 
     setSaving(true);
+    showLoader(isBillingRecord ? "Saving billing record…" : "Saving invoice…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     let invoice: Invoice | null;
 
@@ -343,7 +351,7 @@ export function NewInvoiceForm({
       invoice = updated as Invoice | null;
 
       if (updErr || !invoice) {
-        setSaving(false);
+        stopLoading();
         console.error("Zen Biz: failed to update invoice", updErr);
         setError(friendlySaveError(updErr?.message ?? "Could not update the invoice."));
         return;
@@ -355,7 +363,7 @@ export function NewInvoiceForm({
         .eq("invoice_id", invoice.id);
 
       if (deleteErr) {
-        setSaving(false);
+        stopLoading();
         setError(friendlySaveError(deleteErr.message));
         return;
       }
@@ -369,7 +377,7 @@ export function NewInvoiceForm({
       invoice = created as Invoice | null;
 
       if (invErr || !invoice) {
-        setSaving(false);
+        stopLoading();
         console.error("Zen Biz: failed to save invoice", invErr);
         setError(friendlySaveError(invErr?.message ?? "Could not save the invoice."));
         return;
@@ -401,7 +409,7 @@ export function NewInvoiceForm({
 
     const { error: itemsErr } = await supabase.from("invoice_items" as never).insert(itemsPayload as never);
 
-    setSaving(false);
+    stopLoading();
     if (itemsErr) {
       setError(friendlySaveError(itemsErr.message));
       return;

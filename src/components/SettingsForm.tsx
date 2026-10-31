@@ -9,10 +9,13 @@ import { CURRENCY_OPTIONS } from "@/types/database";
 import { LANGUAGES } from "@/lib/i18n/languages";
 import { useTranslation } from "@/lib/i18n/I18nContext";
 import type { Business, Profile } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
+import { validateGstinFormat, stateNameForCode } from "@/lib/gstinValidation";
 
 const OTHER_VALUE = "__other__";
 
 export function SettingsForm({ profile, business }: { profile: Profile; business: Business }) {
+  const { showLoader, hideLoader } = useGlobalLoader();
   const router = useRouter();
   const supabase = createClient();
   const { t, language, setLanguage } = useTranslation();
@@ -32,6 +35,10 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
   const [address, setAddress] = useState(business.address ?? "");
   const [state, setState] = useState(business.state ?? "");
   const [gstNumber, setGstNumber] = useState(business.gst_number ?? "");
+  // GST is optional on this form (many small businesses aren't registered
+  // yet), so this only ever validates when something has actually been
+  // typed — an empty field is never flagged as an error here.
+  const gstinCheck = gstNumber.trim() ? validateGstinFormat(gstNumber) : null;
   const [defaultCurrency, setDefaultCurrency] = useState(business.default_currency ?? "INR");
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(business.logo_url);
@@ -71,6 +78,12 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
     setError(null);
     setSaved(false);
     setSaving(true);
+    showLoader("Saving business details…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     let logoUrl = business.logo_url;
     if (logoRemoved) {
@@ -84,7 +97,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
         .from("business-logos")
         .upload(path, logoFile, { upsert: true });
       if (uploadErr) {
-        setSaving(false);
+        stopLoading();
         setError(`Couldn't upload logo (${uploadErr.message}).`);
         return;
       }
@@ -116,7 +129,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
       .eq("id", business.id);
 
     if (businessError) {
-      setSaving(false);
+      stopLoading();
       console.error("Zen Biz: failed to save business", businessError);
       setError(
         businessError.message ||
@@ -132,7 +145,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
       .update({ language } as never)
       .eq("id", profile.id);
 
-    setSaving(false);
+    stopLoading();
     if (profileError) {
       console.error("Zen Biz: failed to save language preference", profileError);
       setError(
@@ -282,9 +295,21 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
           </span>
           <input
             value={gstNumber}
-            onChange={(e) => setGstNumber(e.target.value)}
-            className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+            onChange={(e) => setGstNumber(e.target.value.toUpperCase())}
+            maxLength={15}
+            placeholder="e.g. 27AAAPL1234C1Z5"
+            className={`rounded-xl border bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink ${
+              gstinCheck && !gstinCheck.valid ? "border-alert" : "border-paper-fold"
+            }`}
           />
+          {gstinCheck && !gstinCheck.valid && (
+            <p className="text-xs text-alert">{gstinCheck.reason}</p>
+          )}
+          {gstinCheck?.valid && (
+            <p className="text-xs text-success">
+              Valid format{gstinCheck.stateCode && stateNameForCode(gstinCheck.stateCode) ? ` — ${stateNameForCode(gstinCheck.stateCode)}` : ""}
+            </p>
+          )}
         </label>
       </div>
 

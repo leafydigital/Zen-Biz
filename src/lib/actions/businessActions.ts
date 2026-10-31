@@ -1,8 +1,9 @@
 "use server";
 
-import { cookies } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getUserBusinesses, ACTIVE_BUSINESS_COOKIE } from "@/lib/getActiveBusiness";
 import { getPlanFeatures } from "@/lib/planFeatures";
@@ -131,13 +132,16 @@ export async function createBusiness(input: {
   return { error: null, business };
 }
 
-/**
- * Adds an existing Zen Biz user (by email) as a member of a business,
- * after checking the plan's user limit for the business owner's plan and
- * confirming the caller actually owns this business. Never creates a new
- * auth account — the invited person must already have signed up.
- */
+/** Adds an existing user or invites a new email address as a business member. */
 export async function addBusinessMember(businessId: string, email: string) {
+  const normalizedEmail = email.trim().toLowerCase();
+  if (
+    normalizedEmail.length > 254 ||
+    !/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(normalizedEmail)
+  ) {
+    return { error: "Enter a valid email address." };
+  }
+
   const supabase = createClient();
   const {
     data: { user },
@@ -172,26 +176,66 @@ export async function addBusinessMember(businessId: string, email: string) {
   }
 
   const { data: invitedUser } = (await supabase.rpc("get_user_id_by_email" as never, {
-    lookup_email: email.trim().toLowerCase(),
+    lookup_email: normalizedEmail,
   } as never)) as { data: string | null };
 
-  if (!invitedUser) {
-    return { error: "No Zen Biz account found for that email address." };
-  }
+  let memberUserId = invitedUser;
+  let inviteSent = false;
 
-  const { error: insertErr } = await supabase
-    .from("business_members" as never)
-    .insert({ business_id: businessId, user_id: invitedUser, role: "member" } as never);
+  if (!memberUserId) {
+    try {
+      const admin = createAdminClient();
+      const requestOrigin = headers().get("origin");
+      const siteOrigin = requestOrigin?.startsWith("https://") || requestOrigin?.startsWith("http://")
+        ? requestOrigin
+        : "https://zenbiz.app";
+      const { data, error } = await admin.auth.admin.inviteUserByEmail(normalizedEmail, {
+        redirectTo: new URL("/reset-password", siteOrigin).toString(),
+      });
 
-  if (insertErr) {
-    if (insertErr.message.includes("duplicate")) {
-      return { error: "That person is already a member of this business." };
+      if (error) return { error: error.message };
+      if (!data.user) return { error: "The invitation could not be created. Please try again." };
+
+      memberUserId = data.user.id;
+      const { error: profileError } = await admin
+        .from("profiles" as never)
+        .update({ onboarding_complete: true } as never)
+        .eq("id", memberUserId);
+
+      if (profileError) {
+        return { error: "The invitation was sent, but the account could not be prepared. Please contact support." };
+      }
+
+      const { error: insertError } = await admin
+        .from("business_members" as never)
+        .insert({ business_id: businessId, user_id: memberUserId, role: "member" } as never);
+
+      if (insertError) {
+        if (insertError.message.includes("duplicate")) {
+          return { error: "That person is already a member of this business." };
+        }
+        return { error: "The invitation was sent, but the team membership could not be added. Please try again." };
+      }
+
+      inviteSent = true;
+    } catch {
+      return { error: "Unable to send the invitation. Please try again or contact support." };
     }
-    return { error: insertErr.message };
+  } else {
+    const { error: insertError } = await supabase
+      .from("business_members" as never)
+      .insert({ business_id: businessId, user_id: memberUserId, role: "member" } as never);
+
+    if (insertError) {
+      if (insertError.message.includes("duplicate")) {
+        return { error: "That person is already a member of this business." };
+      }
+      return { error: insertError.message };
+    }
   }
 
   revalidatePath("/dashboard/settings");
-  return { error: null };
+  return { error: null, inviteSent };
 }
 
 /**

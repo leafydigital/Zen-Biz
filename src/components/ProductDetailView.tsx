@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Product, Plan } from "@/types/database";
 import { ProductFormModal } from "@/components/ProductFormModal";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -33,13 +34,16 @@ export function ProductDetailView({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
     setDeleting(true);
+    showLoader("Deleting item…");
     await supabase.from("products").delete().eq("id", product.id);
+    hideLoader();
     router.push("/dashboard/products");
     router.refresh();
   }

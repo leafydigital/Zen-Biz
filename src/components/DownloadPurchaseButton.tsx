@@ -4,13 +4,22 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generatePurchasePdf } from "@/lib/generatePurchasePdf";
 import type { Business, Profile, Purchase, PurchaseItem, Supplier } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
 
   async function handleDownload() {
     setLoading(true);
+    showLoader("Preparing PDF…");
+
+    function stopLoading() {
+      setLoading(false);
+      hideLoader();
+    }
+
     const [purchaseResult, itemsResult, profileResult] = await Promise.all([
       supabase.from("purchases" as never).select("*").eq("id", purchaseId).single(),
       supabase.from("purchase_items" as never).select("*").eq("purchase_id", purchaseId),
@@ -22,7 +31,7 @@ export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
     const profile = profileResult.data as Profile | null;
 
     if (!purchase || !profile) {
-      setLoading(false);
+      stopLoading();
       return;
     }
 
@@ -48,7 +57,7 @@ export function DownloadPurchaseButton({ purchaseId }: { purchaseId: string }) {
     }
 
     await generatePurchasePdf({ purchase, items: items ?? [], supplier, profile: profileForPdf });
-    setLoading(false);
+    stopLoading();
   }
 
   return (

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 const TERMS_FIELD: Record<"invoice" | "quotation" | "purchase", "invoice_terms" | "quotation_terms" | "purchase_terms"> = {
   invoice: "invoice_terms",
@@ -28,17 +29,20 @@ export function TermsForm({
 
   const [terms, setTerms] = useState(business[field] ?? "");
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
   async function handleSave() {
     setSaving(true);
     setError(null);
+    showLoader("Saving terms…");
     const { error } = await supabase
       .from("businesses" as never)
      .update({ [field]: terms.trim() || null } as never)
       .eq("id", business.id);
     setSaving(false);
+    hideLoader();
     if (error) {
       console.error(`Zen Biz: failed to save ${field}`, error);
       setError(error.message || "Could not save. Please try again.");

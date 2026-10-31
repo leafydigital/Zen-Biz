@@ -4,9 +4,11 @@ import { createClient } from "@/lib/supabase/server";
 import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
 import { ConvertToInvoiceButton } from "@/components/ConvertToInvoiceButton";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
+import { ShareInvoiceButtons } from "@/components/ShareInvoiceButtons";
 import { PrintButton } from "@/components/PrintButton";
 import { CURRENCY_SYMBOLS } from "@/types/database";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getPlanFeatures } from "@/lib/planFeatures";
 import type { Invoice, InvoiceItem } from "@/types/database";
 
 function formatCurrency(n: number, currency: string = "INR") {
@@ -47,6 +49,7 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
   ]);
 
   const plan = profile?.plan ?? "starter";
+  const canShare = getPlanFeatures(plan).shareViaWhatsapp;
 
   return (
     <div className="flex flex-col gap-5">
@@ -161,6 +164,7 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
               </Link>
               <PrintButton />
               <DownloadInvoiceButton invoiceId={record.id} />
+              {canShare && <ShareInvoiceButtons invoiceId={record.id} />}
               <ConvertToInvoiceButton
                 recordId={record.id}
                 ownerId={record.owner_id}

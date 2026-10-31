@@ -7,6 +7,7 @@ import { getPlanFeatures } from "@/lib/planFeatures";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import { BUSINESS_TYPE_OPTIONS } from "@/lib/businessLabels";
 import type { Business, Plan } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function BusinessManagementTab({
   businesses,
@@ -18,6 +19,7 @@ export function BusinessManagementTab({
   plan: Plan;
 }) {
   const router = useRouter();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [pending, startTransition] = useTransition();
   const [switchingId, setSwitchingId] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -30,9 +32,11 @@ export function BusinessManagementTab({
   function handleSwitch(businessId: string) {
     if (businessId === activeBusinessId) return;
     setSwitchingId(businessId);
+    showLoader("Switching business…");
     startTransition(async () => {
       await switchActiveBusiness(businessId);
       setSwitchingId(null);
+      hideLoader();
       router.refresh();
     });
   }
@@ -180,6 +184,7 @@ function AddBusinessForm({
   onLimitError: (message: string) => void;
 }) {
   const router = useRouter();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [businessName, setBusinessName] = useState("");
   const [businessType, setBusinessType] = useState("");
   const [saving, setSaving] = useState(false);
@@ -193,11 +198,13 @@ function AddBusinessForm({
     }
     setSaving(true);
     setError(null);
+    showLoader("Creating business…");
     const result = await createBusiness({
       business_name: businessName.trim(),
       business_type: businessType.trim(),
     });
     setSaving(false);
+    hideLoader();
     if (result.error) {
       if (result.business === null && result.error.includes("Upgrade")) {
         onLimitError(result.error);

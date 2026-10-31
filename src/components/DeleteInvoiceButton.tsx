@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function DeleteInvoiceButton({
   invoiceId,
@@ -15,6 +16,7 @@ export function DeleteInvoiceButton({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [confirming, setConfirming] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,8 +24,10 @@ export function DeleteInvoiceButton({
   async function handleDelete() {
     setDeleting(true);
     setError(null);
+    showLoader("Deleting…");
     const { error } = await supabase.from("invoices" as never).delete().eq("id", invoiceId);
     setDeleting(false);
+    hideLoader();
     if (error) {
       console.error("Zen Biz: failed to delete invoice", error);
       setError(error.message || "Could not delete. Please try again.");

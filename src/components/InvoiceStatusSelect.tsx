@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { InvoiceStatus, PaymentMethod } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 const STYLES: Record<InvoiceStatus, string> = {
   paid: "bg-success-bg text-success",
@@ -32,6 +33,7 @@ export function InvoiceStatusSelect({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [current, setCurrent] = useState(status);
   const [updating, setUpdating] = useState(false);
   const [askingPaymentMethod, setAskingPaymentMethod] = useState(false);
@@ -39,11 +41,13 @@ export function InvoiceStatusSelect({
   async function applyStatus(next: InvoiceStatus, method: PaymentMethod | null) {
     setUpdating(true);
     setCurrent(next);
+    showLoader("Updating status…");
         await supabase
       .from("invoices" as never)
             .update({ status: next, payment_method: method } as never)
       .eq("id", invoiceId);
     setUpdating(false);
+    hideLoader();
     router.refresh();
   }
 

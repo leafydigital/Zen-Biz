@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { DeliveryChallanStatus } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 const STYLES: Record<DeliveryChallanStatus, string> = {
   draft: "bg-paper-fold text-text-soft",
@@ -20,14 +21,17 @@ export function ChallanStatusSelect({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [current, setCurrent] = useState(status);
   const [updating, setUpdating] = useState(false);
 
   async function handleChange(next: DeliveryChallanStatus) {
     setUpdating(true);
     setCurrent(next);
+    showLoader("Updating status…");
               await supabase.from("delivery_challans" as never).update({ status: next } as never).eq("id", challanId);
     setUpdating(false);
+    hideLoader();
     router.refresh();
   }
 

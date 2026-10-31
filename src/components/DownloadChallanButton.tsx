@@ -4,13 +4,22 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateDeliveryChallanPdf } from "@/lib/generateDeliveryChallanPdf";
 import type { Business, Customer, DeliveryChallan, DeliveryChallanItem, Profile } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function DownloadChallanButton({ challanId }: { challanId: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
 
   async function handleDownload() {
     setLoading(true);
+    showLoader("Preparing PDF…");
+
+    function stopLoading() {
+      setLoading(false);
+      hideLoader();
+    }
+
     const [challanResult, itemsResult, profileResult] = await Promise.all([
       supabase.from("delivery_challans" as never).select("*").eq("id", challanId).single(),
       supabase.from("delivery_challan_items" as never).select("*").eq("challan_id", challanId),
@@ -22,7 +31,7 @@ export function DownloadChallanButton({ challanId }: { challanId: string }) {
     const profile = profileResult.data as Profile | null;
 
     if (!challan || !profile) {
-      setLoading(false);
+      stopLoading();
       return;
     }
 
@@ -48,7 +57,7 @@ export function DownloadChallanButton({ challanId }: { challanId: string }) {
     }
 
     await generateDeliveryChallanPdf({ challan, items: items ?? [], customer, profile: profileForPdf });
-    setLoading(false);
+    stopLoading();
   }
 
   return (

@@ -41,6 +41,9 @@ const ICONS = {
   scale: (
     <path d="M12 3v18M12 3l-5 4M12 3l5 4M4 10h6M14 10h6M4 10l1.5 5a2.5 2.5 0 0 0 5 0L12 10M14 10l1.5 5a2.5 2.5 0 0 0 5 0L22 10" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
   ),
+  message: (
+    <path d="M4 5.5h16a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1H9l-4.5 4V17H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+  ),
 };
 
 function Icon({ name }: { name: keyof typeof ICONS }) {
@@ -116,7 +119,7 @@ export function DashboardNav({
     <>
       {/* Desktop / tablet: gradient rail with grouped sections */}
       <nav
-        className="hidden shrink-0 flex-col gap-1 overflow-y-auto bg-gradient-to-b from-ink via-indigo-600 to-brass px-3 py-5 md:flex md:w-56 lg:w-64"
+        className="hidden shrink-0 flex-col gap-1 overflow-y-auto bg-gradient-to-b from-ink via-indigo-600 to-brass px-3 py-5 md:sticky md:top-0 md:flex md:h-screen md:w-56 lg:w-64"
         aria-label="Main navigation"
       >
         <Link href="/dashboard" className="mb-4 px-2">
@@ -147,6 +150,10 @@ export function DashboardNav({
           ))}
         </div>
 
+        <div className="mt-2 flex flex-col gap-1 border-t border-white/10 pt-2">
+          <NavLink item={{ href: "/dashboard/contact-us", label: "Contact Us", icon: "message" }} />
+        </div>
+
         {resolvedPlan === "starter" && (
           <div className="mt-auto pt-5">
             <div className="rounded-2xl bg-white/15 p-4 text-center backdrop-blur-sm">
@@ -165,6 +172,8 @@ export function DashboardNav({
             </div>
           </div>
         )}
+
+        <p className="mt-3 px-2 text-xs text-blue-200/60">Version 1.00</p>
       </nav>
 
       {/* Mobile: bottom tab bar shows the 4 most-used items, others sit behind "More" */}

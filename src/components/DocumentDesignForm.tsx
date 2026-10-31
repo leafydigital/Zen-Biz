@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { generateSaleDocumentPdf } from "@/lib/generateSaleDocumentPdf";
 import type { Business, DocDesignSettings, DocFontSize, DocPaperSize, DocStyle } from "@/types/database";
 import { DEFAULT_DOCUMENT_DESIGN } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 const SAMPLE_ITEMS = [
   { description: "Sample product", quantity: 2, unit: "piece", item_code: "SKU-101", hsn_code: "7113", unit_price: 500, line_total: 1000 },
@@ -37,12 +38,14 @@ export function DocumentDesignForm({ business }: { business: Business }) {
   const [signaturePreview, setSignaturePreview] = useState<string | null>(business.signature_url);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const [previewing, setPreviewing] = useState(false);
 
   async function handlePreview() {
     setPreviewing(true);
+    showLoader("Generating preview…");
     try {
       await generateSaleDocumentPdf({
         docLabel: "INVOICE",
@@ -66,6 +69,7 @@ export function DocumentDesignForm({ business }: { business: Business }) {
       });
     } finally {
       setPreviewing(false);
+      hideLoader();
     }
   }
 
@@ -91,6 +95,12 @@ export function DocumentDesignForm({ business }: { business: Business }) {
   async function handleSave() {
     setSaving(true);
     setError(null);
+    showLoader("Saving document design…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     let signatureUrl = signaturePreview;
     if (signatureFile) {
@@ -101,7 +111,7 @@ export function DocumentDesignForm({ business }: { business: Business }) {
         .from("signatures")
         .upload(path, signatureFile, { upsert: true });
       if (uploadErr) {
-        setSaving(false);
+        stopLoading();
         setError(`Couldn't upload signature (${uploadErr.message}).`);
         return;
       }
@@ -118,7 +128,7 @@ export function DocumentDesignForm({ business }: { business: Business }) {
         signature_url: signatureUrl,
       } as never)
       .eq("id", business.id);
-    setSaving(false);
+    stopLoading();
     if (error) {
       console.error("Zen Biz: failed to save document design", error);
       setError(error.message || "Could not save. Please try again.");

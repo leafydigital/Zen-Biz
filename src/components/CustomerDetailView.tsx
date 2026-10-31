@@ -5,17 +5,21 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Customer, Plan } from "@/types/database";
 import { CustomerFormModal } from "@/components/CustomerFormModal";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function CustomerDetailView({ customer, plan }: { customer: Customer; plan: Plan }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [editOpen, setEditOpen] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   async function handleDelete() {
     setDeleting(true);
+    showLoader("Deleting customer…");
     await supabase.from("customers" as never).delete().eq("id", customer.id);
+    hideLoader();
     router.push("/dashboard/customers");
     router.refresh();
   }

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateQuotationPdf } from "@/lib/generateQuotationPdf";
 import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import {
   TAX_TYPE_OPTIONS,
   TAX_PERCENT_OPTIONS,
@@ -87,6 +88,7 @@ export function NewQuotationForm({
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineItem[]>([newLine()]);
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
   const selectedCustomer = customers.find((c) => c.id === customerId) ?? null;
@@ -161,6 +163,12 @@ export function NewQuotationForm({
     }
 
     setSaving(true);
+    showLoader("Saving quotation…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     const { data: quotationData, error: qErr } = await supabase
       .from("quotations" as never)
@@ -197,7 +205,7 @@ export function NewQuotationForm({
     const quotation = quotationData as Quotation | null;
 
     if (qErr || !quotation) {
-      setSaving(false);
+      stopLoading();
       console.error("Zen Biz: failed to save quotation", qErr);
       setError(qErr?.message ?? "Could not save the quotation.");
       return;
@@ -229,7 +237,7 @@ export function NewQuotationForm({
 
         const { error: itemsErr } = await supabase.from("quotation_items" as never).insert(itemsPayload as never);
 
-    setSaving(false);
+    stopLoading();
     if (itemsErr) {
       setError(itemsErr.message);
       return;

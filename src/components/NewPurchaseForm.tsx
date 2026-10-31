@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { generatePurchasePdf } from "@/lib/generatePurchasePdf";
 import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS } from "@/types/database";
 import { PAYMENT_METHOD_OPTIONS, PAYMENT_STATUS_OPTIONS } from "@/lib/paymentOptions";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import {
   TAX_TYPE_OPTIONS,
   TAX_PERCENT_OPTIONS,
@@ -99,6 +100,7 @@ export function NewPurchaseForm({
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineItem[]>([newLine()]);
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
   const selectedSupplier = suppliers.find((s) => s.id === supplierId) ?? null;
@@ -193,6 +195,12 @@ export function NewPurchaseForm({
     }
 
     setSaving(true);
+    showLoader("Saving purchase…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     const { data: purchaseData, error: pErr } = await supabase
       .from("purchases" as never)
@@ -229,7 +237,7 @@ export function NewPurchaseForm({
     const purchase = purchaseData as Purchase | null;
 
     if (pErr || !purchase) {
-      setSaving(false);
+      stopLoading();
       console.error("Zen Biz: failed to save purchase", pErr);
       setError(pErr?.message ?? "Could not save the purchase.");
       return;
@@ -264,7 +272,7 @@ export function NewPurchaseForm({
     // needed here, it happens as a side effect of this insert.
         const { error: itemsErr } = await supabase.from("purchase_items" as never).insert(itemsPayload as never);
 
-    setSaving(false);
+    stopLoading();
     if (itemsErr) {
       setError(itemsErr.message);
       return;

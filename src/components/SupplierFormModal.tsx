@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { INDIAN_STATE_NAMES } from "@/lib/indianStates";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import type { Supplier } from "@/types/database";
 
 export function SupplierFormModal({
@@ -28,12 +29,19 @@ export function SupplierFormModal({
   const [gstin, setGstin] = useState(supplier?.gstin ?? "");
   const [notes, setNotes] = useState(supplier?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    showLoader("Saving supplier…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     const payload = {
       owner_id: ownerId,
@@ -51,7 +59,7 @@ export function SupplierFormModal({
       ? await supabase.from("suppliers" as never).update(payload as never).eq("id", supplier.id)
       : await supabase.from("suppliers" as never).insert(payload as never);
 
-    setSaving(false);
+    stopLoading();
     if (error) {
       setError(error.message);
       return;

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { COUNTRY_CODES, DEFAULT_COUNTRY } from "@/lib/countryCodes";
+import { passwordIssue } from "@/lib/passwordValidation";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 type Mode = "login" | "signup";
 
@@ -11,6 +13,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const next = searchParams.get("next") || "/dashboard";
+  const { showLoader, hideLoader } = useGlobalLoader();
 
   const [email, setEmail] = useState("");
   const [loginIdentifier, setLoginIdentifier] = useState("");
@@ -35,26 +38,58 @@ export function AuthForm({ mode }: { mode: Mode }) {
     return /^\d{4,14}$/.test(digitsOnly);
   }
 
-  function fullPhoneNumber(): string {
-    return `${countryDialCode}${localPhone.replace(/[\s\-().]/g, "")}`;
+  /**
+   * HTML's own type="email" validation only checks for a loose x@y
+   * shape — it happily accepts something like "name@g" mid-typing,
+   * which is why an incomplete address (missing ".com" etc.) could get
+   * submitted. This requires an actual domain with a dot and at least a
+   * 2-letter extension, e.g. "name@gmail.com" — a real, complete
+   * address, not just anything containing "@".
+   */
+  function isValidEmail(value: string): boolean {
+    return /^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(value.trim());
   }
 
   /**
-   * Standard security requirement: at least 8 characters, one uppercase
-   * letter, and one symbol. Returns the specific reason it fails so the
-   * message can tell the person exactly what's missing, rather than a
-   * generic "invalid password".
+   * A shape like "name@gmail.co" or "name@gmial.com" passes the general
+   * check above (it's still a real-looking domain), but is almost
+   * always a typo of a well-known provider, not a real address someone
+   * meant to use. This catches the common near-misses for major
+   * providers and returns a specific correction, so the mistake is
+   * caught before the account is created with an address that will
+   * never actually receive the verification email.
    */
-  function passwordIssue(value: string): string | null {
-    if (value.length < 8) return "Password must be at least 8 characters.";
-    if (!/[A-Z]/.test(value)) return "Password must include at least one capital letter.";
-    if (!/[^A-Za-z0-9]/.test(value)) return "Password must include at least one symbol (e.g. ! @ # $ %).";
-    return null;
+  function emailTypoSuggestion(value: string): string | null {
+    const trimmed = value.trim().toLowerCase();
+    const domain = trimmed.split("@")[1];
+    if (!domain) return null;
+
+    const KNOWN_DOMAIN_TYPOS: Record<string, string> = {
+      "gmail.co": "gmail.com",
+      "gmail.cm": "gmail.com",
+      "gmail.con": "gmail.com",
+      "gmial.com": "gmail.com",
+      "gmai.com": "gmail.com",
+      "gnail.com": "gmail.com",
+      "yahoo.co": "yahoo.com",
+      "yahoo.cm": "yahoo.com",
+      "yaho.com": "yahoo.com",
+      "outlook.co": "outlook.com",
+      "hotmail.co": "hotmail.com",
+      "hotmial.com": "hotmail.com",
+    };
+
+    return KNOWN_DOMAIN_TYPOS[domain] ?? null;
+  }
+
+  function fullPhoneNumber(): string {
+    return `${countryDialCode}${localPhone.replace(/[\s\-().]/g, "")}`;
   }
 
   async function handleGoogle() {
     setError(null);
     setLoading("google");
+    showLoader("Connecting to Google…");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -64,6 +99,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
     if (error) {
       setError(error.message);
       setLoading(null);
+      hideLoader();
     }
     // On success, the browser redirects to Google — nothing else to do here.
   }
@@ -73,18 +109,40 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setError(null);
     setNotice(null);
     setLoading("email");
+    showLoader(mode === "signup" ? "Creating your account…" : "Signing in…");
+
+    // Every early return in this handler stops the loader through this
+    // one function, so the global modal can never get stuck open by a
+    // return path that forgot to call hideLoader() directly.
+    function stopLoading() {
+      setLoading(null);
+      hideLoader();
+    }
 
     if (mode === "signup") {
+      if (!isValidEmail(email)) {
+        setError("Please enter a complete email address (e.g. name@gmail.com).");
+        stopLoading();
+        return;
+      }
+
+      const typoSuggestion = emailTypoSuggestion(email);
+      if (typoSuggestion) {
+        setError(`Please check your email address — did you mean "${email.trim().split("@")[0]}@${typoSuggestion}"?`);
+        stopLoading();
+        return;
+      }
+
       if (!isValidLocalPhone(localPhone)) {
         setError("Please enter a valid phone number.");
-        setLoading(null);
+        stopLoading();
         return;
       }
 
       const pwIssue = passwordIssue(password);
       if (pwIssue) {
         setError(pwIssue);
-        setLoading(null);
+        stopLoading();
         return;
       }
 
@@ -107,7 +165,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
 
       if (existingUserForEmail) {
         setError("This Gmail/email is already registered. Please log in instead.");
-        setLoading(null);
+        stopLoading();
         return;
       }
 
@@ -120,7 +178,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
         setError(
           "An account with this phone number already exists. Please log in instead."
         );
-        setLoading(null);
+        stopLoading();
         return;
       }
 
@@ -132,7 +190,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
           data: { phone },
         },
       });
-      setLoading(null);
+      stopLoading();
       if (error) {
         setError(error.message);
         return;
@@ -143,30 +201,30 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return;
     }
 
-    // Login accepts either an email or a phone number — a value with an
-    // "@" is treated as an email directly; anything else is looked up as
-    // a phone number and resolved to the matching account's email, since
-    // Supabase Auth itself only signs in by email here (phone-based auth
-    // was never set up, and phone numbers are just stored on profiles).
-    let loginEmail = loginIdentifier.trim();
-    if (!loginEmail.includes("@")) {
-      const { data: resolvedEmail, error: lookupErr } = await supabase.rpc(
-        "get_email_by_phone" as never,
-        { lookup_phone: loginEmail } as never
-      ) as unknown as { data: string | null; error: { message: string } | null };
-
-      if (lookupErr || !resolvedEmail) {
-        setLoading(null);
-        setError("No account found with that email or phone number.");
-        return;
-      }
-      loginEmail = resolvedEmail;
-    }
-
-    const { error } = await supabase.auth.signInWithPassword({ email: loginEmail, password });
-    setLoading(null);
+    const { error } = await supabase.auth.signInWithPassword({
+      email: loginIdentifier.trim(),
+      password,
+    });
+    stopLoading();
     if (error) {
-      setError(error.message);
+      // Supabase's signInWithPassword() returns the same generic message
+      // ("Invalid login credentials") whether the email has no account at
+      // all or the password is simply wrong — a deliberate choice on
+      // their end so a failed login attempt can't be used to discover
+      // which emails are registered. Checking existence separately here
+      // (via the same narrow, already-anon-accessible lookup used for
+      // signup's duplicate check) lets a genuinely missing account get
+      // an honest, more helpful message instead of being told its
+      // password is wrong.
+      const { data: existingUserId } = (await supabase.rpc("get_user_id_by_email" as never, {
+        lookup_email: loginIdentifier.trim().toLowerCase(),
+      } as never)) as unknown as { data: string | null };
+
+      setError(
+        existingUserId
+          ? "Incorrect password. Please try again."
+          : "Account not found. Please create an account."
+      );
       return;
     }
     router.push(next);
@@ -211,14 +269,14 @@ export function AuthForm({ mode }: { mode: Mode }) {
       <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
         {mode === "login" ? (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-text">Email or Phone Number</span>
+            <span className="text-sm font-medium text-text">Email</span>
             <input
-              type="text"
+              type="email"
               required
               autoComplete="username"
               value={loginIdentifier}
               onChange={(e) => setLoginIdentifier(e.target.value)}
-              placeholder="you@business.com or 98765 43210"
+              placeholder="you@business.com"
               className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
             />
           </label>
@@ -229,6 +287,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
               <input
                 type="email"
                 required
+                pattern="[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}"
+                title="Enter a complete email address, e.g. name@gmail.com"
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -298,6 +358,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
             </button>
           </div>
         </label>
+
+        {mode === "login" && (
+          <a
+            href="/forgot-password"
+            className="-mt-2 self-end text-sm font-medium text-ink hover:underline"
+          >
+            Forgot password?
+          </a>
+        )}
 
         {error && (
           <p className="rounded-lg bg-alert-bg px-3.5 py-2.5 text-sm text-alert" role="alert">

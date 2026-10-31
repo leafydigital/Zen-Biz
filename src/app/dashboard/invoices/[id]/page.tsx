@@ -3,9 +3,12 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { InvoiceStatusSelect } from "@/components/InvoiceStatusSelect";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
+import { ShareInvoiceButtons } from "@/components/ShareInvoiceButtons";
 import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
 import { CURRENCY_SYMBOLS } from "@/types/database";
 import type { Customer, Invoice, InvoiceItem } from "@/types/database";
+import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getPlanFeatures } from "@/lib/planFeatures";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -14,6 +17,8 @@ function formatCurrency(n: number, currency: string = "INR") {
 
 export default async function ViewInvoicePage({ params }: { params: { id: string } }) {
   const supabase = createClient();
+  const profile = await getCurrentProfile();
+  const canShare = getPlanFeatures(profile?.plan ?? "starter").shareViaWhatsapp;
 
   const { data: invoice } = (await supabase
     .from("invoices" as never)
@@ -75,6 +80,7 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
           />
           <div className="flex items-center gap-2">
             <DownloadInvoiceButton invoiceId={invoice.id} />
+            {canShare && <ShareInvoiceButtons invoiceId={invoice.id} />}
             <Link
               href={`/dashboard/invoices/${invoice.id}/edit`}
               className="inline-flex items-center gap-1.5 rounded-lg border border-paper-fold bg-white px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Supplier } from "@/types/database";
 import { SupplierFormModal } from "@/components/SupplierFormModal";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function SuppliersList({
   ownerId,
@@ -17,6 +18,7 @@ export function SuppliersList({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Supplier | null>(null);
   const [search, setSearch] = useState("");
@@ -30,8 +32,10 @@ export function SuppliersList({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
+    showLoader("Deleting supplier…");
     await supabase.from("suppliers" as never).delete().eq("id", id);
     setDeletingId(null);
+    hideLoader();
     router.refresh();
   }
 

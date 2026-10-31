@@ -10,10 +10,11 @@ import { BankDetailsForm } from "@/components/BankDetailsForm";
 import { PlanBillingTab } from "@/components/PlanBillingTab";
 import { BusinessManagementTab } from "@/components/BusinessManagementTab";
 import { TeamManagementTab } from "@/components/TeamManagementTab";
+import { ChangePasswordForm } from "@/components/ChangePasswordForm";
 import { useTranslation } from "@/lib/i18n/I18nContext";
 import type { BusinessMemberWithEmail } from "@/lib/getActiveBusiness";
 
-type Tab = "general" | "businesses" | "team" | "appearance" | "terms" | "bank" | "plan";
+type Tab = "general" | "businesses" | "team" | "appearance" | "terms" | "bank" | "plan" | "security";
 
 export function SettingsTabs({
   profile,
@@ -37,6 +38,7 @@ export function SettingsTabs({
     { id: "terms", label: t.settings.termsConditions },
     { id: "bank", label: t.settings.bankPayment },
     { id: "plan", label: t.settings.planBilling },
+    { id: "security", label: "Security" },
   ];
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "general";
@@ -110,6 +112,7 @@ export function SettingsTabs({
         )}
         {tab === "bank" && <BankDetailsForm business={business} />}
         {tab === "plan" && <PlanBillingTab profile={profile} />}
+        {tab === "security" && <ChangePasswordForm />}
       </div>
     </div>
   );

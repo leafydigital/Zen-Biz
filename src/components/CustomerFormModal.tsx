@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { INDIAN_STATE_NAMES } from "@/lib/indianStates";
 import { getPlanFeatures, getLimitMessage } from "@/lib/planFeatures";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import type { Customer, Plan } from "@/types/database";
 
 export function CustomerFormModal({
@@ -31,12 +32,19 @@ export function CustomerFormModal({
   const [gstin, setGstin] = useState(customer?.gstin ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
     setError(null);
+    showLoader("Saving customer…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     // Re-check the limit here too, not just at the list page's "Add"
     // button — this is the actual enforcement point, since the button
@@ -50,7 +58,7 @@ export function CustomerFormModal({
           .select("id", { count: "exact", head: true })
           .eq("business_id", businessId);
         if ((count ?? 0) >= limit) {
-          setSaving(false);
+          stopLoading();
           setError(getLimitMessage("customers", limit).title);
           return;
         }
@@ -73,7 +81,7 @@ export function CustomerFormModal({
       ? await supabase.from("customers" as never).update(payload as never).eq("id", customer.id)
       : await supabase.from("customers" as never).insert(payload as never);
 
-    setSaving(false);
+    stopLoading();
     if (error) {
       setError(error.message);
       return;

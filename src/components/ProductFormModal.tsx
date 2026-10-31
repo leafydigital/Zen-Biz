@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { searchHsnCodes } from "@/lib/hsnReference";
 import { getPlanFeatures, getLimitMessage } from "@/lib/planFeatures";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import type { Product, Plan } from "@/types/database";
 
 const OTHER_UNIT = "__other__";
@@ -60,6 +61,7 @@ export function ProductFormModal({
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imageRemoved, setImageRemoved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
   // Suggest HSN codes from whatever the person is typing into the HSN
@@ -91,6 +93,12 @@ export function ProductFormModal({
     e.preventDefault();
     setSaving(true);
     setError(null);
+    showLoader("Saving item…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     // Re-check the limit here too, not just at the list page's "Add"
     // button — this is the actual enforcement point. Only applies to
@@ -105,7 +113,7 @@ export function ProductFormModal({
           .select("id", { count: "exact", head: true })
           .eq("business_id", businessId);
         if ((count ?? 0) >= limit) {
-          setSaving(false);
+          stopLoading();
           setError(getLimitMessage("products", limit).title);
           return;
         }
@@ -124,7 +132,7 @@ export function ProductFormModal({
         .from("product-images")
         .upload(path, imageFile, { upsert: true });
       if (uploadErr) {
-        setSaving(false);
+        stopLoading();
         console.error("Zen Biz: failed to upload product image", uploadErr);
         setError(`Couldn't upload image (${uploadErr.message}).`);
         return;
@@ -153,7 +161,7 @@ export function ProductFormModal({
       ? await supabase.from("products" as never).update(payload as never).eq("id", product.id)
       : await supabase.from("products" as never).insert(payload as never);
       
-    setSaving(false);
+    stopLoading();
     if (error) {
       console.error("Zen Biz: failed to save product", error);
       setError(error.message || "Could not save. Please try again.");

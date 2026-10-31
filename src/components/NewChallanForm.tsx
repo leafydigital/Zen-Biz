@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateDeliveryChallanPdf } from "@/lib/generateDeliveryChallanPdf";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import type { Customer, DeliveryChallan, Product, Profile } from "@/types/database";
 
 interface LineItem {
@@ -50,6 +51,7 @@ export function NewChallanForm({
   const [notes, setNotes] = useState("");
   const [lines, setLines] = useState<LineItem[]>([newLine()]);
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
   function updateLine(id: string, patch: Partial<LineItem>) {
@@ -89,6 +91,12 @@ export function NewChallanForm({
     }
 
     setSaving(true);
+    showLoader("Saving delivery challan…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     const { data: challanData, error: cErr } = await supabase
       .from("delivery_challans" as never)
@@ -107,7 +115,7 @@ export function NewChallanForm({
     const challan = challanData as DeliveryChallan | null;
 
     if (cErr || !challan) {
-      setSaving(false);
+      stopLoading();
       console.error("Zen Biz: failed to save delivery challan", cErr);
       setError(cErr?.message ?? "Could not save the challan.");
       return;
@@ -128,7 +136,7 @@ export function NewChallanForm({
       .from("delivery_challan_items" as never)
             .insert(itemsPayload as never);
 
-    setSaving(false);
+    stopLoading();
     if (itemsErr) {
       setError(itemsErr.message);
       return;

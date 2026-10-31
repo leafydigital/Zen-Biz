@@ -6,7 +6,17 @@ import { createClient } from "@/lib/supabase/server";
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") || "/dashboard";
+  const rawNext = searchParams.get("next");
+  // Only ever accept a same-app relative path (starting with a single "/",
+  // not "//" which browsers treat as protocol-relative to another host).
+  // `origin` above is already correctly derived from the incoming
+  // request's own host — this guards it from ever being overridden by an
+  // absolute URL slipped into `next`, so the final redirect can never
+  // point anywhere other than the exact host this request actually
+  // arrived at (localhost stays on localhost, the live domain stays on
+  // the live domain, with no way for a query-string value to redirect
+  // to a third, different site).
+  const next = rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : "/dashboard";
 
   if (code) {
     const supabase = createClient();

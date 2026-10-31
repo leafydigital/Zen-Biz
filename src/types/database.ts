@@ -129,6 +129,26 @@ export const DEFAULT_ANALYTICS_PREFERENCES: AnalyticsPreferences = {
   dateRange: "thisMonth",
 };
 
+export type SupportTicketType = "info" | "issue";
+export type SupportTicketStatus = "open" | "in_progress" | "resolved";
+
+export interface SupportTicket {
+  id: string;
+  user_id: string;
+  business_id: string | null;
+  ticket_type: SupportTicketType;
+  name: string;
+  whatsapp_number: string | null;
+  email: string;
+  address: string | null;
+  pincode: string | null;
+  notes: string | null;
+  message: string;
+  screenshot_url: string | null;
+  status: SupportTicketStatus;
+  created_at: string;
+}
+
 export interface Profile {
   id: string;
   business_name: string;

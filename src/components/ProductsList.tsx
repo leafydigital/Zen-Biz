@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Product, Plan } from "@/types/database";
 import { ProductFormModal } from "@/components/ProductFormModal";
 import { LimitReachedModal } from "@/components/LimitReachedModal";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 function formatCurrency(n: number) {
   return new Intl.NumberFormat("en-IN", {
@@ -45,6 +46,7 @@ export function ProductsList({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [modalOpen, setModalOpen] = useState(false);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
@@ -59,8 +61,10 @@ export function ProductsList({
 
   async function handleDelete(id: string) {
     setDeletingId(id);
+    showLoader("Deleting item…");
     await supabase.from("products").delete().eq("id", id);
     setDeletingId(null);
+    hideLoader();
     router.refresh();
   }
 

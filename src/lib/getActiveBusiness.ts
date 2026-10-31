@@ -34,16 +34,18 @@ export const getUserBusinesses = cache(async (): Promise<(Business & { role: Bus
     .filter((row) => row.businesses)
     .map((row) => ({ ...row.businesses, role: row.role }));
 
-  if (memberships.length > 0) return memberships;
-
   // Self-heal: a business can exist (businesses.owner_id = this user)
   // with no matching business_members row — this happens for any
   // business created before the multi-business migration's backfill
-  // ran, or if that migration was written but never actually executed
-  // against this database. Without this fallback, a real owner of a
-  // real business gets treated as having none at all and bounced to
-  // /onboarding indefinitely, even though nothing about their business
-  // or account data is actually missing — just this one link row.
+  // ran, if that migration was written but never actually executed
+  // against this database, or if a specific business's membership
+  // insert failed silently at creation time while an earlier business's
+  // succeeded. That last case is why this always runs — checking only
+  // when memberships is completely empty would correctly repair a user
+  // with zero working businesses, but silently miss a user who already
+  // has one business working fine and a second one missing its link,
+  // since the "any businesses at all?" check alone can't tell those
+  // two situations apart.
   const { data: owned, error: ownedError } = (await supabase
     .from("businesses" as never)
     .select("*")
@@ -53,19 +55,22 @@ export const getUserBusinesses = cache(async (): Promise<(Business & { role: Bus
     console.error("Zen Biz: owned-businesses self-heal lookup failed", ownedError);
   }
 
-  if (!owned || owned.length === 0) return [];
+  const linkedIds = new Set(memberships.map((b) => b.id));
+  const missingLinks = (owned ?? []).filter((b) => !linkedIds.has(b.id));
+
+  if (missingLinks.length === 0) return memberships;
 
   // Repair the missing link for every owned business found, so this
-  // only ever needs to self-heal once per account. Insert errors are
+  // only ever needs to self-heal once per business. Insert errors are
   // deliberately ignored here (e.g. a race with another request doing
   // the same repair) — the membership either already exists or will on
   // the next read either way, and failing this repair should never
-  // block rendering the business the user already owns.
+  // block rendering the businesses the user already owns.
   await supabase
     .from("business_members" as never)
-    .insert(owned.map((b) => ({ business_id: b.id, user_id: user.id, role: "owner" })) as never);
+    .insert(missingLinks.map((b) => ({ business_id: b.id, user_id: user.id, role: "owner" })) as never);
 
-  return owned.map((b) => ({ ...b, role: "owner" as const }));
+  return [...memberships, ...missingLinks.map((b) => ({ ...b, role: "owner" as const }))];
 });
 
 /**

@@ -7,6 +7,7 @@ import { getPlanFeatures } from "@/lib/planFeatures";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import type { BusinessMemberWithEmail } from "@/lib/getActiveBusiness";
 import type { Plan } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function TeamManagementTab({
   businessId,
@@ -22,9 +23,11 @@ export function TeamManagementTab({
   plan: Plan;
 }) {
   const router = useRouter();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [email, setEmail] = useState("");
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
   const [showUpgrade, setShowUpgrade] = useState(false);
   const [removingId, setRemovingId] = useState<string | null>(null);
 
@@ -33,7 +36,12 @@ export function TeamManagementTab({
 
   async function handleInvite(e: React.FormEvent) {
     e.preventDefault();
-    if (!email.trim()) return;
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!/^[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}$/.test(normalizedEmail) || normalizedEmail.length > 254) {
+      setError("Enter a valid email address.");
+      setNotice(null);
+      return;
+    }
 
     if (atLimit) {
       setShowUpgrade(true);
@@ -42,8 +50,19 @@ export function TeamManagementTab({
 
     setInviting(true);
     setError(null);
-    const result = await addBusinessMember(businessId, email.trim());
+    setNotice(null);
+    showLoader("Adding team member…");
+    let result: Awaited<ReturnType<typeof addBusinessMember>>;
+    try {
+      result = await addBusinessMember(businessId, normalizedEmail);
+    } catch {
+      setInviting(false);
+      hideLoader();
+      setError("Unable to add this team member. Please try again.");
+      return;
+    }
     setInviting(false);
+    hideLoader();
 
     if (result.error) {
       if (result.error.includes("Upgrade")) {
@@ -55,13 +74,20 @@ export function TeamManagementTab({
     }
 
     setEmail("");
+    setNotice(
+      result.inviteSent
+        ? `Invitation sent to ${normalizedEmail}. They can set their password from the email.`
+        : `${normalizedEmail} was added to the team.`
+    );
     router.refresh();
   }
 
   async function handleRemove(userId: string) {
     setRemovingId(userId);
+    showLoader("Removing team member…");
     const result = await removeBusinessMember(businessId, userId);
     setRemovingId(null);
+    hideLoader();
     if (result.error) {
       setError(result.error);
       return;
@@ -121,13 +147,16 @@ export function TeamManagementTab({
             <span className="text-sm font-medium text-text">Add a team member by email</span>
             <input
               type="email"
+              required
+              maxLength={254}
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="teammate@example.com"
               className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
             />
             <span className="text-xs text-text-soft">
-              They must already have a Zen Biz account with this email.
+              Added as a member. New users receive a secure email link to set their password.
             </span>
           </label>
           <button
@@ -145,6 +174,11 @@ export function TeamManagementTab({
       {error && (
         <p className="rounded-lg bg-alert-bg px-3.5 py-2.5 text-sm text-alert" role="alert">
           {error}
+        </p>
+      )}
+      {notice && (
+        <p className="rounded-lg bg-success-bg px-3.5 py-2.5 text-sm text-success" role="status">
+          {notice}
         </p>
       )}
 

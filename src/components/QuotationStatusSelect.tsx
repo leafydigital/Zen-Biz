@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { QuotationStatus } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 const STYLES: Record<QuotationStatus, string> = {
   draft: "bg-paper-fold text-text-soft",
@@ -21,14 +22,17 @@ export function QuotationStatusSelect({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [current, setCurrent] = useState(status);
   const [updating, setUpdating] = useState(false);
 
   async function handleChange(next: QuotationStatus) {
     setUpdating(true);
     setCurrent(next);
+    showLoader("Updating status…");
    await supabase.from("quotations" as never).update({ status: next } as never).eq("id", quotationId);
     setUpdating(false);
+    hideLoader();
     router.refresh();
   }
 

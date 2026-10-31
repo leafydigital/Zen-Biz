@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import type { Business } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function BankDetailsForm({ business }: { business: Business }) {
   const router = useRouter();
@@ -16,6 +17,7 @@ export function BankDetailsForm({ business }: { business: Business }) {
   const [qrPreview, setQrPreview] = useState<string | null>(business.payment_qr_url);
   const [qrFile, setQrFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
 
@@ -36,6 +38,12 @@ export function BankDetailsForm({ business }: { business: Business }) {
   async function handleSave() {
     setSaving(true);
     setError(null);
+    showLoader("Saving bank details…");
+
+    function stopLoading() {
+      setSaving(false);
+      hideLoader();
+    }
 
     let qrUrl = qrPreview;
     if (qrFile) {
@@ -45,7 +53,7 @@ export function BankDetailsForm({ business }: { business: Business }) {
         .from("payment-qr")
         .upload(path, qrFile, { upsert: true });
       if (uploadErr) {
-        setSaving(false);
+        stopLoading();
         setError(`Couldn't upload QR code (${uploadErr.message}).`);
         return;
       }
@@ -63,7 +71,7 @@ export function BankDetailsForm({ business }: { business: Business }) {
         payment_qr_url: qrUrl,
       } as never)
       .eq("id", business.id);
-    setSaving(false);
+    stopLoading();
     if (error) {
       console.error("Zen Biz: failed to save bank details", error);
       setError(error.message || "Could not save. Please try again.");

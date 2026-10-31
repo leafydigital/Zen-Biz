@@ -5,13 +5,22 @@ import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { generateBillingRecordPdf } from "@/lib/generateBillingRecordPdfWrapper";
 import type { Business, Customer, Invoice, InvoiceItem, Profile } from "@/types/database";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState(false);
+  const { showLoader, hideLoader } = useGlobalLoader();
 
   async function handleDownload() {
     setLoading(true);
+    showLoader("Preparing PDF…");
+
+    function stopLoading() {
+      setLoading(false);
+      hideLoader();
+    }
+
     const [invoiceResult, itemsResult, profileResult] = await Promise.all([
       supabase.from("invoices" as never).select("*").eq("id", invoiceId).single(),
       supabase.from("invoice_items" as never).select("*").eq("invoice_id", invoiceId),
@@ -23,7 +32,7 @@ export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
     const profile = profileResult.data as Profile | null;
 
     if (!invoice || !profile) {
-      setLoading(false);
+      stopLoading();
       return;
     }
 
@@ -47,7 +56,7 @@ export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
     const profileForPdf: Profile = business ? { ...profile, ...business, id: profile.id } : profile;
 
     if (!invoice) {
-      setLoading(false);
+      stopLoading();
       return;
     }
 
@@ -69,7 +78,7 @@ export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
     } else {
       await generateInvoicePdf({ invoice, items: items ?? [], customer, profile: profileForPdf });
     }
-    setLoading(false);
+    stopLoading();
   }
 
   return (
