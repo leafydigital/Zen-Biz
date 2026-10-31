@@ -6,7 +6,7 @@ import { createBusiness, switchActiveBusiness } from "@/lib/actions/businessActi
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import { BUSINESS_TYPE_OPTIONS } from "@/lib/businessLabels";
-import type { Business, Plan } from "@/types/database";
+import type { BusinessRole, Business, Plan } from "@/types/database";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function BusinessManagementTab({
@@ -14,7 +14,7 @@ export function BusinessManagementTab({
   activeBusinessId,
   plan,
 }: {
-  businesses: (Business & { role: "owner" | "member" })[];
+  businesses: (Business & { role: BusinessRole })[];
   activeBusinessId: string;
   plan: Plan;
 }) {

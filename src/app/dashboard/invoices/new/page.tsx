@@ -1,7 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
+import { getNextDocumentNumber } from "@/lib/getNextDocumentNumber";
 import { NewInvoiceForm } from "@/components/NewInvoiceForm";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
-import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import { getActiveBusiness, mergeBusinessIntoProfile } from "@/lib/getActiveBusiness";
 import type { Customer, Product } from "@/types/database";
 
 export default async function NewInvoicePage({
@@ -48,7 +49,7 @@ export default async function NewInvoicePage({
   const products = productsResult.data as Product[] | null;
   const plan = profile?.plan ?? "starter";
 
-  const suggestedInvoiceNumber = `INV-${String((count ?? 0) + 1).padStart(4, "0")}`;
+  const suggestedInvoiceNumber = await getNextDocumentNumber(supabase as never, "invoice", businessId, activeBusiness?.format_settings);
 
   return (
     <div className="flex flex-col gap-5">
@@ -65,7 +66,7 @@ export default async function NewInvoicePage({
       <NewInvoiceForm
         ownerId={user!.id}
         businessId={businessId}
-        profile={profile!}
+        profile={mergeBusinessIntoProfile(profile!, activeBusiness)}
         customers={customers ?? []}
         products={products ?? []}
         suggestedInvoiceNumber={suggestedInvoiceNumber}

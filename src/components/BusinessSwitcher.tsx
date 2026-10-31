@@ -24,24 +24,13 @@ export function BusinessSwitcher({
       setOpen(false);
       return;
     }
-
     showLoader("Switching business…");
-
     startTransition(async () => {
-      try {
-        const result = await switchActiveBusiness(businessId);
-
-        // Safe check using optional chaining to prevent reading 'error' on undefined
-        if (!result?.error) {
-          setOpen(false);
-          router.refresh();
-        } else {
-          console.error("Failed to switch business:", result.error);
-        }
-      } catch (err) {
-        console.error("Unexpected error switching business:", err);
-      } finally {
-        hideLoader();
+      const result = await switchActiveBusiness(businessId);
+      hideLoader();
+      if (!result.error) {
+        setOpen(false);
+        router.refresh();
       }
     });
   }
@@ -75,27 +64,14 @@ export function BusinessSwitcher({
             {activeBusiness.business_type}
           </p>
         </div>
-        <svg
-          width="14"
-          height="14"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="hidden shrink-0 text-text-soft sm:block"
-          aria-hidden="true"
-        >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="hidden shrink-0 text-text-soft sm:block" aria-hidden="true">
           <path d="m6 9 6 6 6-6" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
       </button>
 
       {open && (
         <>
-          <div
-            className="fixed inset-0 z-30"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
+          <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden="true" />
           <div
             role="menu"
             className="absolute right-0 top-full z-40 mt-2 w-72 rounded-xl2 border border-paper-fold bg-white p-2 shadow-lg"
@@ -137,27 +113,12 @@ export function BusinessSwitcher({
                 >
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                     {b.id === activeBusiness.id && (
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth="2.5"
-                        className="text-ink"
-                        aria-hidden="true"
-                      >
-                        <path
-                          d="M20 6 9 17l-5-5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="text-ink" aria-hidden="true">
+                        <path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     )}
                   </span>
-                  <span className="min-w-0 flex-1 truncate">
-                    {b.business_name || "Untitled business"}
-                  </span>
+                  <span className="min-w-0 flex-1 truncate">{b.business_name || "Untitled business"}</span>
                 </button>
               ))}
             </div>

@@ -64,7 +64,7 @@ export function DownloadQuotationButton({ quotationId }: { quotationId: string }
     <button
       onClick={handleDownload}
       disabled={loading}
-      className="rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper disabled:opacity-60"
+      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-rose-600 hover:bg-rose-700"
     >
       {loading ? "Preparing…" : "Download PDF"}
     </button>

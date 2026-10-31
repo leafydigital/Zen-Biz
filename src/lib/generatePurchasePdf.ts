@@ -13,14 +13,19 @@ export async function generatePurchasePdf({
   items,
   supplier,
   profile,
+  preview,
 }: {
   purchase: Purchase;
   items: PurchaseItem[];
   supplier: Supplier | null;
   profile: Profile;
+  /** Returns the PDF as a Blob instead of downloading it. */
+  preview?: boolean;
 }) {
-  await generateSaleDocumentPdf({
+  return await generateSaleDocumentPdf({
+    preview,
     docLabel: "PURCHASE",
+    titleText: profile.format_settings?.titles?.purchase,
     docNumber: purchase.purchase_number,
     docDate: purchase.purchase_date,
     status: purchase.status,

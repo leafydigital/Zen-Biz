@@ -1,9 +1,10 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getNextDocumentNumber } from "@/lib/getNextDocumentNumber";
 import { NewPurchaseForm } from "@/components/NewPurchaseForm";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
-import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import { getActiveBusiness, mergeBusinessIntoProfile } from "@/lib/getActiveBusiness";
 import type { Product, Supplier } from "@/types/database";
 
 export default async function NewPurchasePage() {
@@ -30,7 +31,7 @@ export default async function NewPurchasePage() {
   const suppliers = suppliersResult.data as Supplier[] | null;
   const products = productsResult.data as Product[] | null;
 
-  const suggestedPurchaseNumber = `PUR-${String((count ?? 0) + 1).padStart(4, "0")}`;
+  const suggestedPurchaseNumber = await getNextDocumentNumber(supabase as never, "purchase", businessId, activeBusiness?.format_settings);
 
   return (
     <div className="flex flex-col gap-5">
@@ -41,7 +42,7 @@ export default async function NewPurchasePage() {
       <NewPurchaseForm
         ownerId={user!.id}
         businessId={businessId}
-        profile={profile!}
+        profile={mergeBusinessIntoProfile(profile!, activeBusiness)}
         suppliers={suppliers ?? []}
         products={products ?? []}
         suggestedPurchaseNumber={suggestedPurchaseNumber}

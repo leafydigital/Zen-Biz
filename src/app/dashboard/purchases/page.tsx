@@ -1,3 +1,5 @@
+import { DocShareActions } from "@/components/DocShareActions";
+import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { PurchaseStatusSelect } from "@/components/PurchaseStatusSelect";
@@ -71,7 +73,7 @@ export default async function PurchasesPage() {
                 key={p.id}
                 className="flex flex-col gap-3 p-4 transition hover:bg-paper/60 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex min-w-0 items-center gap-3">
+                <Link href={`/dashboard/purchases/${p.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-purple-50 text-purple-600">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                       <path d="M3 4h2l2.4 12.2a1.5 1.5 0 0 0 1.5 1.3h8.2a1.5 1.5 0 0 0 1.48-1.24L20 8H6.2M9 21a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm8 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" strokeLinecap="round" strokeLinejoin="round" />
@@ -83,13 +85,16 @@ export default async function PurchasesPage() {
                       {p.suppliers?.name ?? "Not specified"} · {p.purchase_date}
                     </p>
                   </div>
-                </div>
+                </Link>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">
                     {formatCurrency(Number(p.total), p.currency)}
                   </span>
                   <PurchaseStatusSelect purchaseId={p.id} status={p.status} paymentMethod={p.payment_method} />
+                  <Link href={`/dashboard/purchases/${p.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700">View</Link>
                   <DownloadPurchaseButton purchaseId={p.id} />
+          <DocShareActions kind="purchase" id={p.id} />
+                  <DeleteRecordButton table="purchases" id={p.id} label="purchase" />
                 </div>
               </li>
             ))}

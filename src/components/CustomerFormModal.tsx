@@ -14,12 +14,15 @@ export function CustomerFormModal({
   customer,
   plan,
   onClose,
+  onSaved,
 }: {
   ownerId: string;
   businessId: string;
   customer?: Customer | null;
   plan: Plan;
   onClose: () => void;
+  /** Called with the saved customer (used to select it straight away in invoices). */
+  onSaved?: (customer: Customer) => void;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -31,6 +34,7 @@ export function CustomerFormModal({
   const [state, setState] = useState(customer?.state ?? "");
   const [gstin, setGstin] = useState(customer?.gstin ?? "");
   const [notes, setNotes] = useState(customer?.notes ?? "");
+  const [customerCode, setCustomerCode] = useState(customer?.customer_code ?? "");
   const [saving, setSaving] = useState(false);
   const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
@@ -75,17 +79,28 @@ export function CustomerFormModal({
       state: state || null,
       gstin: gstin.trim() || null,
       notes: notes.trim() || null,
+      // Blank = the database numbers it automatically (CUST-0001, CUST-0002 …).
+      customer_code: customerCode.trim() || null,
     };
+    if (customer && !payload.customer_code) delete (payload as { customer_code?: string | null }).customer_code;
 
-    const { error } = customer
-      ? await supabase.from("customers" as never).update(payload as never).eq("id", customer.id)
-      : await supabase.from("customers" as never).insert(payload as never);
+    const { data: saved, error } = (customer
+      ? await supabase.from("customers" as never).update(payload as never).eq("id", customer.id).select().single()
+      : await supabase.from("customers" as never).insert(payload as never).select().single()) as {
+      data: Customer | null;
+      error: { message: string } | null;
+    };
 
     stopLoading();
     if (error) {
-      setError(error.message);
+      setError(
+        /duplicate|unique/i.test(error.message)
+          ? "That Customer ID is already used by another customer. Pick a different one, or leave it blank for automatic."
+          : error.message
+      );
       return;
     }
+    if (saved) onSaved?.(saved);
     router.refresh();
     onClose();
   }
@@ -112,6 +127,20 @@ export function CustomerFormModal({
               onChange={(e) => setName(e.target.value)}
               className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
             />
+          </label>
+
+          <label className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text">
+              Customer ID <span className="text-text-soft">(optional)</span>
+            </span>
+            <input
+              value={customerCode}
+              onChange={(e) => setCustomerCode(e.target.value)}
+              placeholder="Automatic — e.g. CUST-0001"
+              maxLength={30}
+              className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
+            />
+            <span className="text-xs text-text-soft">Leave blank for an automatic number, or type your own.</span>
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">

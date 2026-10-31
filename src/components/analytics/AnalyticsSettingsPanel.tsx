@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { saveAnalyticsPreferences } from "@/lib/actions/analyticsActions";
 import { DEFAULT_ANALYTICS_PREFERENCES } from "@/types/database";
@@ -33,37 +33,18 @@ export function AnalyticsSettingsPanel({
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<AnalyticsPreferences>(preferences);
   const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
-  const saveQueue = useRef<Promise<void>>(Promise.resolve());
-  const latestChange = useRef(0);
 
-  function applyPreferences(next: AnalyticsPreferences) {
+  // Every change is applied and saved straight away (no Save button).
+  async function apply(next: AnalyticsPreferences) {
     setDraft(next);
     setSaving(true);
-    setSaveError(null);
-    const change = ++latestChange.current;
-
-    saveQueue.current = saveQueue.current.catch(() => undefined).then(async () => {
-      try {
-        const result = await saveAnalyticsPreferences(next);
-        if (change !== latestChange.current) return;
-        setSaving(false);
-        if (result.error) {
-          setSaveError(result.error);
-        } else {
-          router.refresh();
-        }
-      } catch {
-        if (change === latestChange.current) {
-          setSaving(false);
-          setSaveError("Unable to save analytics preferences.");
-        }
-      }
-    });
+    const result = await saveAnalyticsPreferences(next);
+    setSaving(false);
+    if (!result.error) router.refresh();
   }
 
   function toggleChart(id: AnalyticsChartId) {
-    applyPreferences({
+    apply({
       ...draft,
       visibleCharts: draft.visibleCharts.includes(id)
         ? draft.visibleCharts.filter((c) => c !== id)
@@ -72,18 +53,21 @@ export function AnalyticsSettingsPanel({
   }
 
   function setChartType(id: AnalyticsChartId, type: "line" | "bar") {
-    applyPreferences({ ...draft, chartTypes: { ...draft.chartTypes, [id]: type } });
+    apply({ ...draft, chartTypes: { ...draft.chartTypes, [id]: type } });
   }
 
   function handleReset() {
-    applyPreferences(DEFAULT_ANALYTICS_PREFERENCES);
+    apply(DEFAULT_ANALYTICS_PREFERENCES);
   }
 
   return (
     <div className="relative">
       <button
         type="button"
-        onClick={() => setOpen((prev) => !prev)}
+        onClick={() => {
+          setDraft(preferences);
+          setOpen((prev) => !prev);
+        }}
         aria-label="Customize analytics"
         className="flex h-8 w-8 items-center justify-center rounded-lg text-text-soft transition hover:bg-paper hover:text-text"
       >
@@ -97,11 +81,7 @@ export function AnalyticsSettingsPanel({
         <>
           <div className="fixed inset-0 z-30" onClick={() => setOpen(false)} aria-hidden="true" />
           <div className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] rounded-xl2 border border-paper-fold bg-white p-4 shadow-lg">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <p className="text-sm font-semibold text-text">Customize Analytics</p>
-              {saving && <span className="text-xs text-text-soft">Applying…</span>}
-            </div>
-            {saveError && <p role="alert" className="mb-3 text-xs text-red-700">{saveError}</p>}
+            <p className="mb-3 text-sm font-semibold text-text">Customize Analytics</p>
 
             <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-text-soft">
               Date range
@@ -111,7 +91,7 @@ export function AnalyticsSettingsPanel({
                 <button
                   key={range}
                   type="button"
-                  onClick={() => applyPreferences({ ...draft, dateRange: range })}
+                  onClick={() => apply({ ...draft, dateRange: range })}
                   className={`rounded-lg border px-2.5 py-1.5 text-xs font-medium transition ${
                     draft.dateRange === range
                       ? "border-ink bg-ink text-paper"
@@ -160,13 +140,20 @@ export function AnalyticsSettingsPanel({
               ))}
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between gap-2">
               <button
                 type="button"
                 onClick={handleReset}
                 className="text-xs font-medium text-text-soft underline-offset-2 hover:text-text hover:underline"
               >
                 Reset to default
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"
+              >
+                {saving ? "Updating…" : "Close"}
               </button>
             </div>
           </div>

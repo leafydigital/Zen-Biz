@@ -1,10 +1,12 @@
 "use client";
 
+import { NumField } from "@/components/NumField";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { generateQuotationPdf } from "@/lib/generateQuotationPdf";
 import { CURRENCY_OPTIONS, CURRENCY_SYMBOLS } from "@/types/database";
+import { CustomerFormModal } from "@/components/CustomerFormModal";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import {
   TAX_TYPE_OPTIONS,
@@ -70,6 +72,12 @@ export function NewQuotationForm({
   const [quotationNumber, setQuotationNumber] = useState(suggestedQuotationNumber);
   const [quotationDate, setQuotationDate] = useState(new Date().toISOString().slice(0, 10));
   const [validUntil, setValidUntil] = useState("");
+  const [extraCustomers, setExtraCustomers] = useState<Customer[]>([]);
+  const allCustomers = useMemo(
+    () => [...customers, ...extraCustomers.filter((e) => !customers.some((c) => c.id === e.id))],
+    [customers, extraCustomers]
+  );
+  const [addCustomerOpen, setAddCustomerOpen] = useState(false);
   const [customerId, setCustomerId] = useState<string>("");
   const [currency, setCurrency] = useState(profile.default_currency ?? "INR");
   const [shipToSameAsBill, setShipToSameAsBill] = useState(true);
@@ -91,7 +99,7 @@ export function NewQuotationForm({
   const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
-  const selectedCustomer = customers.find((c) => c.id === customerId) ?? null;
+  const selectedCustomer = allCustomers.find((c) => c.id === customerId) ?? null;
 
   const lineResults = useMemo(
     () =>
@@ -123,6 +131,8 @@ export function NewQuotationForm({
   const preRoundTotal = subtotal + totalTax;
   const { rounded: grandTotal, roundOff } = calculateRoundOff(preRoundTotal);
 
+  const [customTaxIds, setCustomTaxIds] = useState<string[]>([]);
+
   function updateLine(id: string, patch: Partial<LineItem>) {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   }
@@ -145,7 +155,7 @@ export function NewQuotationForm({
   }
 
   function removeLine(id: string) {
-    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
+    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : [newLine()]));
   }
 
   async function handleSubmit(e: React.FormEvent, download: boolean) {
@@ -244,7 +254,7 @@ export function NewQuotationForm({
     }
 
     if (download) {
-      const customer = customers.find((c) => c.id === customerId) ?? null;
+      const customer = allCustomers.find((c) => c.id === customerId) ?? null;
       await generateQuotationPdf({
         quotation,
         items: itemsPayload.map((it, i) => ({
@@ -275,6 +285,7 @@ export function NewQuotationForm({
   }
 
   return (
+    <>
     <form className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-6">
       <div className="flex flex-1 flex-col gap-6">
         {/* Customer Information */}
@@ -291,21 +302,31 @@ export function NewQuotationForm({
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            <label className="flex flex-col gap-1.5 sm:col-span-2">
-              <span className="text-sm font-medium text-text">Customer</span>
+            <div className="flex flex-col gap-1.5 sm:col-span-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-medium text-text">Customer</span>
+                <button
+                  type="button"
+                  onClick={() => setAddCustomerOpen(true)}
+                  className="rounded-lg border border-paper-fold px-2.5 py-1 text-xs font-semibold text-ink transition hover:bg-paper"
+                >
+                  + Add new customer
+                </button>
+              </div>
               <select
                 value={customerId}
                 onChange={(e) => setCustomerId(e.target.value)}
                 className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
               >
                 <option value="">Not specified</option>
-                {customers.map((c) => (
+                {allCustomers.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.name}
+                    {c.customer_code ? ` · ${c.customer_code}` : ""}
                   </option>
                 ))}
               </select>
-            </label>
+            </div>
 
             {selectedCustomer ? (
               <>
@@ -558,14 +579,13 @@ export function NewQuotationForm({
                   </div>
                 </div>
 
-                <input
-                  type="number"
+                <NumField
                   min="0"
                   step="0.01"
                   placeholder="Qty"
                   aria-label="Quantity"
                   value={line.quantity}
-                  onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })}
+                  onValue={(n) => updateLine(line.id, { quantity: n })}
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
@@ -577,26 +597,24 @@ export function NewQuotationForm({
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
-                <input
-                  type="number"
+                <NumField
                   min="0"
                   step="0.01"
                   placeholder="Rate"
                   aria-label="Rate"
                   value={line.unitPrice}
-                  onChange={(e) => updateLine(line.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                  onValue={(n) => updateLine(line.id, { unitPrice: n })}
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
-                <input
-                  type="number"
+                <NumField
                   min="0"
                   max="100"
                   step="0.01"
                   placeholder="0"
                   aria-label="Discount percent"
                   value={line.discountPercent}
-                  onChange={(e) => updateLine(line.id, { discountPercent: parseFloat(e.target.value) || 0 })}
+                  onValue={(n) => updateLine(line.id, { discountPercent: n })}
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
@@ -604,9 +622,17 @@ export function NewQuotationForm({
                   <div className="flex min-w-0 gap-1">
                     <select
                       aria-label={gstApplies ? "GST percent" : "Tax percent"}
-                      value={TAX_PERCENT_OPTIONS.includes(line.taxPercent) ? String(line.taxPercent) : "custom"}
+                      value={
+                        customTaxIds.includes(line.id) || !TAX_PERCENT_OPTIONS.includes(line.taxPercent)
+                          ? "custom"
+                          : String(line.taxPercent)
+                      }
                       onChange={(e) => {
-                        if (e.target.value === "custom") return;
+                        if (e.target.value === "custom") {
+                          setCustomTaxIds((ids) => (ids.includes(line.id) ? ids : [...ids, line.id]));
+                          return;
+                        }
+                        setCustomTaxIds((ids) => ids.filter((id) => id !== line.id));
                         updateLine(line.id, { taxPercent: parseFloat(e.target.value) });
                       }}
                       className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
@@ -618,15 +644,14 @@ export function NewQuotationForm({
                       ))}
                       <option value="custom">Custom</option>
                     </select>
-                    {!TAX_PERCENT_OPTIONS.includes(line.taxPercent) && (
-                      <input
-                        type="number"
+                    {(customTaxIds.includes(line.id) || !TAX_PERCENT_OPTIONS.includes(line.taxPercent)) && (
+                      <NumField
                         min="0"
                         step="0.01"
                         placeholder="%"
                         aria-label="Custom tax percent"
                         value={line.taxPercent}
-                        onChange={(e) => updateLine(line.id, { taxPercent: parseFloat(e.target.value) || 0 })}
+                        onValue={(n) => updateLine(line.id, { taxPercent: n })}
                         className="w-14 min-w-0 shrink-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
                       />
                     )}
@@ -734,8 +759,8 @@ export function NewQuotationForm({
       </div>
 
       {/* Sticky totals sidebar */}
-      <aside className="lg:w-80 lg:shrink-0">
-        <div className="rounded-2xl border border-paper-fold bg-white p-4 shadow-card lg:sticky lg:top-6 lg:p-5">
+      <aside className="lg:sticky lg:top-6 lg:w-80 lg:shrink-0">
+        <div className="rounded-2xl border border-paper-fold bg-white p-4 shadow-card lg:p-5">
           <h3 className="mb-3 border-b border-paper-fold pb-3 font-display text-lg font-semibold text-text">
             Total
           </h3>
@@ -828,5 +853,34 @@ export function NewQuotationForm({
         </div>
       </aside>
     </form>
+
+    <div className="h-16 lg:hidden" aria-hidden="true" />
+    <div className="fixed inset-x-0 bottom-[60px] z-10 flex items-center justify-between gap-3 border-t border-paper-fold bg-white/95 px-4 py-2.5 shadow-card backdrop-blur md:bottom-0 md:left-56 lg:hidden">
+      <div className="min-w-0 text-xs text-text-soft">
+        <p>
+          Subtotal <span className="font-ledger tabular-nums text-text">{formatCurrency(subtotal, currency)}</span>
+          {totalTax > 0 && (
+            <>
+              {" · "}Tax <span className="font-ledger tabular-nums text-text">{formatCurrency(totalTax, currency)}</span>
+            </>
+          )}
+        </p>
+        <p>Grand Total</p>
+      </div>
+      <p className="font-ledger text-xl font-bold tabular-nums text-ink">{formatCurrency(grandTotal, currency)}</p>
+    </div>
+    {addCustomerOpen && (
+      <CustomerFormModal
+        ownerId={ownerId}
+        businessId={businessId}
+        plan={profile.plan}
+        onClose={() => setAddCustomerOpen(false)}
+        onSaved={(c) => {
+          setExtraCustomers((list) => [...list.filter((x) => x.id !== c.id), c]);
+          setCustomerId(c.id);
+        }}
+      />
+    )}
+    </>
   );
 }

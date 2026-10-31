@@ -2,6 +2,8 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { NewInvoiceForm } from "@/components/NewInvoiceForm";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { mergeBusinessIntoProfile } from "@/lib/getActiveBusiness";
+import type { Business } from "@/types/database";
 import type { Customer, Invoice, InvoiceItem, Product } from "@/types/database";
 
 export default async function EditInvoicePage({ params }: { params: { id: string } }) {
@@ -34,6 +36,12 @@ export default async function EditInvoicePage({ params }: { params: { id: string
     supabase.from("products").select("*").eq("business_id", invoice.business_id).eq("is_active", true).order("name"),
   ]);
 
+  const { data: invoiceBusiness } = await supabase
+    .from("businesses" as never)
+    .select("*")
+    .eq("id", invoice.business_id)
+    .maybeSingle();
+
   const items = itemsResult.data as InvoiceItem[] | null;
   const customers = customersResult.data as Customer[] | null;
   const products = productsResult.data as Product[] | null;
@@ -49,7 +57,7 @@ export default async function EditInvoicePage({ params }: { params: { id: string
       <NewInvoiceForm
         ownerId={user!.id}
         businessId={invoice.business_id}
-        profile={profile!}
+        profile={mergeBusinessIntoProfile(profile!, invoiceBusiness as Business | null)}
         customers={customers ?? []}
         products={products ?? []}
         suggestedInvoiceNumber={invoice.invoice_number}

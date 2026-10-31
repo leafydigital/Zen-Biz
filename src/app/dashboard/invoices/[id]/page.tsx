@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { InvoiceStatusSelect } from "@/components/InvoiceStatusSelect";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
 import { ShareInvoiceButtons } from "@/components/ShareInvoiceButtons";
+import { PrintButton } from "@/components/PrintButton";
 import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
 import { CURRENCY_SYMBOLS } from "@/types/database";
 import type { Customer, Invoice, InvoiceItem } from "@/types/database";
@@ -79,11 +80,12 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
             paymentMethod={invoice.payment_method}
           />
           <div className="flex items-center gap-2">
+            <PrintButton invoiceId={invoice.id} />
             <DownloadInvoiceButton invoiceId={invoice.id} />
             {canShare && <ShareInvoiceButtons invoiceId={invoice.id} />}
             <Link
               href={`/dashboard/invoices/${invoice.id}/edit`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-paper-fold bg-white px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"
+              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-sky-600 hover:bg-sky-700"
             >
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" strokeLinecap="round" strokeLinejoin="round" />

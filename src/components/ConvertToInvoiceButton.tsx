@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { getNextDocumentNumber } from "@/lib/getNextDocumentNumber";
+import type { FormatSettings } from "@/lib/formatSettings";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { LimitReachedModal } from "@/components/LimitReachedModal";
 import type { Plan } from "@/types/database";
@@ -64,12 +66,17 @@ export function ConvertToInvoiceButton({
     // (INV-0001, INV-0002, ...), counting official invoices only, scoped
     // to this same business — each business has its own numbering
     // sequence, not shared across every business the user belongs to.
-    const { count: invoiceCount } = await supabase
-      .from("invoices" as never)
-      .select("id", { count: "exact", head: true })
-      .eq("business_id", businessId)
-      .eq("record_type", "invoice");
-    const nextNumber = `INV-${String((invoiceCount ?? 0) + 1).padStart(4, "0")}`;
+    const { data: bizRow } = await supabase
+      .from("businesses" as never)
+      .select("format_settings")
+      .eq("id", businessId)
+      .maybeSingle();
+    const nextNumber = await getNextDocumentNumber(
+      supabase as never,
+      "invoice",
+      businessId,
+      (bizRow as { format_settings: FormatSettings | null } | null)?.format_settings
+    );
 
     const { error: updateErr } = await supabase
       .from("invoices" as never)

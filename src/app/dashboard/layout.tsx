@@ -1,4 +1,7 @@
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { getMyAccess } from "@/lib/getMyAccess";
+import { permissionForPath } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/DashboardNav";
 import { Logo } from "@/components/Logo";
@@ -77,10 +80,15 @@ export default async function DashboardLayout({
 
   if (!resolvedBusiness) redirect("/onboarding");
 
+  // Role-based access: block pages the person's role doesn't tick.
+  const access = await getMyAccess();
+  const needed = permissionForPath(headers().get("x-pathname") ?? "");
+  if (needed && !access.permissions.includes(needed)) redirect("/dashboard");
+
   return (
     <I18nProvider initialLanguage={profile.language}>
       <div className="flex min-h-screen flex-col bg-paper md:flex-row">
-        <DashboardNav businessType={resolvedBusiness.business_type} plan={profile.plan} />
+        <DashboardNav businessType={resolvedBusiness.business_type} plan={profile.plan} allowed={access.permissions} />
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">

@@ -5,6 +5,7 @@ import { getPlanFeatures } from "@/lib/planFeatures";
 import { getTranslations } from "@/lib/i18n/translations";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
+import { getMyAccess } from "@/lib/getMyAccess";
 import { AnalyticsSection } from "@/components/analytics/AnalyticsSection";
 
 function formatCurrency(n: number) {
@@ -437,11 +438,13 @@ export default async function DashboardHome() {
         )}
       </div>
 
-      <AnalyticsSection
-        plan={profile?.plan ?? "starter"}
-        businessId={businessId}
-        preferences={profile?.analytics_preferences}
-      />
+      {(await getMyAccess()).permissions.includes("analytics") && (
+        <AnalyticsSection
+          plan={profile?.plan ?? "starter"}
+          businessId={businessId}
+          preferences={profile?.analytics_preferences}
+        />
+      )}
     </div>
   );
 }

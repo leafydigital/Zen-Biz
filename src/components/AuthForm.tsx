@@ -1,5 +1,6 @@
 "use client";
 
+import { usernameToEmail } from "@/lib/teamUsername";
 import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -201,8 +202,11 @@ export function AuthForm({ mode }: { mode: Mode }) {
       return;
     }
 
+    // No "@" → team user signing in with a username.
+    const identifier = loginIdentifier.trim();
+    const isUsername = !identifier.includes("@");
     const { error } = await supabase.auth.signInWithPassword({
-      email: loginIdentifier.trim(),
+      email: isUsername ? usernameToEmail(identifier) : identifier,
       password,
     });
     stopLoading();
@@ -217,13 +221,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
       // an honest, more helpful message instead of being told its
       // password is wrong.
       const { data: existingUserId } = (await supabase.rpc("get_user_id_by_email" as never, {
-        lookup_email: loginIdentifier.trim().toLowerCase(),
+        lookup_email: (isUsername ? usernameToEmail(identifier) : identifier).toLowerCase(),
       } as never)) as unknown as { data: string | null };
 
       setError(
         existingUserId
           ? "Incorrect password. Please try again."
-          : "Account not found. Please create an account."
+          : isUsername
+            ? "Username not found. Check it, or ask your admin."
+            : "Account not found. Please create an account."
       );
       return;
     }
@@ -269,14 +275,15 @@ export function AuthForm({ mode }: { mode: Mode }) {
       <form onSubmit={handleEmailAuth} className="flex flex-col gap-4">
         {mode === "login" ? (
           <label className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-text">Email</span>
+            <span className="text-sm font-medium text-text">Email or username</span>
             <input
-              type="email"
+              type="text"
               required
               autoComplete="username"
+              autoCapitalize="none"
               value={loginIdentifier}
               onChange={(e) => setLoginIdentifier(e.target.value)}
-              placeholder="you@business.com"
+              placeholder="you@business.com or username"
               className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
             />
           </label>

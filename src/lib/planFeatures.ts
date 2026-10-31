@@ -80,7 +80,7 @@ const PROFESSIONAL_FEATURES: PlanFeatures = {
   profitAndLoss: true,
   gstBilling: false,
   gstReport: false,
-  colourfulStyles: false,
+  colourfulStyles: true,
   invoiceWatermark: false,
   shareViaWhatsapp: true,
   expenseTracking: true,

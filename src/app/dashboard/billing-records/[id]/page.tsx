@@ -157,12 +157,12 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
           ) : (
             <>
               <Link
-                href={`/dashboard/invoices/${record.id}/edit`}
-                className="rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"
+                href={`/dashboard/invoices/${record.id}/edit?type=billing`}
+                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-sky-600 hover:bg-sky-700"
               >
                 Edit
               </Link>
-              <PrintButton />
+              <PrintButton invoiceId={record.id} />
               <DownloadInvoiceButton invoiceId={record.id} />
               {canShare && <ShareInvoiceButtons invoiceId={record.id} />}
               <ConvertToInvoiceButton

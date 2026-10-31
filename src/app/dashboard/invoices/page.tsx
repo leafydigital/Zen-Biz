@@ -77,7 +77,7 @@ export default async function InvoicesPage() {
                   <InvoiceStatusSelect invoiceId={inv.id} status={inv.status} paymentMethod={inv.payment_method} />
                   <Link
                     href={`/dashboard/invoices/${inv.id}/edit`}
-                    className="rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"
+                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-sky-600 hover:bg-sky-700"
                   >
                     Edit
                   </Link>

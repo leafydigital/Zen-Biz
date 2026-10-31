@@ -36,7 +36,8 @@ export function CustomersList({
   const filtered = customers.filter(
     (c) =>
       c.name.toLowerCase().includes(search.toLowerCase()) ||
-      (c.phone ?? "").includes(search)
+      (c.phone ?? "").includes(search) ||
+      (c.customer_code ?? "").toLowerCase().includes(search.toLowerCase())
   );
 
   async function handleDelete(id: string) {
@@ -83,7 +84,7 @@ export function CustomersList({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or phone…"
+          placeholder="Search by name, phone or ID…"
           className="w-full rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink sm:max-w-xs"
         />
       )}
@@ -110,7 +111,7 @@ export function CustomersList({
                       {c.name}
                     </p>
                     <p className="truncate text-xs text-text-soft">
-                      {[c.phone, c.email].filter(Boolean).join(" · ") || "No contact info"}
+                      {[c.customer_code, c.phone, c.email].filter(Boolean).join(" · ") || "No contact info"}
                     </p>
                     {c.address && (
                       <p className="truncate text-xs text-text-soft">{c.address}</p>

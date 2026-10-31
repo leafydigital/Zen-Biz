@@ -82,7 +82,7 @@ export default async function BillingRecordsPage() {
                   )}
                   <Link
                     href={`/dashboard/billing-records/${r.id}`}
-                    className="rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper"
+                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700"
                   >
                     View
                   </Link>

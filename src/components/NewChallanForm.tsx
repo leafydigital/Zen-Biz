@@ -73,7 +73,7 @@ export function NewChallanForm({
   }
 
   function removeLine(id: string) {
-    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
+    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : [newLine()]));
   }
 
   async function handleSubmit(e: React.FormEvent, download: boolean) {

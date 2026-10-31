@@ -1,0 +1,84 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
+
+export function DeleteRecordButton({
+  table,
+  id,
+  label,
+  redirectTo,
+}: {
+  table: "quotations" | "purchases" | "delivery_challans";
+  id: string;
+  label: string;
+  redirectTo?: string;
+}) {
+  const router = useRouter();
+  const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
+  const [confirming, setConfirming] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleDelete() {
+    setDeleting(true);
+    setError(null);
+    showLoader("Deleting…");
+    const { error } = await supabase.from(table as never).delete().eq("id", id);
+    setDeleting(false);
+    hideLoader();
+    if (error) {
+      setError(error.message || "Could not delete. Please try again.");
+      return;
+    }
+    setConfirming(false);
+    if (redirectTo) router.push(redirectTo);
+    router.refresh();
+  }
+
+  if (!confirming) {
+    return (
+      <button
+        type="button"
+        onClick={() => setConfirming(true)}
+        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-red-600 hover:bg-red-700"
+      >
+        Delete
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 backdrop-blur-sm"
+      onClick={() => !deleting && setConfirming(false)}
+    >
+      <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[340px] rounded-xl2 bg-paper-card p-5 shadow-card">
+        <p className="mb-1.5 text-sm font-semibold text-text">Delete this {label}?</p>
+        <p className="mb-4 text-sm text-text-soft">This can't be undone.</p>
+        {error && <p className="mb-3 rounded-lg bg-alert-bg px-3 py-2 text-xs text-alert">{error}</p>}
+        <div className="flex gap-2">
+          <button
+            type="button"
+            onClick={() => setConfirming(false)}
+            disabled={deleting}
+            className="flex-1 rounded-lg border border-paper-fold px-3 py-2 text-sm font-medium text-text transition hover:bg-paper disabled:opacity-60"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            onClick={handleDelete}
+            disabled={deleting}
+            className="flex-1 rounded-lg bg-alert px-3 py-2 text-sm font-semibold text-white transition hover:bg-alert/90 disabled:opacity-60"
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

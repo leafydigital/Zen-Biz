@@ -4,6 +4,8 @@ import { createClient } from "@/lib/supabase/server";
 import { SettingsTabs } from "@/components/SettingsTabs";
 import { getTranslations } from "@/lib/i18n/translations";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
+import { getMyAccess } from "@/lib/getMyAccess";
+import { getBusinessRoles } from "@/lib/getBusinessRoles";
 import { getActiveBusiness, getUserBusinesses, getBusinessMembers } from "@/lib/getActiveBusiness";
 
 export default async function SettingsPage() {
@@ -22,7 +24,11 @@ export default async function SettingsPage() {
 
   if (!profile || !business) redirect("/onboarding");
 
-  const members = await getBusinessMembers(business.id);
+  const [members, access, roles] = await Promise.all([
+    getBusinessMembers(business.id),
+    getMyAccess(),
+    getBusinessRoles(business.owner_id),
+  ]);
 
   const t = getTranslations(profile.language);
 
@@ -43,6 +49,9 @@ export default async function SettingsPage() {
           businesses={businesses}
           members={members}
           currentUserId={user.id}
+          roles={roles}
+          permissions={access.permissions}
+          isFullAccess={access.isFull}
         />
       </Suspense>
     </div>

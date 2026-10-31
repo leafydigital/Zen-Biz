@@ -1,3 +1,4 @@
+import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ChallanStatusSelect } from "@/components/ChallanStatusSelect";
@@ -66,7 +67,7 @@ export default async function DeliveryChallansPage() {
                 key={c.id}
                 className="flex flex-col gap-3 p-4 transition hover:bg-paper/60 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex min-w-0 items-center gap-3">
+                <Link href={`/dashboard/delivery-challans/${c.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-teal-50 text-teal-600">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" aria-hidden="true">
                       <path d="M2 7h11v9H2zM13 10h4l3 3v3h-7z M5.5 19.5a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Zm12 0a1.5 1.5 0 1 0 0-3 1.5 1.5 0 0 0 0 3Z" strokeLinecap="round" strokeLinejoin="round" />
@@ -78,10 +79,12 @@ export default async function DeliveryChallansPage() {
                       {c.customers?.name ?? "Not specified"} · {c.challan_date}
                     </p>
                   </div>
-                </div>
+                </Link>
                 <div className="flex flex-wrap items-center gap-3">
                   <ChallanStatusSelect challanId={c.id} status={c.status} />
+                  <Link href={`/dashboard/delivery-challans/${c.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700">View</Link>
                   <DownloadChallanButton challanId={c.id} />
+                  <DeleteRecordButton table="delivery_challans" id={c.id} label="delivery challan" />
                 </div>
               </li>
             ))}

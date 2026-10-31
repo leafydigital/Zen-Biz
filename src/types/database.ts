@@ -18,19 +18,66 @@ export type TaxType = "gst" | "tax" | "non_tax" | "inclusive" | "exclusive" | "e
 export type GstPricingMode = "inclusive" | "exclusive";
 
 export type DocPaperSize = "a4" | "a5" | "thermal" | "thermal58";
-export type DocStyle = "default" | "thermal_simple" | "colourful_paid";
+/** "default" / "thermal_simple" / "colourful_paid" are old saved values, still understood. */
+export type DocStyle = "simple" | "colourful" | "custom" | "default" | "thermal_simple" | "colourful_paid";
 export type DocFontSize = 9 | 10 | 11 | 12 | 13 | 14;
+
+export type DocFontFamily = "helvetica" | "times" | "courier";
+
+/** Extra switches for the "Custom" style. */
+export interface DocCustomOptions {
+  fontFamily: DocFontFamily;
+  showLogo: boolean;
+  showHsn: boolean;
+  showBank: boolean;
+  showQr: boolean;
+  showSignature: boolean;
+  showNotes: boolean;
+  showTerms: boolean;
+  tintTable: boolean;
+}
+
+export const DEFAULT_CUSTOM_OPTIONS: DocCustomOptions = {
+  fontFamily: "helvetica",
+  showLogo: true,
+  showHsn: true,
+  showBank: true,
+  showQr: true,
+  showSignature: true,
+  showNotes: true,
+  showTerms: true,
+  tintTable: true,
+};
 
 export interface DocDesignSettings {
   paperSize: DocPaperSize;
   style: DocStyle;
   fontSize: DocFontSize;
+  /** Hex colour such as "#1d4ed8" — used by Colourful and Custom. */
+  accentColor?: string;
+  custom?: Partial<DocCustomOptions>;
+  /** Separate size adjustments (paid plans). Unset = automatic. */
+  sizes?: DocSizes;
+}
+
+export interface DocSizes {
+  /** Business name in the header, pt. */
+  headerName?: number;
+  /** Address / phone / GSTIN in the header, pt. */
+  headerDetails?: number;
+  /** Logo size, percent of normal. */
+  logoPercent?: number;
+  /** Item table text, pt. */
+  tableText?: number;
+  /** Grand total amount, pt. */
+  totalAmount?: number;
 }
 
 export const DEFAULT_DOCUMENT_DESIGN: DocDesignSettings = {
   paperSize: "a4",
-  style: "default",
+  style: "simple",
   fontSize: 10,
+  accentColor: "#1d4ed8",
 };
 
 /** Common currencies shown in the per-document currency picker. */
@@ -75,7 +122,9 @@ export interface Business {
   state: string | null;
   gst_number: string | null;
   phone: string | null;
+  email?: string | null;
   document_design: DocDesignSettings;
+  format_settings?: import("@/lib/formatSettings").FormatSettings | null;
   signature_url: string | null;
   invoice_terms: string | null;
   quotation_terms: string | null;
@@ -90,7 +139,7 @@ export interface Business {
   updated_at: string;
 }
 
-export type BusinessRole = "owner" | "member";
+export type BusinessRole = "owner" | "admin" | "manager" | "staff" | "member";
 
 export interface BusinessMember {
   id: string;
@@ -167,6 +216,7 @@ export interface Profile {
   // Shared across Invoice, Quotation, and Purchase — one paper size/style/
   // font/signature setting rather than three separate ones.
   document_design: DocDesignSettings;
+  format_settings?: import("@/lib/formatSettings").FormatSettings | null;
   signature_url: string | null;
   // Terms & Conditions stay separate per document type.
   invoice_terms: string | null;
@@ -213,6 +263,8 @@ export interface Customer {
   state: string | null;
   gstin: string | null;
   notes: string | null;
+  /** Customer ID shown to the user: auto "CUST-0001" or typed in. */
+  customer_code: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -227,6 +279,8 @@ export interface Invoice {
   record_type: RecordType;
   converted_invoice_id: string | null;
   invoice_number: string;
+  /** Title printed on the document, e.g. "TAX INVOICE", "BILL OF SUPPLY". */
+  doc_title?: string | null;
   invoice_date: string;
   due_date: string | null;
   status: InvoiceStatus;

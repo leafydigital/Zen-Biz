@@ -15,15 +15,20 @@ export async function generateQuotationPdf({
   customer,
   profile,
   designOverride,
+  preview,
 }: {
   quotation: Quotation;
   items: QuotationItem[];
   customer: Customer | null;
   profile: Profile;
   designOverride?: DocDesignSettings;
+  /** Returns the PDF as a Blob instead of downloading it. */
+  preview?: boolean;
 }) {
-  await generateSaleDocumentPdf({
+  return await generateSaleDocumentPdf({
+    preview,
     docLabel: "QUOTATION",
+    titleText: profile.format_settings?.titles?.quotation,
     docNumber: quotation.quotation_number,
     docDate: quotation.quotation_date,
     dueDate: quotation.valid_until,

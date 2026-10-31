@@ -3,10 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import type { Business } from "@/types/database";
+import { LiveInvoicePreview } from "@/components/LiveInvoicePreview";
+import { DEFAULT_ACCENT, normalizeStyle } from "@/lib/docDesign";
+import { DEFAULT_DOCUMENT_DESIGN } from "@/types/database";
+import type { Business, Plan } from "@/types/database";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
-export function BankDetailsForm({ business }: { business: Business }) {
+export function BankDetailsForm({ business, plan }: { business: Business; plan: Plan }) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -81,7 +84,15 @@ export function BankDetailsForm({ business }: { business: Business }) {
     router.refresh();
   }
 
+  const savedDesign = business.document_design ?? DEFAULT_DOCUMENT_DESIGN;
+  const previewDesign = {
+    ...savedDesign,
+    style: normalizeStyle(savedDesign.style),
+    accentColor: savedDesign.accentColor ?? DEFAULT_ACCENT,
+  };
+
   return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="font-display text-lg font-semibold text-text">
@@ -201,6 +212,23 @@ export function BankDetailsForm({ business }: { business: Business }) {
       >
         {saving ? "Saving…" : "Save settings"}
       </button>
+    </div>
+
+    <div className="lg:sticky lg:top-4 lg:self-start">
+      <LiveInvoicePreview
+        business={business}
+        plan={plan}
+        design={previewDesign}
+        signatureUrl={business.signature_url}
+        bank={{
+          bankName: bankName.trim() || null,
+          accountName: accountName.trim() || null,
+          accountNumber: accountNumber.trim() || null,
+          ifscOrSwift: ifscOrSwift.trim() || null,
+        }}
+        qrUrl={qrPreview}
+      />
+    </div>
     </div>
   );
 }

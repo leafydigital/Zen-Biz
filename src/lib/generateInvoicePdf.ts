@@ -17,15 +17,20 @@ export async function generateInvoicePdf({
   customer,
   profile,
   designOverride,
+  preview,
 }: {
   invoice: Invoice;
   items: InvoiceItem[];
   customer: Customer | null;
   profile: Profile;
   designOverride?: DocDesignSettings;
+  /** Returns the PDF as a Blob instead of downloading it. */
+  preview?: boolean;
 }) {
-  await generateSaleDocumentPdf({
+  return await generateSaleDocumentPdf({
+    preview,
     docLabel: "INVOICE",
+    titleText: invoice.doc_title,
     docNumber: invoice.invoice_number,
     docDate: invoice.invoice_date,
     dueDate: invoice.due_date,

@@ -1,7 +1,7 @@
 import { cache } from "react";
 import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
-import type { Business, BusinessMember } from "@/types/database";
+import type { Business, BusinessMember, Profile } from "@/types/database";
 
 export const ACTIVE_BUSINESS_COOKIE = "zenbiz-active-business";
 
@@ -105,6 +105,12 @@ export interface BusinessMemberWithEmail {
   email: string;
   role: BusinessMember["role"];
   created_at: string;
+  full_name: string | null;
+  username: string | null;
+  is_active: boolean;
+  role_id: string | null;
+  role_name: string | null;
+  business_ids: string[];
 }
 
 /**
@@ -124,4 +130,14 @@ export async function getBusinessMembers(businessId: string): Promise<BusinessMe
     target_business_id: businessId,
   } as never)) as { data: BusinessMemberWithEmail[] | null };
   return data ?? [];
+}
+
+/**
+ * Documents must carry the ACTIVE business's name, logo, GSTIN, bank
+ * details, signature and design — not the user-level profile row's old
+ * copies. Business fields win; the person's own id/plan/language stay.
+ */
+export function mergeBusinessIntoProfile(profile: Profile, business: Business | null): Profile {
+  if (!business || !business.id) return profile;
+  return { ...profile, ...business, id: profile.id, plan: profile.plan } as Profile;
 }

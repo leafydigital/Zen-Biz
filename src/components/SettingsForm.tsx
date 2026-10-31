@@ -32,6 +32,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
   );
   const [businessName, setBusinessName] = useState(business.business_name);
   const [phone, setPhone] = useState(business.phone ?? "");
+  const [email, setEmail] = useState(business.email ?? "");
   const [address, setAddress] = useState(business.address ?? "");
   const [state, setState] = useState(business.state ?? "");
   const [gstNumber, setGstNumber] = useState(business.gst_number ?? "");
@@ -120,6 +121,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
         business_name: businessName.trim(),
         business_type: finalBusinessType,
         phone: phone.trim() || null,
+        email: email.trim() || null,
         address: address.trim() || null,
         state: state || null,
         gst_number: gstNumber.trim() || null,
@@ -162,6 +164,21 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+      <label className="flex flex-col gap-1.5">
+        <span className="text-sm font-medium text-text">Business email</span>
+        <input
+          type="email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          placeholder="billing@yourbusiness.com"
+          className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+        />
+        <span className="text-xs text-text-soft">
+          Invoices emailed from Zen Biz are sent in your business name and customers&apos; replies come to this
+          address. Everyone on the team can see it; only people with General settings edit access can change it.
+        </span>
+      </label>
+
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-text">Business name</span>
         <input

@@ -1,5 +1,6 @@
 "use client";
 
+import { NumField } from "@/components/NumField";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -151,6 +152,8 @@ export function NewPurchaseForm({
     [lines, products]
   );
 
+  const [customTaxIds, setCustomTaxIds] = useState<string[]>([]);
+
   function updateLine(id: string, patch: Partial<LineItem>) {
     setLines((prev) => prev.map((l) => (l.id === id ? { ...l, ...patch } : l)));
   }
@@ -173,7 +176,7 @@ export function NewPurchaseForm({
   }
 
   function removeLine(id: string) {
-    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : prev));
+    setLines((prev) => (prev.length > 1 ? prev.filter((l) => l.id !== id) : [newLine()]));
   }
 
   async function handleSubmit(e: React.FormEvent, download: boolean) {
@@ -310,6 +313,7 @@ export function NewPurchaseForm({
   }
 
   return (
+    <>
     <form className="flex flex-col gap-6 lg:flex-row lg:items-start lg:gap-6">
       <div className="flex flex-1 flex-col gap-6">
         {/* Supplier Information */}
@@ -472,12 +476,11 @@ export function NewPurchaseForm({
             {paymentStatus === "partial" && (
               <label className="flex flex-col gap-1.5">
                 <span className="text-sm font-medium text-text">Amount paid so far</span>
-                <input
-                  type="number"
+                <NumField
                   min="0"
                   step="0.01"
-                  value={amountPaid}
-                  onChange={(e) => setAmountPaid(e.target.value)}
+                  value={parseFloat(amountPaid) || 0}
+                  onValue={(n) => setAmountPaid(n ? String(n) : "")}
                   placeholder="0.00"
                   className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/10"
                 />
@@ -614,14 +617,13 @@ export function NewPurchaseForm({
                   </div>
                 </div>
 
-                <input
-                  type="number"
+                <NumField
                   min="0"
                   step="0.01"
                   placeholder="Qty"
                   aria-label="Quantity"
                   value={line.quantity}
-                  onChange={(e) => updateLine(line.id, { quantity: parseFloat(e.target.value) || 0 })}
+                  onValue={(n) => updateLine(line.id, { quantity: n })}
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
@@ -633,26 +635,24 @@ export function NewPurchaseForm({
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
-                <input
-                  type="number"
+                <NumField
                   min="0"
                   step="0.01"
                   placeholder="Rate"
                   aria-label="Rate"
                   value={line.unitPrice}
-                  onChange={(e) => updateLine(line.id, { unitPrice: parseFloat(e.target.value) || 0 })}
+                  onValue={(n) => updateLine(line.id, { unitPrice: n })}
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
-                <input
-                  type="number"
+                <NumField
                   min="0"
                   max="100"
                   step="0.01"
                   placeholder="0"
                   aria-label="Discount percent"
                   value={line.discountPercent}
-                  onChange={(e) => updateLine(line.id, { discountPercent: parseFloat(e.target.value) || 0 })}
+                  onValue={(n) => updateLine(line.id, { discountPercent: n })}
                   className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-2.5 py-2 text-sm text-text focus:border-ink"
                 />
 
@@ -660,9 +660,17 @@ export function NewPurchaseForm({
                   <div className="flex min-w-0 gap-1">
                     <select
                       aria-label={gstApplies ? "GST percent" : "Tax percent"}
-                      value={TAX_PERCENT_OPTIONS.includes(line.taxPercent) ? String(line.taxPercent) : "custom"}
+                      value={
+                        customTaxIds.includes(line.id) || !TAX_PERCENT_OPTIONS.includes(line.taxPercent)
+                          ? "custom"
+                          : String(line.taxPercent)
+                      }
                       onChange={(e) => {
-                        if (e.target.value === "custom") return;
+                        if (e.target.value === "custom") {
+                          setCustomTaxIds((ids) => (ids.includes(line.id) ? ids : [...ids, line.id]));
+                          return;
+                        }
+                        setCustomTaxIds((ids) => ids.filter((id) => id !== line.id));
                         updateLine(line.id, { taxPercent: parseFloat(e.target.value) });
                       }}
                       className="w-full min-w-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
@@ -674,15 +682,14 @@ export function NewPurchaseForm({
                       ))}
                       <option value="custom">Custom</option>
                     </select>
-                    {!TAX_PERCENT_OPTIONS.includes(line.taxPercent) && (
-                      <input
-                        type="number"
+                    {(customTaxIds.includes(line.id) || !TAX_PERCENT_OPTIONS.includes(line.taxPercent)) && (
+                      <NumField
                         min="0"
                         step="0.01"
                         placeholder="%"
                         aria-label="Custom tax percent"
                         value={line.taxPercent}
-                        onChange={(e) => updateLine(line.id, { taxPercent: parseFloat(e.target.value) || 0 })}
+                        onValue={(n) => updateLine(line.id, { taxPercent: n })}
                         className="w-14 min-w-0 shrink-0 rounded-lg border border-paper-fold bg-white px-1.5 py-2 text-sm text-text focus:border-ink"
                       />
                     )}
@@ -794,8 +801,8 @@ export function NewPurchaseForm({
       </div>
 
       {/* Sticky totals sidebar */}
-      <aside className="lg:w-80 lg:shrink-0">
-        <div className="rounded-2xl border border-paper-fold bg-white p-4 shadow-card lg:sticky lg:top-6 lg:p-5">
+      <aside className="lg:sticky lg:top-6 lg:w-80 lg:shrink-0">
+        <div className="rounded-2xl border border-paper-fold bg-white p-4 shadow-card lg:p-5">
           <h3 className="mb-3 border-b border-paper-fold pb-3 font-display text-lg font-semibold text-text">
             Total
           </h3>
@@ -897,5 +904,22 @@ export function NewPurchaseForm({
         </div>
       </aside>
     </form>
+
+    <div className="h-16 lg:hidden" aria-hidden="true" />
+    <div className="fixed inset-x-0 bottom-[60px] z-10 flex items-center justify-between gap-3 border-t border-paper-fold bg-white/95 px-4 py-2.5 shadow-card backdrop-blur md:bottom-0 md:left-56 lg:hidden">
+      <div className="min-w-0 text-xs text-text-soft">
+        <p>
+          Subtotal <span className="font-ledger tabular-nums text-text">{formatCurrency(subtotal, currency)}</span>
+          {totalTax > 0 && (
+            <>
+              {" · "}Tax <span className="font-ledger tabular-nums text-text">{formatCurrency(totalTax, currency)}</span>
+            </>
+          )}
+        </p>
+        <p>Grand Total</p>
+      </div>
+      <p className="font-ledger text-xl font-bold tabular-nums text-ink">{formatCurrency(grandTotal, currency)}</p>
+    </div>
+    </>
   );
 }

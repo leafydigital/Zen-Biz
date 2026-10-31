@@ -1,3 +1,5 @@
+import { DocShareActions } from "@/components/DocShareActions";
+import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { QuotationStatusSelect } from "@/components/QuotationStatusSelect";
@@ -55,7 +57,7 @@ export default async function QuotationsPage() {
                 key={q.id}
                 className="flex flex-col gap-3 p-4 transition hover:bg-paper/60 sm:flex-row sm:items-center sm:justify-between"
               >
-                <div className="flex min-w-0 items-center gap-3">
+                <Link href={`/dashboard/quotations/${q.id}`} className="flex min-w-0 flex-1 items-center gap-3">
                   <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-50 text-green-600">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
                       <path d="M7 3.5h7l4 4V20a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V4.5a1 1 0 0 1 1-1ZM14 3.5V8h4M9 13h4M9 16.5h6" strokeLinecap="round" strokeLinejoin="round" />
@@ -67,13 +69,16 @@ export default async function QuotationsPage() {
                       {q.customers?.name ?? "Not specified"} · {q.quotation_date}
                     </p>
                   </div>
-                </div>
+                </Link>
                 <div className="flex flex-wrap items-center gap-3">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">
                     {formatCurrency(Number(q.total), q.currency)}
                   </span>
                   <QuotationStatusSelect quotationId={q.id} status={q.status} />
+                  <Link href={`/dashboard/quotations/${q.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700">View</Link>
                   <DownloadQuotationButton quotationId={q.id} />
+          <DocShareActions kind="quotation" id={q.id} />
+                  <DeleteRecordButton table="quotations" id={q.id} label="quotation" />
                 </div>
               </li>
             ))}

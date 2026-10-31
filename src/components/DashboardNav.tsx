@@ -2,12 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { getLabels } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { Logo } from "@/components/Logo";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import { useTranslation } from "@/lib/i18n/I18nContext";
+import { permissionForPath } from "@/lib/permissions";
 import type { Plan } from "@/types/database";
 
 const ICONS = {
@@ -57,11 +58,17 @@ function Icon({ name }: { name: keyof typeof ICONS }) {
 export function DashboardNav({
   businessType,
   plan,
+  allowed,
 }: {
   businessType?: string;
   plan?: Plan;
+  allowed?: string[];
 }) {
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+  // Billing records are made/edited on the invoice form with ?type=billing;
+  // they belong to the Billing Records menu item, not Invoices.
+  const isBillingForm = pathname.startsWith("/dashboard/invoices/") && searchParams.get("type") === "billing";
   const { t } = useTranslation();
   const labels = getLabels(businessType);
   const resolvedPlan = plan ?? "starter";
@@ -86,10 +93,17 @@ export function DashboardNav({
   const settingsItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard/settings", label: t.nav.settings, icon: "settings" },
   ];
+  const canSee = (href: string) => {
+    const need = permissionForPath(href);
+    return !need || !allowed || allowed.includes(need);
+  };
+  mainItems.splice(0, mainItems.length, ...mainItems.filter((i) => canSee(i.href)));
+  reportItems.splice(0, reportItems.length, ...reportItems.filter((i) => canSee(i.href)));
   const items = [...mainItems, ...reportItems, ...settingsItems];
 
   function isActive(href: string) {
     if (href === "/dashboard") return pathname === "/dashboard";
+    if (isBillingForm) return href === "/dashboard/billing-records";
     return pathname.startsWith(href);
   }
 

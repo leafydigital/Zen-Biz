@@ -27,7 +27,7 @@ const FEATURES: FeatureRow[] = [
   { label: "Expense tracking", starter: false, professional: true, business: true },
   { label: "Invoice tracking (Sent/Viewed/Overdue)", starter: false, professional: true, business: true },
   { label: "POS print support", starter: true, professional: true, business: true },
-  { label: "Colourful document styles", starter: false, professional: false, business: true },
+  { label: "Colourful & custom invoice styles, size adjustments", starter: false, professional: true, business: true },
   { label: "GST billing & GST report", starter: false, professional: false, business: true },
   { label: "Profit & Loss report", starter: false, professional: false, business: true },
   { label: "Multiple users & roles", starter: false, professional: false, business: true },

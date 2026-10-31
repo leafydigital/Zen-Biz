@@ -4,6 +4,8 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
 import { generateBillingRecordPdf } from "@/lib/generateBillingRecordPdfWrapper";
+import { sharePdfToWhatsApp } from "@/lib/shareFile";
+import { sendInvoiceEmail } from "@/lib/actions/emailActions";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import { CURRENCY_SYMBOLS } from "@/types/database";
 import type { Business, Customer, Invoice, InvoiceItem, Profile } from "@/types/database";
@@ -21,6 +23,41 @@ export function ShareInvoiceButtons({ invoiceId }: { invoiceId: string }) {
   const supabase = createClient();
   const [loading, setLoading] = useState<"whatsapp" | "email" | null>(null);
   const { showLoader, hideLoader } = useGlobalLoader();
+  const [draft, setDraft] = useState<{
+    to: string;
+    subject: string;
+    message: string;
+    blob: Blob;
+    filename: string;
+    hasReplyTo: boolean;
+  } | null>(null);
+  const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
+  const [sentTo, setSentTo] = useState<string | null>(null);
+
+  async function sendNow() {
+    if (!draft) return;
+    setSending(true);
+    setSendError(null);
+    const buf = new Uint8Array(await draft.blob.arrayBuffer());
+    let bin = "";
+    for (let i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode(...buf.subarray(i, i + 0x8000));
+    const result = await sendInvoiceEmail({
+      invoiceId,
+      to: draft.to,
+      subject: draft.subject,
+      message: draft.message,
+      pdfBase64: btoa(bin),
+      filename: draft.filename,
+    });
+    setSending(false);
+    if (result.error) {
+      setSendError(result.error);
+      return;
+    }
+    setSentTo(draft.to);
+    setDraft(null);
+  }
 
   async function prepareAndShare(channel: "whatsapp" | "email") {
     setLoading(channel);
@@ -64,10 +101,12 @@ export function ShareInvoiceButtons({ invoiceId }: { invoiceId: string }) {
       customer = data as Customer | null;
     }
 
+    const asBlob = true;
+    let pdfBlob: Blob | void = undefined;
     if (invoice.record_type === "billing_record") {
-      await generateBillingRecordPdf({ invoice, items: items ?? [], customer, profile: profileForPdf });
+      pdfBlob = await generateBillingRecordPdf({ invoice, items: items ?? [], customer, profile: profileForPdf, preview: asBlob });
     } else {
-      await generateInvoicePdf({ invoice, items: items ?? [], customer, profile: profileForPdf });
+      pdfBlob = await generateInvoicePdf({ invoice, items: items ?? [], customer, profile: profileForPdf, preview: asBlob });
     }
 
     const symbol = CURRENCY_SYMBOLS[invoice.currency ?? "INR"] ?? "";
@@ -82,23 +121,111 @@ export function ShareInvoiceButtons({ invoiceId }: { invoiceId: string }) {
     stopLoading();
 
     if (channel === "whatsapp") {
-      const phone = customer?.phone ? customer.phone.replace(/[^0-9]/g, "") : "";
-      const waUrl = `https://wa.me/${phone}?text=${encodeURIComponent(messageText)}`;
-      window.open(waUrl, "_blank", "noopener,noreferrer");
-    } else {
-      const subject = `${docLabel === "bill" ? "Bill" : "Invoice"}${invoice.invoice_number ? ` #${invoice.invoice_number}` : ""}`;
-      const mailtoUrl = `mailto:${customer?.email ?? ""}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(messageText)}`;
-      window.location.href = mailtoUrl;
+      if (pdfBlob) {
+        const label = docLabel === "bill" ? "Bill" : "Invoice";
+        await sharePdfToWhatsApp({
+          blob: pdfBlob,
+          filename: `${label}-${invoice.invoice_number}.pdf`,
+          text: messageText.replace(" The PDF just downloaded — please attach it here.", ""),
+          fallbackText: messageText,
+          phone: customer?.phone,
+          businessId: invoice.business_id,
+        });
+      }
+    } else if (pdfBlob) {
+      const label = docLabel === "bill" ? "Bill" : "Invoice";
+      const subject = `${label}${invoice.invoice_number ? ` #${invoice.invoice_number}` : ""}${businessName ? ` from ${businessName}` : ""}`;
+      const body =
+        `Hi${customer?.name ? " " + customer.name : ""},\n\n` +
+        `Please find attached your ${docLabel}${invoice.invoice_number ? ` #${invoice.invoice_number}` : ""} ` +
+        `for ${symbol}${Number(invoice.total).toLocaleString("en-IN")}.\n\nThank you,\n${businessName}`;
+      setSentTo(null);
+      setSendError(null);
+      setDraft({
+        to: customer?.email ?? "",
+        subject,
+        message: body,
+        blob: pdfBlob,
+        filename: `${label}-${invoice.invoice_number}.pdf`,
+        hasReplyTo: !!business?.email,
+      });
     }
   }
 
+  const field =
+    "rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm text-text focus:border-ink focus:outline-none";
+
   return (
     <>
+      {sentTo && (
+        <span className="rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700">
+          Email sent to {sentTo}
+        </span>
+      )}
+      {draft && (
+        <div
+          className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm"
+          onClick={() => !sending && setDraft(null)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl2 bg-paper-card p-5 shadow-card"
+          >
+            <p className="text-sm font-semibold text-text">Email to customer</p>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-text-soft">To</span>
+              <input
+                type="email"
+                value={draft.to}
+                onChange={(e) => setDraft({ ...draft, to: e.target.value })}
+                placeholder="customer@example.com"
+                className={field}
+              />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-text-soft">Subject</span>
+              <input value={draft.subject} onChange={(e) => setDraft({ ...draft, subject: e.target.value })} className={field} />
+            </label>
+            <label className="flex flex-col gap-1">
+              <span className="text-xs font-medium text-text-soft">Message</span>
+              <textarea
+                rows={7}
+                value={draft.message}
+                onChange={(e) => setDraft({ ...draft, message: e.target.value })}
+                className={field}
+              />
+            </label>
+            <p className="text-xs text-text-soft">
+              The PDF ({draft.filename}) is attached automatically.
+              {!draft.hasReplyTo && " Add a Business email in Settings → General so customers can reply to you."}
+            </p>
+            {sendError && <p className="rounded-lg bg-alert-bg px-3 py-2 text-xs text-alert">{sendError}</p>}
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setDraft(null)}
+                disabled={sending}
+                className="flex-1 rounded-lg border border-paper-fold px-3 py-2 text-sm font-medium text-text transition hover:bg-paper disabled:opacity-60"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={sendNow}
+                disabled={sending || !draft.to.trim()}
+                className="flex-1 rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60"
+              >
+                {sending ? "Sending…" : "Send email"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <button
         type="button"
         onClick={() => prepareAndShare("whatsapp")}
         disabled={loading !== null}
-        className="flex items-center gap-1.5 rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper disabled:opacity-60"
+        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-emerald-600 hover:bg-emerald-700"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
           <path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4L9.7 7c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1 0 1.2.9 2.4 1 2.6.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.7-.7 1.9-1.4.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z" />
@@ -110,7 +237,7 @@ export function ShareInvoiceButtons({ invoiceId }: { invoiceId: string }) {
         type="button"
         onClick={() => prepareAndShare("email")}
         disabled={loading !== null}
-        className="flex items-center gap-1.5 rounded-lg border border-paper-fold px-3 py-1.5 text-xs font-semibold text-text transition hover:bg-paper disabled:opacity-60"
+        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-amber-600 hover:bg-amber-700"
       >
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
           <path d="M4 6h16v12H4z" strokeLinecap="round" strokeLinejoin="round" />

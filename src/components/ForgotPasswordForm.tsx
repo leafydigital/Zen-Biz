@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { TEAM_EMAIL_DOMAIN } from "@/lib/teamUsername";
 import { createClient } from "@/lib/supabase/client";
 
 export function ForgotPasswordForm() {
@@ -15,6 +16,12 @@ export function ForgotPasswordForm() {
     e.preventDefault();
     setLoading(true);
     setError(null);
+
+    if (email.trim().toLowerCase().endsWith("@" + TEAM_EMAIL_DOMAIN)) {
+      setLoading(false);
+      setError("Team logins can't reset by email. Ask your business owner or admin to set a new password.");
+      return;
+    }
 
     const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
       redirectTo: `${window.location.origin}/reset-password`,

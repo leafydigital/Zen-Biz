@@ -1,27 +1,29 @@
 // Supabase Database Webhook target — fires whenever a new row is inserted
-// into public.support_tickets, and forwards the ticket details to
-// leafydigital@gmail.com via Brevo's transactional email API.
+// into public.support_tickets, and emails the ticket details to
+// leafydigital@gmail.com via Resend's email API.
 //
-// This is a separate, independent integration from the SMTP setup used
-// for signup/reset emails — those go through Supabase Auth's own SMTP
-// config, but a webhook calling this function needs to send email
-// itself, so it uses Brevo's REST API directly with an API key (not the
-// SMTP username/password used elsewhere).
+// Why Resend and not Gmail's own SMTP: Supabase Edge Functions run on
+// Deno Deploy, which does not allow outgoing connections on the ports
+// Gmail's SMTP requires (465/587) — this is a platform-level network
+// restriction, not something fixable in this function's code. Resend
+// sends over a normal HTTPS API call instead, which isn't blocked, and
+// the email still lands in the same leafydigital@gmail.com inbox — it's
+// just delivered TO Gmail rather than sent THROUGH Gmail's own servers.
 //
 // Deploy with: supabase functions deploy notify-support-ticket
-// Then wire it up in Supabase Dashboard -> Database -> Webhooks:
+// Then wire it up in Supabase Dashboard -> Integrations -> Webhooks:
 //   - Table: support_tickets
 //   - Events: Insert
 //   - Type: Supabase Edge Function
 //   - Function: notify-support-ticket
 //
-// Required secret (set via `supabase secrets set BREVO_API_KEY=...`):
-//   BREVO_API_KEY — from Brevo dashboard -> SMTP & API -> API Keys
-//   (a different kind of key than the SMTP key used for Supabase Auth's
-//   own SMTP settings — generate a dedicated "API Key" there, not the
-//   SMTP key.)
-
-import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
+// Required secret (set via `supabase secrets set RESEND_API_KEY=...`):
+//   RESEND_API_KEY — from resend.com -> API Keys, after creating a free
+//   account. No domain verification is required to START sending as
+//   long as the "from" address uses Resend's own onboarding@resend.dev
+//   sender (used below) — good enough for this internal notification
+//   use case. Verifying your own domain later improves deliverability
+//   but isn't required to get this working.
 
 const NOTIFY_EMAIL = "leafydigital@gmail.com";
 
@@ -45,7 +47,15 @@ interface DatabaseWebhookPayload {
   record: SupportTicketRow;
 }
 
-serve(async (req) => {
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+Deno.serve(async (req: Request) => {
   try {
     const payload: DatabaseWebhookPayload = await req.json();
     const ticket = payload.record;
@@ -57,9 +67,9 @@ serve(async (req) => {
       });
     }
 
-    const apiKey = Deno.env.get("BREVO_API_KEY");
+    const apiKey = Deno.env.get("RESEND_API_KEY");
     if (!apiKey) {
-      return new Response(JSON.stringify({ error: "BREVO_API_KEY is not configured" }), {
+      return new Response(JSON.stringify({ error: "RESEND_API_KEY is not configured" }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
@@ -81,47 +91,40 @@ serve(async (req) => {
       <p><small>Ticket ID: ${ticket.id} · Submitted: ${ticket.created_at}</small></p>
     `;
 
-    const brevoResponse = await fetch("https://api.brevo.com/v3/smtp/email", {
+    const resendResponse = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "api-key": apiKey,
+        Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        sender: { name: "Zen Biz Support", email: "hello@leafydigital.in" },
-        to: [{ email: NOTIFY_EMAIL }],
-        replyTo: { email: ticket.email, name: ticket.name },
+        from: "Zen Biz Support <onboarding@resend.dev>",
+        to: [NOTIFY_EMAIL],
+        reply_to: ticket.email,
         subject,
-        htmlContent: htmlBody,
+        html: htmlBody,
       }),
     });
 
-    if (!brevoResponse.ok) {
-      const errText = await brevoResponse.text();
-      console.error("Zen Biz: Brevo send failed", errText);
-      return new Response(JSON.stringify({ error: "Failed to send notification email" }), {
+    const resendResult = await resendResponse.json();
+
+    if (!resendResponse.ok) {
+      console.error("Zen Biz: Resend send failed", resendResult);
+      return new Response(JSON.stringify({ error: "Failed to send notification email", details: resendResult }), {
         status: 500,
         headers: { "Content-Type": "application/json" },
       });
     }
 
-    return new Response(JSON.stringify({ ok: true }), {
+    return new Response(JSON.stringify({ ok: true, id: resendResult.id }), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
   } catch (err) {
     console.error("Zen Biz: notify-support-ticket error", err);
-    return new Response(JSON.stringify({ error: "Unexpected error" }), {
+    return new Response(JSON.stringify({ error: "Unexpected error", details: String(err) }), {
       status: 500,
       headers: { "Content-Type": "application/json" },
     });
   }
 });
-
-function escapeHtml(value: string): string {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
