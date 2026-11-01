@@ -8,7 +8,7 @@ const zh: Translations = {
     suppliers: "供应商",
     customers: "客户",
     invoices: "发票",
-    billingRecords: "开票记录",
+    billingRecords: "Billing",
     quotations: "报价单",
     deliveryChallans: "送货单",
     gstReport: "GST 报告",

@@ -124,6 +124,8 @@ export interface Business {
   phone: string | null;
   email?: string | null;
   document_design: DocDesignSettings;
+  /** Activity-log entries older than this many days are deleted automatically (null = keep forever). */
+  log_retention_days?: number | null;
   format_settings?: import("@/lib/formatSettings").FormatSettings | null;
   signature_url: string | null;
   invoice_terms: string | null;

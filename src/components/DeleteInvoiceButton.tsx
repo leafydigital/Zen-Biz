@@ -34,7 +34,7 @@ export function DeleteInvoiceButton({
       return;
     }
     setConfirming(false);
-    router.push(isBillingRecord ? "/dashboard/billing-records" : "/dashboard/invoices");
+    router.push(isBillingRecord ? "/dashboard/billing-records?tab=records" : "/dashboard/invoices");
     router.refresh();
   }
 

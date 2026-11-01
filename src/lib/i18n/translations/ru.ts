@@ -8,7 +8,7 @@ const ru: Translations = {
     suppliers: "Поставщики",
     customers: "Клиенты",
     invoices: "Счета",
-    billingRecords: "Записи о выставлении счетов",
+    billingRecords: "Billing",
     quotations: "Коммерческие предложения",
     deliveryChallans: "Накладные на доставку",
     gstReport: "Отчёт по GST",

@@ -8,7 +8,7 @@ const bn: Translations = {
     suppliers: "সরবরাহকারী",
     customers: "গ্রাহক",
     invoices: "চালান",
-    billingRecords: "বিলিং রেকর্ড",
+    billingRecords: "Billing",
     quotations: "কোটেশন",
     deliveryChallans: "ডেলিভারি চালান",
     gstReport: "GST রিপোর্ট",

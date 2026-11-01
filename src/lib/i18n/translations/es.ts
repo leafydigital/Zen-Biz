@@ -8,7 +8,7 @@ const es: Translations = {
     suppliers: "Proveedores",
     customers: "Clientes",
     invoices: "Facturas",
-    billingRecords: "Registros de facturación",
+    billingRecords: "Billing",
     quotations: "Cotizaciones",
     deliveryChallans: "Notas de entrega",
     gstReport: "Informe de GST",

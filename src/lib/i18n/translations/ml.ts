@@ -8,7 +8,7 @@ const ml: Translations = {
     suppliers: "വിതരണക്കാർ",
     customers: "ഉപഭോക്താക്കൾ",
     invoices: "ഇൻവോയ്‌സുകൾ",
-    billingRecords: "ബില്ലിംഗ് രേഖകൾ",
+    billingRecords: "Billing",
     quotations: "കോട്ടേഷനുകൾ",
     deliveryChallans: "ഡെലിവറി ചെല്ലാനുകൾ",
     gstReport: "GST റിപ്പോർട്ട്",

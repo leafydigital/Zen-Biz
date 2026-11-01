@@ -20,6 +20,7 @@ export function ProductFormModal({
   stockTrackingDefault,
   stockHint,
   plan,
+  categories = [],
   onClose,
 }: {
   ownerId: string;
@@ -31,6 +32,8 @@ export function ProductFormModal({
   stockTrackingDefault: boolean;
   stockHint: string;
   plan: Plan;
+  /** Categories already used by other items, offered as quick picks. */
+  categories?: string[];
   onClose: () => void;
 }) {
   const router = useRouter();
@@ -53,6 +56,8 @@ export function ProductFormModal({
   const [stockQty, setStockQty] = useState(
     product?.stock_qty != null ? String(product.stock_qty) : "0"
   );
+  const [category, setCategory] = useState(product?.category ?? "");
+  const [isActive, setIsActive] = useState(product?.is_active ?? true);
   const [description, setDescription] = useState(product?.description ?? "");
   const [itemCode, setItemCode] = useState(product?.item_code ?? "");
   const [hsnCode, setHsnCode] = useState(product?.hsn_code ?? "");
@@ -155,6 +160,8 @@ export function ProductFormModal({
       item_code: itemCode.trim() || null,
       hsn_code: hsnCode.trim() || null,
       image_url: imageUrl,
+      category: category.trim() || null,
+      is_active: isActive,
     };
 
         const { error } = product
@@ -230,6 +237,50 @@ export function ProductFormModal({
               onChange={(e) => setName(e.target.value)}
               className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
             />
+          </label>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text">
+              Category <span className="text-text-soft">(optional)</span>
+            </span>
+            <input
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              placeholder="Type a new category or pick one below"
+              className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
+            />
+            {categories.length > 0 && (
+              <div className="flex flex-wrap gap-1.5">
+                {categories.map((c) => (
+                  <button
+                    key={c}
+                    type="button"
+                    onClick={() => setCategory(c)}
+                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
+                      category.trim().toLowerCase() === c.toLowerCase()
+                        ? "border-ink bg-ink text-paper"
+                        : "border-paper-fold bg-white text-text-soft hover:bg-paper"
+                    }`}
+                  >
+                    {c}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-paper-fold bg-white p-3.5">
+            <span className="text-sm font-medium text-text">
+              Available for sale
+              <span className="block text-xs font-normal text-text-soft">
+                Turn off to hide it for a while (out of stock / not ready). It stays greyed out in billing and cannot be added.
+              </span>
+            </span>
+            <span className="relative inline-flex shrink-0 items-center">
+              <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} className="peer sr-only" />
+              <span className="h-6 w-11 rounded-full bg-paper-fold transition-colors peer-checked:bg-ink" />
+              <span className="pointer-events-none absolute left-0.5 top-0.5 h-5 w-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5" />
+            </span>
           </label>
 
           <div className="grid gap-4 sm:grid-cols-2">

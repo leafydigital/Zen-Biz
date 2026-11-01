@@ -8,7 +8,7 @@ const mr: Translations = {
     suppliers: "पुरवठादार",
     customers: "ग्राहक",
     invoices: "बीजके",
-    billingRecords: "बिलिंग नोंदी",
+    billingRecords: "Billing",
     quotations: "कोटेशन",
     deliveryChallans: "डिलिव्हरी चलन",
     gstReport: "GST अहवाल",

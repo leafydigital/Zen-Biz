@@ -8,7 +8,7 @@ const kn: Translations = {
     suppliers: "ಪೂರೈಕೆದಾರರು",
     customers: "ಗ್ರಾಹಕರು",
     invoices: "ಇನ್ವಾಯ್ಸ್‌ಗಳು",
-    billingRecords: "ಬಿಲ್ಲಿಂಗ್ ದಾಖಲೆಗಳು",
+    billingRecords: "Billing",
     quotations: "ಉಲ್ಲೇಖಗಳು",
     deliveryChallans: "ಡೆಲಿವರಿ ಚಲನ್‌ಗಳು",
     gstReport: "GST ವರದಿ",

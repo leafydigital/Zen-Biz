@@ -8,7 +8,7 @@ const te: Translations = {
     suppliers: "సరఫరాదారులు",
     customers: "కస్టమర్లు",
     invoices: "ఇన్వాయిస్‌లు",
-    billingRecords: "బిల్లింగ్ రికార్డులు",
+    billingRecords: "Billing",
     quotations: "కోటేషన్లు",
     deliveryChallans: "డెలివరీ చలాన్‌లు",
     gstReport: "GST నివేదిక",

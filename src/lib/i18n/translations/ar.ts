@@ -8,7 +8,7 @@ const ar: Translations = {
     suppliers: "الموردون",
     customers: "العملاء",
     invoices: "الفواتير",
-    billingRecords: "سجلات الفوترة",
+    billingRecords: "Billing",
     quotations: "عروض الأسعار",
     deliveryChallans: "إشعارات التسليم",
     gstReport: "تقرير الضريبة",

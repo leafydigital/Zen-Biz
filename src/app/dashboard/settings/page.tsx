@@ -30,6 +30,7 @@ export default async function SettingsPage() {
   ]);
 
   const t = getTranslations(profile.language);
+  const isOwner = business.owner_id === user.id;
 
   return (
     <div className="flex flex-col gap-5">
@@ -51,6 +52,8 @@ export default async function SettingsPage() {
           roles={roles}
           permissions={access.permissions}
           isFullAccess={access.isFull}
+          canViewLog={isOwner || (!access.isFull && access.permissions.includes("activity_log"))}
+          canDeleteLog={isOwner || (!access.isFull && access.permissions.includes("activity_log_delete"))}
         />
       </Suspense>
     </div>

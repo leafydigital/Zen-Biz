@@ -8,7 +8,7 @@ const hi: Translations = {
     suppliers: "आपूर्तिकर्ता",
     customers: "ग्राहक",
     invoices: "चालान",
-    billingRecords: "बिलिंग रिकॉर्ड",
+    billingRecords: "Billing",
     quotations: "कोटेशन",
     deliveryChallans: "डिलीवरी चालान",
     gstReport: "GST रिपोर्ट",

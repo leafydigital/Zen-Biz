@@ -8,7 +8,7 @@ const tr: Translations = {
     suppliers: "Tedarikçiler",
     customers: "Müşteriler",
     invoices: "Faturalar",
-    billingRecords: "Faturalama Kayıtları",
+    billingRecords: "Billing",
     quotations: "Teklifler",
     deliveryChallans: "Sevk İrsaliyeleri",
     gstReport: "GST Raporu",

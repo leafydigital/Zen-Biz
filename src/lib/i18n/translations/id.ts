@@ -8,7 +8,7 @@ const id: Translations = {
     suppliers: "Pemasok",
     customers: "Pelanggan",
     invoices: "Faktur",
-    billingRecords: "Catatan Penagihan",
+    billingRecords: "Billing",
     quotations: "Penawaran",
     deliveryChallans: "Surat Jalan",
     gstReport: "Laporan GST",

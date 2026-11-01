@@ -10,6 +10,7 @@ import { TermsForm } from "@/components/TermsForm";
 import { BankDetailsForm } from "@/components/BankDetailsForm";
 import { PlanBillingTab } from "@/components/PlanBillingTab";
 import { BusinessManagementTab } from "@/components/BusinessManagementTab";
+import { ActivityLogTab } from "@/components/ActivityLogTab";
 import { TeamManagementTab } from "@/components/TeamManagementTab";
 import { FormatSettingsForm } from "@/components/FormatSettingsForm";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
@@ -18,7 +19,7 @@ import { useTranslation } from "@/lib/i18n/I18nContext";
 import type { BusinessRoleRow } from "@/lib/getBusinessRoles";
 import type { BusinessMemberWithEmail } from "@/lib/getActiveBusiness";
 
-type Tab = "general" | "businesses" | "team" | "appearance" | "terms" | "bank" | "format" | "plan" | "security";
+type Tab = "general" | "businesses" | "team" | "appearance" | "terms" | "bank" | "format" | "plan" | "security" | "log";
 
 export function SettingsTabs({
   profile,
@@ -29,6 +30,8 @@ export function SettingsTabs({
   roles,
   permissions,
   isFullAccess,
+  canViewLog,
+  canDeleteLog,
 }: {
   profile: Profile;
   business: Business;
@@ -38,6 +41,8 @@ export function SettingsTabs({
   roles: BusinessRoleRow[];
   permissions: string[];
   isFullAccess: boolean;
+  canViewLog: boolean;
+  canDeleteLog: boolean;
 }) {
   const { t } = useTranslation();
   const TABS: { id: Tab; label: string }[] = [
@@ -50,6 +55,7 @@ export function SettingsTabs({
     { id: "format", label: "Formats" },
     { id: "plan", label: t.settings.planBilling },
     { id: "security", label: "Security" },
+    { id: "log", label: "Activity log" },
   ];
   // Owner/admin see every tab. Others see only the settings sections their
   // role ticks (view or edit), plus Security so everyone can change their
@@ -66,6 +72,8 @@ export function SettingsTabs({
   const VISIBLE: Tab[] = isFullAccess
     ? ["general", "businesses", "team", "appearance", "terms", "bank", "format", "plan", "security"]
     : [...(["general", "appearance", "terms", "bank", "format"] as Tab[]).filter((id) => levelFor(id)), "security"];
+  // Activity log: owner, or someone the owner ticked it for in Team.
+  if (canViewLog) VISIBLE.push("log");
   const VISIBLE_TABS = TABS.filter((x) => VISIBLE.includes(x.id));
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "general";
@@ -156,6 +164,13 @@ export function SettingsTabs({
         {tab === "plan" && <PlanBillingTab profile={profile} />}
         </fieldset>
         {tab === "security" && <ChangePasswordForm />}
+        {tab === "log" && canViewLog && (
+          <ActivityLogTab
+            isOwner={business.owner_id === currentUserId}
+            canDelete={canDeleteLog}
+            retentionDays={business.log_retention_days ?? null}
+          />
+        )}
       </div>
     </div>
   );

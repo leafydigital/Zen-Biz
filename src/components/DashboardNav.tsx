@@ -11,7 +11,7 @@ import { getPlanFeatures } from "@/lib/planFeatures";
 import { Logo } from "@/components/Logo";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import { useTranslation } from "@/lib/i18n/I18nContext";
-import { permissionForPath } from "@/lib/permissions";
+import { hasPermission, isBillingOnly, permissionForPath } from "@/lib/permissions";
 import type { Plan } from "@/types/database";
 
 const ICONS = {
@@ -120,11 +120,17 @@ export function DashboardNav({
     { href: "/dashboard/settings", label: t.nav.settings, icon: "settings" },
   ];
   const canSee = (href: string) => {
+    if (href === "/dashboard") return !allowed || allowed.includes("overview");
     const need = permissionForPath(href);
-    return !need || !allowed || allowed.includes(need);
+    return !need || !allowed || hasPermission(allowed, need);
   };
   mainItems.splice(0, mainItems.length, ...mainItems.filter((i) => canSee(i.href)));
   reportItems.splice(0, reportItems.length, ...reportItems.filter((i) => canSee(i.href)));
+  const billingOnly = !!allowed && isBillingOnly(allowed);
+  if (billingOnly) {
+    mainItems.splice(0, mainItems.length, ...mainItems.filter((i) => i.href === "/dashboard/billing-records"));
+    settingsItems.splice(0, settingsItems.length);
+  }
   const items = [...mainItems, ...reportItems, ...settingsItems];
 
   function isActive(href: string) {
@@ -173,7 +179,7 @@ export function DashboardNav({
           ))}
         </div>
 
-        <p className="mb-1 mt-5 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">
+        <p className={`mb-1 mt-5 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80 ${billingOnly ? "hidden" : ""}`}>
           {t.nav.reports}
         </p>
         <div className="flex flex-col gap-1">
@@ -182,7 +188,7 @@ export function DashboardNav({
           ))}
         </div>
 
-        <p className="mb-1 mt-5 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">
+        <p className={`mb-1 mt-5 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80 ${billingOnly ? "hidden" : ""}`}>
           {t.nav.settings}
         </p>
         <div className="flex flex-col gap-1">
@@ -254,11 +260,11 @@ export function DashboardNav({
             {mainItems.map((item) => (
               <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
             ))}
-            <p className="mb-1 mt-4 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">{t.nav.reports}</p>
+            <p className={`mb-1 mt-4 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80 ${billingOnly ? "hidden" : ""}`}>{t.nav.reports}</p>
             {reportItems.map((item) => (
               <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
             ))}
-            <p className="mb-1 mt-4 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">{t.nav.settings}</p>
+            <p className={`mb-1 mt-4 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80 ${billingOnly ? "hidden" : ""}`}>{t.nav.settings}</p>
             {settingsItems.map((item) => (
               <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
             ))}

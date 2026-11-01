@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
+import { getMyAccess } from "@/lib/getMyAccess";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
 import { ConvertToInvoiceButton } from "@/components/ConvertToInvoiceButton";
@@ -17,6 +18,7 @@ function formatCurrency(n: number, currency: string = "INR") {
 }
 
 export default async function BillingRecordDetailPage({ params }: { params: { id: string } }) {
+  if (!(await getMyAccess()).permissions.includes("billing_records")) redirect("/dashboard/billing-records");
   const supabase = createClient();
 
   const { data: record } = (await supabase
@@ -54,7 +56,7 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
   return (
     <div className="flex flex-col gap-5">
       <Link
-        href="/dashboard/billing-records"
+        href="/dashboard/billing-records?tab=records"
         className="inline-flex items-center gap-1.5 text-sm font-medium text-text-soft hover:text-ink"
       >
         ← Back to Billing Records

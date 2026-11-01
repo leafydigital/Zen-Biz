@@ -1,10 +1,11 @@
 import { redirect } from "next/navigation";
 import { headers } from "next/headers";
 import { getMyAccess } from "@/lib/getMyAccess";
-import { permissionForPath } from "@/lib/permissions";
+import { firstAllowedPath, hasPermission, isBillingOnly, permissionForPath } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/DashboardNav";
 import { Logo } from "@/components/Logo";
+import { AccessDenied } from "@/components/AccessDenied";
 import { PageBackButton } from "@/components/PageBackButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { PlanBadge } from "@/components/PlanBadge";
@@ -92,7 +93,18 @@ export default async function DashboardLayout({
 
   // Role-based access: block pages the person's role doesn't tick.
   const needed = permissionForPath(headers().get("x-pathname") ?? "");
-  if (needed && !access.permissions.includes(needed)) redirect("/dashboard");
+  // Billing-only roles can only reach Billing. Anything else shows a warning
+  // (they stay signed in) instead of the page.
+  const billingOnly = !access.isFull && isBillingOnly(access.permissions);
+  const path = headers().get("x-pathname") ?? "";
+  const onBillingPath = path === "/dashboard/billing-records" || path.startsWith("/dashboard/billing-records/");
+  // Overview is its own tick: without it, "/dashboard" lands on their first allowed page.
+  if (path === "/dashboard" && !access.permissions.includes("overview")) redirect(firstAllowedPath(access.permissions));
+  const noAccess =
+    (!!needed && !hasPermission(access.permissions, needed)) || (billingOnly && !onBillingPath);
+
+  // A team member with a single business has nothing to switch to.
+  const showSwitcher = businesses.length > 1 || resolvedBusiness.owner_id === user.id;
 
   return (
     <AppConfigProvider config={appConfig}>
@@ -105,7 +117,7 @@ export default async function DashboardLayout({
           mobileExtras={
             <>
               <PlanBadge plan={profile.plan} />
-              <BusinessSwitcher inline activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />
+              {showSwitcher && <BusinessSwitcher inline activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />}
             </>
           }
         />
@@ -114,24 +126,33 @@ export default async function DashboardLayout({
           <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
             <Logo className="ml-11 shrink-0 md:hidden" />
 
-            <GlobalSearch className="hidden min-w-0 flex-1 md:block md:max-w-md" />
+            {billingOnly ? <div className="flex-1" /> : <GlobalSearch className="hidden min-w-0 flex-1 md:block md:max-w-md" />}
 
             <div className="ml-auto flex shrink-0 items-center gap-3">
               <PlanBadge plan={profile.plan} className="hidden sm:inline-flex" />
-              <div className="hidden md:block">
+              <div className={showSwitcher ? "hidden md:block" : "hidden"}>
                 <BusinessSwitcher activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />
               </div>
               <SignOutButton className="hidden md:block" />
             </div>
           </header>
 
-        <div className="border-b border-paper-fold bg-paper-card px-4 py-3 sm:px-6 md:hidden">
-          <GlobalSearch />
-        </div>
+        {!billingOnly && (
+          <div className="border-b border-paper-fold bg-paper-card px-4 py-3 sm:px-6 md:hidden">
+            <GlobalSearch />
+          </div>
+        )}
 
         <main className="flex-1 px-4 pb-8 pt-5 sm:px-6 md:px-8">
           <PageBackButton />
-          {children}
+          {noAccess ? (
+            <AccessDenied
+              backHref={billingOnly ? "/dashboard/billing-records" : "/dashboard"}
+              backLabel={billingOnly ? "Back to Billing" : "Back to dashboard"}
+            />
+          ) : (
+            children
+          )}
         </main>
       </div>
     </div>

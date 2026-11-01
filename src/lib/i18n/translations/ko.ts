@@ -8,7 +8,7 @@ const ko: Translations = {
     suppliers: "공급업체",
     customers: "고객",
     invoices: "청구서",
-    billingRecords: "청구 기록",
+    billingRecords: "Billing",
     quotations: "견적서",
     deliveryChallans: "배송 전표",
     gstReport: "GST 보고서",

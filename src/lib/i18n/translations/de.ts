@@ -8,7 +8,7 @@ const de: Translations = {
     suppliers: "Lieferanten",
     customers: "Kunden",
     invoices: "Rechnungen",
-    billingRecords: "Abrechnungsprotokolle",
+    billingRecords: "Billing",
     quotations: "Angebote",
     deliveryChallans: "Lieferscheine",
     gstReport: "GST-Bericht",

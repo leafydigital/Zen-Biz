@@ -490,7 +490,7 @@ export function NewInvoiceForm({
     // unseen, which is the whole reason a visible confirmation was added.
     setTimeout(() => {
       if (isBillingRecord) {
-        router.push(isEditing ? `/dashboard/billing-records/${invoice!.id}` : "/dashboard/billing-records");
+        router.push(isEditing ? `/dashboard/billing-records/${invoice!.id}` : "/dashboard/billing-records?tab=records");
       } else {
         router.push(isEditing ? `/dashboard/invoices/${invoice!.id}` : "/dashboard/invoices");
       }

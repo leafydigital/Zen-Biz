@@ -8,7 +8,7 @@ const gu: Translations = {
     suppliers: "સપ્લાયર્સ",
     customers: "ગ્રાહકો",
     invoices: "ઇન્વૉઇસ",
-    billingRecords: "બિલિંગ રેકોર્ડ્સ",
+    billingRecords: "Billing",
     quotations: "કોટેશન",
     deliveryChallans: "ડિલિવરી ચલણ",
     gstReport: "GST રિપોર્ટ",

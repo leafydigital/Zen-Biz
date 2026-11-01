@@ -8,7 +8,7 @@ const it: Translations = {
     suppliers: "Fornitori",
     customers: "Clienti",
     invoices: "Fatture",
-    billingRecords: "Registri di fatturazione",
+    billingRecords: "Billing",
     quotations: "Preventivi",
     deliveryChallans: "Bolle di consegna",
     gstReport: "Report GST",

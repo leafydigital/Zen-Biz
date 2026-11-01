@@ -8,7 +8,7 @@ const ja: Translations = {
     suppliers: "仕入先",
     customers: "顧客",
     invoices: "請求書",
-    billingRecords: "請求記録",
+    billingRecords: "Billing",
     quotations: "見積書",
     deliveryChallans: "納品書",
     gstReport: "GSTレポート",

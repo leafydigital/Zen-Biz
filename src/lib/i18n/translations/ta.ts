@@ -8,7 +8,7 @@ const ta: Translations = {
     suppliers: "சப்ளையர்கள்",
     customers: "வாடிக்கையாளர்கள்",
     invoices: "விலைப்பட்டியல்கள்",
-    billingRecords: "பில்லிங் பதிவுகள்",
+    billingRecords: "Billing",
     quotations: "மேற்கோள்கள்",
     deliveryChallans: "டெலிவரி சலான்கள்",
     gstReport: "GST அறிக்கை",

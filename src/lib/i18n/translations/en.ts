@@ -11,7 +11,7 @@ const en = {
     suppliers: "Suppliers",
     customers: "Customers",
     invoices: "Invoices",
-    billingRecords: "Billing Records",
+    billingRecords: "Billing",
     quotations: "Quotations",
     deliveryChallans: "Delivery Challans",
     gstReport: "GST Report",

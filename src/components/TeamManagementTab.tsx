@@ -102,6 +102,7 @@ export function TeamManagementTab({
     });
     setRoleSaving(false);
     hideLoader();
+    if (!result) return setError("Could not save the role. Please refresh the page and try again.");
     if (result.error) return setError(result.error);
     setRoleEditId(null);
     router.refresh();

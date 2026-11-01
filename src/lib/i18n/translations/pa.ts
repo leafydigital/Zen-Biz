@@ -8,7 +8,7 @@ const pa: Translations = {
     suppliers: "ਸਪਲਾਇਰ",
     customers: "ਗਾਹਕ",
     invoices: "ਚਲਾਨ",
-    billingRecords: "ਬਿਲਿੰਗ ਰਿਕਾਰਡ",
+    billingRecords: "Billing",
     quotations: "ਕੋਟੇਸ਼ਨ",
     deliveryChallans: "ਡਿਲੀਵਰੀ ਚਲਾਨ",
     gstReport: "GST ਰਿਪੋਰਟ",
