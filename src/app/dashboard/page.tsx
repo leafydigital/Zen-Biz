@@ -6,6 +6,7 @@ import { getTranslations } from "@/lib/i18n/translations";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
 import { getMyAccess } from "@/lib/getMyAccess";
+import { LowStockAlert } from "@/components/LowStockAlert";
 import { AnalyticsSection } from "@/components/analytics/AnalyticsSection";
 
 function formatCurrency(n: number) {
@@ -281,6 +282,10 @@ export default async function DashboardHome() {
           );
         })}
       </div>
+
+      {getPlanFeatures(profile?.plan ?? "starter").stockLowAlerts && activeBusiness && (
+        <LowStockAlert businessId={activeBusiness.id} />
+      )}
 
       <div className="rounded-xl2 border border-paper-fold bg-white p-5 shadow-card sm:p-6">
         <h2 className="mb-4 flex items-center gap-2 font-display text-lg font-semibold text-text">

@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { COUNTRY_CODES, DEFAULT_COUNTRY } from "@/lib/countryCodes";
+import { PhoneField } from "@/components/PhoneField";
 import { passwordIssue } from "@/lib/passwordValidation";
+import { markSignupVerified } from "@/lib/actions/otpActions";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 type Mode = "login" | "signup";
@@ -25,6 +27,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
   const [loading, setLoading] = useState<"google" | "email" | null>(null);
   const [error, setError] = useState<string | null>(searchParams.get("error"));
   const [notice, setNotice] = useState<string | null>(null);
+  const [awaitingCode, setAwaitingCode] = useState(false);
+  const [signupCode, setSignupCode] = useState("");
 
   const supabase = createClient();
 
@@ -36,7 +40,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
    */
   function isValidLocalPhone(value: string): boolean {
     const digitsOnly = value.replace(/[\s\-().]/g, "");
-    return /^\d{4,14}$/.test(digitsOnly);
+    return /^\d{10}$/.test(digitsOnly);
   }
 
   /**
@@ -105,6 +109,28 @@ export function AuthForm({ mode }: { mode: Mode }) {
     // On success, the browser redirects to Google — nothing else to do here.
   }
 
+  async function handleVerifySignup(e: React.FormEvent) {
+    e.preventDefault();
+    setError(null);
+    setLoading("email");
+    const { error } = await supabase.auth.verifyOtp({ email: email.trim(), token: signupCode.trim(), type: "signup" });
+    if (error) {
+      setLoading(null);
+      setError("That code is wrong or has expired. Check your email, or ask for a new one.");
+      return;
+    }
+    await markSignupVerified();
+    router.push(next);
+    router.refresh();
+  }
+
+  async function resendSignupCode() {
+    setError(null);
+    const { error } = await supabase.auth.resend({ type: "signup", email: email.trim() });
+    setNotice(error ? null : "A new code is on its way.");
+    if (error) setError(error.message);
+  }
+
   async function handleEmailAuth(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -121,8 +147,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
 
     if (mode === "signup") {
-      if (!isValidEmail(email)) {
-        setError("Please enter a complete email address (e.g. name@gmail.com).");
+      if (!/^[^\s@]+@gmail\.com$/i.test(email.trim())) {
+        setError("Please use a Gmail address ending in @gmail.com.");
         stopLoading();
         return;
       }
@@ -135,7 +161,7 @@ export function AuthForm({ mode }: { mode: Mode }) {
       }
 
       if (!isValidLocalPhone(localPhone)) {
-        setError("Please enter a valid phone number.");
+        setError("Please enter a 10-digit phone number.");
         stopLoading();
         return;
       }
@@ -196,9 +222,8 @@ export function AuthForm({ mode }: { mode: Mode }) {
         setError(error.message);
         return;
       }
-      setNotice(
-        "Account created. Check your email for a verification link, then log in."
-      );
+      setNotice("We emailed you a 6-digit code. Enter it below to finish creating your account.");
+      setAwaitingCode(true);
       return;
     }
 
@@ -235,6 +260,31 @@ export function AuthForm({ mode }: { mode: Mode }) {
     }
     router.push(next);
     router.refresh();
+  }
+
+  if (awaitingCode) {
+    return (
+      <form onSubmit={handleVerifySignup} className="flex w-full max-w-[380px] flex-col gap-4">
+        <p className="text-sm text-text-soft">
+          Enter the 6-digit code sent to <span className="font-medium text-text">{email.trim()}</span>.
+        </p>
+        <input
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          maxLength={6}
+          value={signupCode}
+          onChange={(e) => setSignupCode(e.target.value.replace(/\D/g, ""))}
+          placeholder="6-digit code"
+          className="rounded-xl border border-paper-fold bg-white px-3.5 py-3 text-center font-ledger text-xl tracking-[0.4em] text-text focus:border-ink"
+        />
+        {error && <p className="rounded-lg bg-alert-bg px-3.5 py-2.5 text-sm text-alert" role="alert">{error}</p>}
+        {notice && <p className="rounded-lg bg-success-bg px-3.5 py-2.5 text-sm text-success" role="status">{notice}</p>}
+        <button type="submit" disabled={loading !== null || signupCode.length !== 6} className="rounded-xl bg-ink px-4 py-3 text-[0.95rem] font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60">
+          {loading === "email" ? "Please wait…" : "Verify and continue"}
+        </button>
+        <button type="button" onClick={resendSignupCode} className="self-start text-sm font-medium text-ink hover:underline">Resend code</button>
+      </form>
+    );
   }
 
   return (
@@ -290,45 +340,23 @@ export function AuthForm({ mode }: { mode: Mode }) {
         ) : (
           <>
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text">Email</span>
+              <span className="text-sm font-medium text-text">Email <span className="font-normal text-text-soft">(Gmail only)</span></span>
               <input
                 type="email"
                 required
-                pattern="[^\s@]+@[^\s@]+\.[a-zA-Z]{2,}"
-                title="Enter a complete email address, e.g. name@gmail.com"
+                pattern="[^\s@]+@gmail\.com"
+                title="Use a Gmail address, e.g. name@gmail.com"
                 autoComplete="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@business.com"
+                placeholder="yourname@gmail.com"
                 className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
               />
             </label>
 
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">Phone Number</span>
-              <div className="flex gap-2">
-                <select
-                  value={countryDialCode}
-                  onChange={(e) => setCountryDialCode(e.target.value)}
-                  aria-label="Country code"
-                  className="w-[110px] shrink-0 rounded-xl border border-paper-fold bg-white px-2.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
-                >
-                  {COUNTRY_CODES.map((c) => (
-                    <option key={c.iso} value={c.dialCode}>
-                      {c.dialCode} {c.iso}
-                    </option>
-                  ))}
-                </select>
-                <input
-                  type="tel"
-                  required
-                  autoComplete="tel-national"
-                  value={localPhone}
-                  onChange={(e) => setLocalPhone(e.target.value)}
-                  placeholder="98765 43210"
-                  className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
-                />
-              </div>
+              <PhoneField dial={countryDialCode} onDial={setCountryDialCode} digits={localPhone} onDigits={setLocalPhone} required />
             </label>
           </>
         )}

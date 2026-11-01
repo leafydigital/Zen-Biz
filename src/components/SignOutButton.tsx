@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { clearLoginVerification } from "@/lib/actions/otpActions";
 import { useTranslation } from "@/lib/i18n/I18nContext";
 
 export function SignOutButton({ className = "" }: { className?: string }) {
@@ -10,6 +11,7 @@ export function SignOutButton({ className = "" }: { className?: string }) {
   const { t } = useTranslation();
 
   async function handleSignOut() {
+    await clearLoginVerification();
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();

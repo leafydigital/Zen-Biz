@@ -1,0 +1,301 @@
+"use server";
+
+import { headers } from "next/headers";
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { canEdit, checkConsoleLogin, endAdminSession, getConsoleSession, hashPassword, startAdminSession } from "@/lib/adminAuth";
+import { cleanPerms, allEdit, type SectionId } from "@/lib/consoleSections";
+import { passwordIssue } from "@/lib/passwordValidation";
+import { computeDiscount } from "@/lib/discounts";
+import { getAppConfig } from "@/lib/getAppConfig";
+
+const attempts = new Map<string, { n: number; first: number }>();
+
+export async function adminLogin(_prev: { error: string | null }, formData: FormData): Promise<{ error: string | null }> {
+  const ip = headers().get("x-forwarded-for")?.split(",")[0]?.trim() || "local";
+  const rec = attempts.get(ip);
+  if (rec && Date.now() - rec.first < 15 * 60_000 && rec.n >= 5) {
+    return { error: "Too many attempts. Try again in 15 minutes." };
+  }
+  const ok = await checkConsoleLogin(String(formData.get("username") ?? ""), String(formData.get("password") ?? ""));
+  if (!ok) {
+    const fresh = !rec || Date.now() - rec.first >= 15 * 60_000;
+    attempts.set(ip, { n: fresh ? 1 : rec!.n + 1, first: fresh ? Date.now() : rec!.first });
+    return { error: "Wrong username or password." };
+  }
+  attempts.delete(ip);
+  startAdminSession(ok.id);
+  redirect("/app");
+}
+
+export async function adminLogout() {
+  endAdminSession();
+  redirect("/app");
+}
+
+/** null when the signed-in console user may EDIT this section. */
+async function guard(sec: SectionId) {
+  const s = await getConsoleSession();
+  if (!s) return "Not signed in.";
+  return canEdit(s, sec) ? null : "You only have view access to this section.";
+}
+
+/** Tickets: editing either Problems raised or Enquiries is enough. */
+async function guardTicket() {
+  const s = await getConsoleSession();
+  if (!s) return "Not signed in.";
+  return canEdit(s, "issues") || canEdit(s, "enquiries") ? null : "You only have view access to tickets.";
+}
+
+async function saveSetting(key: string, value: unknown) {
+  const { error } = await createAdminClient()
+    .from("app_settings" as never)
+    .upsert({ key, value, updated_at: new Date().toISOString() } as never);
+  if (error) return { error: error.message };
+  revalidatePath("/", "layout");
+  return { error: null };
+}
+
+export async function saveVersion(version: string) {
+  const g = await guard("settings");
+  if (g) return { error: g };
+  const v = version.trim();
+  if (!v || v.length > 20) return { error: "Enter a version (up to 20 characters)." };
+  return saveSetting("version", v);
+}
+
+export async function saveContact(c: {
+  email: string;
+  whatsapp: string;
+  address: string;
+  message: string;
+  days: string[];
+  openTime: string;
+  closeTime: string;
+}) {
+  const g = await guard("settings");
+  if (g) return { error: g };
+  const t = (v: unknown) => String(v ?? "").trim().slice(0, 500);
+  const time = (v: unknown) => (/^\d{2}:\d{2}$/.test(String(v)) ? String(v) : "");
+  const valid = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  return saveSetting("contact", {
+    email: t(c.email),
+    whatsapp: t(c.whatsapp),
+    address: t(c.address),
+    message: t(c.message),
+    days: (c.days ?? []).filter((d) => valid.includes(d)),
+    openTime: time(c.openTime),
+    closeTime: time(c.closeTime),
+  });
+}
+
+export async function savePricing(p: Record<"professional" | "business", { monthly: number; yearly: number }>) {
+  const g = await guard("pricing");
+  if (g) return { error: g };
+  for (const plan of ["professional", "business"] as const) {
+    for (const cycle of ["monthly", "yearly"] as const) {
+      const n = Number(p[plan]?.[cycle]);
+      if (!Number.isFinite(n) || n < 1 || n > 1_000_000) return { error: "Enter valid prices (whole rupees)." };
+      p[plan][cycle] = Math.round(n);
+    }
+  }
+  return saveSetting("pricing", p);
+}
+
+export async function updateTicketStatus(id: string, status: "open" | "in_progress" | "resolved") {
+  const g = await guardTicket();
+  if (g) return { error: g };
+  if (!["open", "in_progress", "resolved"].includes(status)) return { error: "Bad status." };
+  const { error } = await createAdminClient().from("support_tickets" as never).update({ status } as never).eq("id", id);
+  revalidatePath("/app");
+  return { error: error?.message ?? null };
+}
+
+export async function deleteTicket(id: string) {
+  const g = await guardTicket();
+  if (g) return { error: g };
+  const admin = createAdminClient();
+  const { data } = (await admin.from("support_tickets" as never).select("screenshot_url").eq("id", id).maybeSingle()) as { data: { screenshot_url: string | null } | null };
+  const path = data?.screenshot_url?.split("ticket-screenshots/")[1]?.split("?")[0];
+  if (path) await admin.storage.from("ticket-screenshots").remove([decodeURIComponent(path)]);
+  const { error } = await admin.from("support_tickets" as never).delete().eq("id", id);
+  revalidatePath("/app");
+  return { error: error?.message ?? null };
+}
+
+export async function createDiscount(input: {
+  code: string;
+  kind: "percent" | "flat";
+  value: number;
+  plans: string[];
+  maxUses: number | null;
+  expiresAt: string | null;
+  note: string;
+}) {
+  const g = await guard("discounts");
+  if (g) return { error: g };
+  const value = Number(input.value);
+  if (!(value > 0)) return { error: "Enter a discount value." };
+  if (input.kind === "percent" && value > 100) return { error: "A percentage can't be more than 100." };
+  let code = input.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
+  if (!code) {
+    const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+    code = "ZEN" + Array.from({ length: 6 }, () => chars[Math.floor(Math.random() * chars.length)]).join("");
+  }
+  const { error } = await createAdminClient()
+    .from("discount_codes" as never)
+    .insert({
+      code,
+      kind: input.kind,
+      value,
+      plans: input.plans.length ? input.plans : null,
+      max_uses: input.maxUses && input.maxUses > 0 ? Math.floor(input.maxUses) : null,
+      expires_at: input.expiresAt ? new Date(input.expiresAt + "T23:59:59+05:30").toISOString() : null,
+      note: input.note.trim() || null,
+    } as never);
+  if (error) return { error: error.message.includes("duplicate") ? "That code already exists." : error.message };
+  revalidatePath("/app");
+  return { error: null, code };
+}
+
+export async function toggleDiscount(id: string, active: boolean) {
+  const g = await guard("discounts");
+  if (g) return { error: g };
+  const { error } = await createAdminClient().from("discount_codes" as never).update({ active } as never).eq("id", id);
+  revalidatePath("/app");
+  return { error: error?.message ?? null };
+}
+
+export async function deleteDiscount(id: string) {
+  const g = await guard("discounts");
+  if (g) return { error: g };
+  const { error } = await createAdminClient().from("discount_codes" as never).delete().eq("id", id);
+  revalidatePath("/app");
+  return { error: error?.message ?? null };
+}
+
+/** For the checkout screen: shows what a code would take off the chosen plan. */
+export async function checkDiscount(code: string, plan: "professional" | "business", cycle: "monthly" | "yearly") {
+  const cfg = await getAppConfig();
+  return computeDiscount(code, plan, cfg.pricing[plan][cycle]);
+}
+
+/** Fresh tickets for the auto-refresh — only the Problems/Enquiries lists call this. */
+export async function getTickets() {
+  const s = await getConsoleSession();
+  if (!s || !(s.perms.issues !== "none" || s.perms.enquiries !== "none")) return { error: "Not signed in.", tickets: [] as any[] };
+  const admin = createAdminClient();
+  const { data, error } = await admin.from("support_tickets" as never).select("*").order("created_at", { ascending: false }).limit(300);
+  if (error) return { error: error.message, tickets: [] as any[] };
+  const tickets = await Promise.all(
+    ((data ?? []) as any[]).map(async (t) => {
+      let shot: string | null = null;
+      if (t.screenshot_url) {
+        const path = String(t.screenshot_url).split("ticket-screenshots/")[1]?.split("?")[0];
+        if (path) {
+          const { data: u } = await admin.storage.from("ticket-screenshots").createSignedUrl(decodeURIComponent(path), 3600);
+          shot = u?.signedUrl ?? null;
+        }
+      }
+      return { ...t, screenshot_signed: shot };
+    })
+  );
+  return { error: null, tickets };
+}
+
+// ---------- console users & passwords ----------
+
+/** Any signed-in console user changes their OWN password — no current password needed. */
+export async function changeMyPassword(newPassword: string) {
+  const s = await getConsoleSession();
+  if (!s) return { error: "Not signed in." };
+  const issue = passwordIssue(newPassword);
+  if (issue) return { error: issue };
+  const admin = createAdminClient();
+  const hash = hashPassword(newPassword);
+  if (s.id === "env") {
+    // The env owner gets a database row so the new password replaces the env one.
+    const { data, error } = (await admin
+      .from("console_users" as never)
+      .upsert({ username: s.username.toLowerCase(), password_hash: hash, role_name: "Owner", permissions: allEdit(), is_super: true, active: true } as never, { onConflict: "username" })
+      .select("id")
+      .single()) as { data: { id: string } | null; error: { message: string } | null };
+    if (error || !data) return { error: error?.message ?? "Could not save." };
+    startAdminSession(data.id);
+    return { error: null };
+  }
+  const { error } = await admin.from("console_users" as never).update({ password_hash: hash } as never).eq("id", s.id);
+  return { error: error?.message ?? null };
+}
+
+async function superOnly() {
+  const s = await getConsoleSession();
+  if (!s) return { s: null, err: "Not signed in." };
+  if (!s.isSuper) return { s: null, err: "Only the owner can manage users." };
+  return { s, err: null as string | null };
+}
+
+export async function listConsoleUsers() {
+  const { err } = await superOnly();
+  if (err) return { error: err, users: [] as any[] };
+  const { data, error } = await createAdminClient()
+    .from("console_users" as never)
+    .select("id, username, role_name, permissions, active, is_super, created_at")
+    .eq("is_super", false)
+    .order("created_at", { ascending: true });
+  return { error: error?.message ?? null, users: (data ?? []) as any[] };
+}
+
+const validUsername = (u: string) => /^[A-Za-z0-9._@-]{3,40}$/.test(u);
+
+export async function createConsoleUser(input: { username: string; password: string; role: string; permissions: unknown }) {
+  const { err } = await superOnly();
+  if (err) return { error: err };
+  const username = input.username.trim().toLowerCase();
+  if (!validUsername(username)) return { error: "Username: 3–40 letters, numbers or . _ @ -" };
+  if (process.env.ADMIN_USERNAME && username === process.env.ADMIN_USERNAME.toLowerCase()) return { error: "That username is reserved." };
+  const issue = passwordIssue(input.password);
+  if (issue) return { error: issue };
+  const { error } = await createAdminClient()
+    .from("console_users" as never)
+    .insert({
+      username,
+      password_hash: hashPassword(input.password),
+      role_name: input.role.trim().slice(0, 40) || "Staff",
+      permissions: cleanPerms(input.permissions),
+    } as never);
+  if (error) return { error: error.message.includes("duplicate") ? "That username already exists." : error.message };
+  return { error: null };
+}
+
+export async function updateConsoleUser(id: string, input: { role: string; permissions: unknown; active: boolean }) {
+  const { err } = await superOnly();
+  if (err) return { error: err };
+  const { error } = await createAdminClient()
+    .from("console_users" as never)
+    .update({ role_name: input.role.trim().slice(0, 40) || "Staff", permissions: cleanPerms(input.permissions), active: !!input.active } as never)
+    .eq("id", id)
+    .eq("is_super", false);
+  return { error: error?.message ?? null };
+}
+
+export async function resetConsoleUserPassword(id: string, newPassword: string) {
+  const { err } = await superOnly();
+  if (err) return { error: err };
+  const issue = passwordIssue(newPassword);
+  if (issue) return { error: issue };
+  const { error } = await createAdminClient()
+    .from("console_users" as never)
+    .update({ password_hash: hashPassword(newPassword) } as never)
+    .eq("id", id)
+    .eq("is_super", false);
+  return { error: error?.message ?? null };
+}
+
+export async function deleteConsoleUser(id: string) {
+  const { err } = await superOnly();
+  if (err) return { error: err };
+  const { error } = await createAdminClient().from("console_users" as never).delete().eq("id", id).eq("is_super", false);
+  return { error: error?.message ?? null };
+}

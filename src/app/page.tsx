@@ -1,3 +1,4 @@
+import { getAppConfig } from "@/lib/getAppConfig";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -78,6 +79,8 @@ const FAQ = [
 ];
 
 export default async function HomePage() {
+  const appConfig = await getAppConfig();
+  const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
   const supabase = createClient();
   const {
     data: { user },
@@ -240,7 +243,7 @@ export default async function HomePage() {
                 Professional
               </p>
               <p className="mt-2 font-display text-3xl font-bold text-text">
-                ₹799<span className="text-base font-normal text-text-soft">/mo</span>
+                {rupees(appConfig.pricing.professional.monthly)}<span className="text-base font-normal text-text-soft">/mo</span>
               </p>
               <p className="mt-1 text-xs text-text-soft">Growing small businesses</p>
               <ul className="mt-5 flex flex-col gap-2.5 text-sm text-text-soft">
@@ -253,7 +256,9 @@ export default async function HomePage() {
                   "Share via WhatsApp / email",
                   "Expense tracking",
                   "Invoice tracking (Sent/Viewed/Overdue)",
-                  "2 businesses, 2 users",
+                  "Multiple users & roles",
+                  "Low stock alerts",
+                  "2 businesses, 4 users",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <span className="mt-0.5 text-success">✓</span>
@@ -274,7 +279,7 @@ export default async function HomePage() {
                 Business
               </p>
               <p className="mt-2 font-display text-3xl font-bold text-text">
-                ₹1,999<span className="text-base font-normal text-text-soft">/mo</span>
+                {rupees(appConfig.pricing.business.monthly)}<span className="text-base font-normal text-text-soft">/mo</span>
               </p>
               <p className="mt-1 text-xs text-text-soft">Established SMEs</p>
               <ul className="mt-5 flex flex-col gap-2.5 text-sm text-text-soft">
@@ -283,8 +288,6 @@ export default async function HomePage() {
                   "GST billing & GST report",
                   "Profit & Loss report",
                   "Colourful document styles",
-                  "Multiple users & roles",
-                  "Low stock alerts",
                   "Up to 5 businesses, 5+ users",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">

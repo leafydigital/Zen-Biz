@@ -187,6 +187,8 @@ export interface SupportTicket {
   business_id: string | null;
   ticket_type: SupportTicketType;
   name: string;
+  ticket_no?: number | null;
+  phone?: string | null;
   whatsapp_number: string | null;
   email: string;
   address: string | null;

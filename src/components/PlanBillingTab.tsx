@@ -1,15 +1,17 @@
 "use client";
 
+import { useAppConfig } from "@/lib/AppConfigContext";
 import { useState } from "react";
 import Link from "next/link";
-import { PLAN_LABELS, PLAN_PRICING, getPlanFeatures } from "@/lib/planFeatures";
+import { PLAN_LABELS, getPlanFeatures } from "@/lib/planFeatures";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import type { Profile } from "@/types/database";
 
 export function PlanBillingTab({ profile }: { profile: Profile }) {
+  const { pricing: allPricing } = useAppConfig();
   const [compareOpen, setCompareOpen] = useState(false);
   const features = getPlanFeatures(profile.plan);
-  const pricing = profile.plan === "starter" ? null : PLAN_PRICING[profile.plan];
+  const pricing = profile.plan === "starter" ? null : allPricing[profile.plan];
 
   return (
     <div className="flex flex-col gap-6">

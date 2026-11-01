@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
+import { useAppConfig } from "@/lib/AppConfigContext";
 import { getLabels } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { Logo } from "@/components/Logo";
@@ -66,6 +67,7 @@ export function DashboardNav({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const config = useAppConfig();
   // Billing records are made/edited on the invoice form with ?type=billing;
   // they belong to the Billing Records menu item, not Invoices.
   const isBillingForm = pathname.startsWith("/dashboard/invoices/") && searchParams.get("type") === "billing";
@@ -187,7 +189,7 @@ export function DashboardNav({
           </div>
         )}
 
-        <p className="mt-3 px-2 text-xs text-blue-200/60">Version 1.00</p>
+        <p className="mt-3 px-2 text-xs text-blue-200/60">Version {config.version}</p>
       </nav>
 
       {/* Mobile: bottom tab bar shows the 4 most-used items, others sit behind "More" */}

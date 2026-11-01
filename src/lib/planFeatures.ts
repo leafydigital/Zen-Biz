@@ -85,8 +85,8 @@ const PROFESSIONAL_FEATURES: PlanFeatures = {
   shareViaWhatsapp: true,
   expenseTracking: true,
   invoiceTrackingStatuses: true,
-  multipleUsers: false,
-  stockLowAlerts: false,
+  multipleUsers: true,
+  stockLowAlerts: true,
   customerOutstandingReport: false,
   posPrintSupport: true,
   barcodeScanning: true,
@@ -95,7 +95,7 @@ const PROFESSIONAL_FEATURES: PlanFeatures = {
     customers: null,
     products: null,
     businesses: 2,
-    users: 2,
+    users: 4,
   },
 };
 

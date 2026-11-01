@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { markLoginVerified } from "@/lib/otp";
 
 // Handles the redirect back from Google (or email confirmation links) and
 // exchanges the auth code for a session cookie.
@@ -33,6 +34,14 @@ export async function GET(request: Request) {
         `${origin}/login?error=${encodeURIComponent("Sign-in failed. Please try again.")}`
       );
     }
+  }
+
+  if (code) {
+    // Opening the emailed link already proves the inbox is theirs — no extra login code needed.
+    const {
+      data: { user },
+    } = await createClient().auth.getUser();
+    if (user) markLoginVerified(user.id);
   }
 
   return NextResponse.redirect(`${origin}${next}`);

@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
+import { PhoneField } from "@/components/PhoneField";
+import { sendTicketOtp, submitSupportTicket, verifyTicketOtp } from "@/lib/actions/otpActions";
 import type { SupportTicketType } from "@/types/database";
 
 export function ContactUsForm({
@@ -18,11 +20,19 @@ export function ContactUsForm({
 }) {
   const [ticketType, setTicketType] = useState<SupportTicketType | null>(null);
   const [submitted, setSubmitted] = useState(false);
+  const [ticketNo, setTicketNo] = useState<string | null>(null);
 
   if (submitted) {
     return (
       <div className="rounded-xl2 border border-paper-fold bg-white p-6 text-center">
         <p className="text-sm font-semibold text-text">Thanks — we've got your message.</p>
+        {ticketNo && (
+          <p className="mt-3 text-sm text-text-soft">
+            Your ticket number
+            <span className="mt-1 block font-ledger text-2xl font-bold tracking-wide text-ink">{ticketNo}</span>
+            <span className="text-xs">Keep it for reference — you can follow its status below.</span>
+          </p>
+        )}
         <p className="mt-1 text-sm text-text-soft">
           We'll get back to you at the email or WhatsApp number you provided.
         </p>
@@ -75,7 +85,10 @@ export function ContactUsForm({
       defaultName={defaultName}
       defaultEmail={defaultEmail}
       onBack={() => setTicketType(null)}
-      onSubmitted={() => setSubmitted(true)}
+      onSubmitted={(no) => {
+        setTicketNo(no ?? null);
+        setSubmitted(true);
+      }}
     />
   );
 }
@@ -95,13 +108,17 @@ function TicketForm({
   defaultName?: string;
   defaultEmail?: string;
   onBack: () => void;
-  onSubmitted: () => void;
+  onSubmitted: (ticketNo?: string) => void;
 }) {
   const supabase = createClient();
   const { showLoader, hideLoader } = useGlobalLoader();
 
   const [name, setName] = useState(defaultName ?? "");
-  const [whatsappNumber, setWhatsappNumber] = useState("");
+  const [phoneDial, setPhoneDial] = useState("+91");
+  const [phoneDigits, setPhoneDigits] = useState("");
+  const [sameWhatsapp, setSameWhatsapp] = useState(true);
+  const [waDial, setWaDial] = useState("+91");
+  const [waDigits, setWaDigits] = useState("");
   const [email, setEmail] = useState(defaultEmail ?? "");
   const [address, setAddress] = useState("");
   const [pincode, setPincode] = useState("");
@@ -111,6 +128,37 @@ function TicketForm({
   const [screenshotPreview, setScreenshotPreview] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [otpSent, setOtpSent] = useState(false);
+  const [otpCode, setOtpCode] = useState("");
+  const [verifiedEmail, setVerifiedEmail] = useState<string | null>(null);
+  const [verifyToken, setVerifyToken] = useState("");
+  const [otpBusy, setOtpBusy] = useState(false);
+  const [otpMsg, setOtpMsg] = useState<string | null>(null);
+  const emailVerified = verifiedEmail !== null && verifiedEmail === email.trim().toLowerCase();
+
+  async function sendCode() {
+    if (!/^[^\s@]+@gmail\.com$/i.test(email.trim())) {
+      setOtpMsg("Please use a Gmail address ending in @gmail.com.");
+      return;
+    }
+    setOtpBusy(true);
+    setOtpMsg(null);
+    const r = await sendTicketOtp(email);
+    setOtpBusy(false);
+    if (r.error) return setOtpMsg(r.error);
+    setOtpSent(true);
+    setOtpMsg(`We sent a 6-digit code to ${email.trim()}.`);
+  }
+
+  async function checkCode() {
+    setOtpBusy(true);
+    const r = await verifyTicketOtp(email, otpCode);
+    setOtpBusy(false);
+    if (r.error || !r.token) return setOtpMsg(r.error ?? "Could not verify.");
+    setVerifiedEmail(email.trim().toLowerCase());
+    setVerifyToken(r.token);
+    setOtpMsg(null);
+  }
 
   function handleScreenshotChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -123,6 +171,18 @@ function TicketForm({
     e.preventDefault();
     if (!name.trim() || !email.trim() || !message.trim()) {
       setError("Name, email, and message are required.");
+      return;
+    }
+    if (!/^\d{10}$/.test(phoneDigits)) {
+      setError("Please enter a 10-digit phone number.");
+      return;
+    }
+    if (!sameWhatsapp && !/^\d{10}$/.test(waDigits)) {
+      setError("Please enter a 10-digit WhatsApp number.");
+      return;
+    }
+    if (!emailVerified) {
+      setError("Please verify your email with the code first.");
       return;
     }
 
@@ -151,28 +211,29 @@ function TicketForm({
       screenshotUrl = publicUrlData.publicUrl;
     }
 
-    const { error: insertErr } = await supabase.from("support_tickets" as never).insert({
-      user_id: userId,
-      business_id: businessId,
-      ticket_type: ticketType,
-      name: name.trim(),
-      whatsapp_number: whatsappNumber.trim() || null,
-      email: email.trim(),
-      address: address.trim() || null,
-      pincode: pincode.trim() || null,
-      notes: notes.trim() || null,
-      message: message.trim(),
-      screenshot_url: screenshotUrl,
-    } as never);
+    const { error: insertErr, ticketNo: newNo } = await submitSupportTicket({
+      businessId,
+      ticketType,
+      name,
+      phone: `${phoneDial}${phoneDigits}`,
+      whatsappNumber: sameWhatsapp ? `${phoneDial}${phoneDigits}` : `${waDial}${waDigits}`,
+      email,
+      address,
+      pincode,
+      notes,
+      message,
+      screenshotUrl,
+      verifyToken,
+    });
 
     stopLoading();
 
     if (insertErr) {
-      setError(insertErr.message || "Something went wrong sending your message. Please try again.");
+      setError(insertErr || "Something went wrong sending your message. Please try again.");
       return;
     }
 
-    onSubmitted();
+    onSubmitted(newNo);
   }
 
   return (
@@ -200,27 +261,60 @@ function TicketForm({
           />
         </label>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-text">WhatsApp number</span>
-          <input
-            type="tel"
-            value={whatsappNumber}
-            onChange={(e) => setWhatsappNumber(e.target.value)}
-            placeholder="98765 43210"
-            className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
-          />
-        </label>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium text-text">Phone number</span>
+          <PhoneField dial={phoneDial} onDial={setPhoneDial} digits={phoneDigits} onDigits={setPhoneDigits} required />
+          <label className="mt-1 flex items-center gap-2 text-sm text-text">
+            <input type="checkbox" checked={sameWhatsapp} onChange={(e) => setSameWhatsapp(e.target.checked)} className="h-4 w-4 accent-ink" />
+            This is also my WhatsApp number
+          </label>
+        </div>
 
-        <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-text">Gmail / Email</span>
-          <input
-            type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
-          />
-        </label>
+        {!sameWhatsapp && (
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium text-text">WhatsApp number</span>
+            <PhoneField dial={waDial} onDial={setWaDial} digits={waDigits} onDigits={setWaDigits} required />
+          </div>
+        )}
+
+        <div className="flex flex-col gap-1.5 sm:col-span-2">
+          <span className="text-sm font-medium text-text">Email <span className="font-normal text-text-soft">(Gmail only)</span></span>
+          <div className="flex gap-2">
+            <input
+              type="email"
+              required
+              pattern="[^\s@]+@gmail\.com"
+              title="Use a Gmail address, e.g. name@gmail.com"
+              placeholder="yourname@gmail.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+            />
+            {emailVerified ? (
+              <span className="flex items-center rounded-xl bg-green-50 px-3 text-sm font-semibold text-green-700">✓ Verified</span>
+            ) : (
+              <button type="button" onClick={sendCode} disabled={otpBusy || !email.trim()} className="rounded-xl bg-indigo-600 px-4 text-sm font-semibold text-white transition hover:bg-indigo-700 disabled:opacity-60">
+                {otpSent ? "Resend code" : "Send code"}
+              </button>
+            )}
+          </div>
+          {otpSent && !emailVerified && (
+            <div className="flex gap-2">
+              <input
+                inputMode="numeric"
+                maxLength={6}
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                placeholder="6-digit code from your email"
+                className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+              />
+              <button type="button" onClick={checkCode} disabled={otpBusy || otpCode.length !== 6} className="rounded-xl bg-emerald-600 px-4 text-sm font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-60">
+                Verify
+              </button>
+            </div>
+          )}
+          {otpMsg && !emailVerified && <p className="text-xs text-text-soft">{otpMsg}</p>}
+        </div>
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-text">Pincode</span>

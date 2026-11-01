@@ -9,6 +9,9 @@ import { SignOutButton } from "@/components/SignOutButton";
 import { PlanBadge } from "@/components/PlanBadge";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { BusinessSwitcher } from "@/components/BusinessSwitcher";
+import { loginOtpRequired } from "@/lib/otp";
+import { AppConfigProvider } from "@/lib/AppConfigContext";
+import { getAppConfig } from "@/lib/getAppConfig";
 import { I18nProvider } from "@/lib/i18n/I18nContext";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
@@ -29,12 +32,13 @@ export default async function DashboardLayout({
   } = await supabase.auth.getUser();
 
   if (!user) redirect("/login");
+  if (loginOtpRequired(user)) redirect("/login/verify");
 
   const profile = await getCurrentProfile();
 
   if (!profile || !profile.onboarding_complete) redirect("/onboarding");
 
-  const [activeBusiness, businesses] = await Promise.all([getActiveBusiness(), getUserBusinesses()]);
+  const [activeBusiness, businesses, appConfig] = await Promise.all([getActiveBusiness(), getUserBusinesses(), getAppConfig()]);
 
   // EMERGENCY FALLBACK: normally getActiveBusiness() should always find a
   // business for anyone with onboarding_complete = true (onboarding
@@ -86,6 +90,7 @@ export default async function DashboardLayout({
   if (needed && !access.permissions.includes(needed)) redirect("/dashboard");
 
   return (
+    <AppConfigProvider config={appConfig}>
     <I18nProvider initialLanguage={profile.language}>
       <div className="flex min-h-screen flex-col bg-paper md:flex-row">
         <DashboardNav businessType={resolvedBusiness.business_type} plan={profile.plan} allowed={access.permissions} />
@@ -115,5 +120,6 @@ export default async function DashboardLayout({
       </div>
     </div>
     </I18nProvider>
+    </AppConfigProvider>
   );
 }

@@ -1,7 +1,7 @@
 "use client";
 
+import { useAppConfig } from "@/lib/AppConfigContext";
 import { useEffect, useState } from "react";
-import { PLAN_PRICING } from "@/lib/planFeatures";
 import type { Plan } from "@/types/database";
 
 interface FeatureRow {
@@ -16,7 +16,7 @@ const FEATURES: FeatureRow[] = [
   { label: "Customers", starter: "75", professional: "Unlimited", business: "Unlimited" },
   { label: "Products & services", starter: "75", professional: "Unlimited", business: "Unlimited" },
   { label: "Businesses", starter: "1", professional: "2", business: "Up to 5" },
-  { label: "Users", starter: "1", professional: "2", business: "5+" },
+  { label: "Users", starter: "1", professional: "4", business: "5+" },
   { label: "No watermark on invoices", starter: false, professional: true, business: true },
   { label: "Quotations, convert to Invoice", starter: true, professional: true, business: true },
   { label: "A4 / A5 / Thermal paper sizes", starter: true, professional: true, business: true },
@@ -30,8 +30,8 @@ const FEATURES: FeatureRow[] = [
   { label: "Colourful & custom invoice styles, size adjustments", starter: false, professional: true, business: true },
   { label: "GST billing & GST report", starter: false, professional: false, business: true },
   { label: "Profit & Loss report", starter: false, professional: false, business: true },
-  { label: "Multiple users & roles", starter: false, professional: false, business: true },
-  { label: "Low stock alerts", starter: false, professional: false, business: true },
+  { label: "Multiple users & roles", starter: false, professional: true, business: true },
+  { label: "Low stock alerts", starter: false, professional: true, business: true },
   { label: "Barcode scanning", starter: false, professional: true, business: true },
 ];
 
@@ -71,6 +71,7 @@ export function PlanComparisonModal({
   currentPlan: Plan;
   onClose: () => void;
 }) {
+  const { pricing: allPricing } = useAppConfig();
   const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
@@ -137,7 +138,7 @@ export function PlanComparisonModal({
         <div className="mt-5 grid gap-3 sm:grid-cols-3">
           {plans.map((p) => {
             const isCurrent = p.id === currentPlan;
-            const pricing = p.id === "starter" ? null : PLAN_PRICING[p.id as "professional" | "business"];
+            const pricing = p.id === "starter" ? null : allPricing[p.id as "professional" | "business"];
             return (
               <div
                 key={p.id}

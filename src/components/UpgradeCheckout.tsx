@@ -1,9 +1,10 @@
 "use client";
 
+import { useAppConfig } from "@/lib/AppConfigContext";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
-import { PLAN_LABELS, PLAN_PRICING } from "@/lib/planFeatures";
+import { PLAN_LABELS } from "@/lib/planFeatures";
 import type { BillingCycle, PayablePlan, Profile } from "@/types/database";
 
 declare global {
@@ -21,13 +22,14 @@ export function UpgradeCheckout({
   plan: PayablePlan;
   billingCycle: BillingCycle;
 }) {
+  const { pricing: allPricing } = useAppConfig();
   const router = useRouter();
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
 
-  const amount = PLAN_PRICING[plan][billingCycle];
+  const amount = allPricing[plan][billingCycle];
 
   async function handlePay() {
     setError(null);
