@@ -93,11 +93,22 @@ export default async function DashboardLayout({
     <AppConfigProvider config={appConfig}>
     <I18nProvider initialLanguage={profile.language}>
       <div className="flex min-h-screen flex-col bg-paper md:flex-row">
-        <DashboardNav businessType={resolvedBusiness.business_type} plan={profile.plan} allowed={access.permissions} />
+        <DashboardNav
+          businessType={resolvedBusiness.business_type}
+          plan={profile.plan}
+          allowed={access.permissions}
+          mobileExtras={
+            <>
+              <PlanBadge plan={profile.plan} />
+              <BusinessSwitcher activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />
+              <SignOutButton />
+            </>
+          }
+        />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <header className="flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
-            <Logo className="shrink-0 md:hidden" />
+          <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
+            <Logo className="ml-11 shrink-0 md:hidden" />
 
             <GlobalSearch className="hidden min-w-0 flex-1 md:block md:max-w-md" />
 
@@ -114,7 +125,7 @@ export default async function DashboardLayout({
           <GlobalSearch />
         </div>
 
-        <main className="flex-1 px-4 pb-24 pt-5 sm:px-6 md:px-8 md:pb-8">
+        <main className="flex-1 px-4 pb-8 pt-5 sm:px-6 md:px-8">
           {children}
         </main>
       </div>

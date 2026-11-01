@@ -60,10 +60,12 @@ export function DashboardNav({
   businessType,
   plan,
   allowed,
+  mobileExtras,
 }: {
   businessType?: string;
   plan?: Plan;
   allowed?: string[];
+  mobileExtras?: React.ReactNode;
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -76,6 +78,7 @@ export function DashboardNav({
   const resolvedPlan = plan ?? "starter";
   const features = getPlanFeatures(resolvedPlan);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const mainItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard", label: t.nav.overview, icon: "home" },
@@ -109,11 +112,12 @@ export function DashboardNav({
     return pathname.startsWith(href);
   }
 
-  function NavLink({ item }: { item: (typeof items)[number] }) {
+  function NavLink({ item, onNavigate }: { item: (typeof items)[number]; onNavigate?: () => void }) {
     const active = isActive(item.href);
     return (
       <Link
         href={item.href}
+        onClick={onNavigate}
         className={`flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-medium transition ${
           active
             ? "bg-white/15 text-white"
@@ -192,125 +196,64 @@ export function DashboardNav({
         <p className="mt-3 px-2 text-xs text-blue-200/60">Version {config.version}</p>
       </nav>
 
-      {/* Mobile: bottom tab bar shows the 4 most-used items, others sit behind "More" */}
-      <MobileNav items={items} isActive={isActive} />
+      {/* Phone / app: 3-line button (top-left) opens a left-side menu with every page */}
+      <button
+        type="button"
+        onClick={() => setMenuOpen(true)}
+        aria-label="Open menu"
+        className="fixed left-3 top-2.5 z-30 flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-ink to-indigo-600 text-white shadow-card md:hidden"
+        style={{ top: "calc(env(safe-area-inset-top) + 0.625rem)" }}
+      >
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+      </button>
+
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
+          <nav
+            className="absolute inset-y-0 left-0 flex w-[80%] max-w-xs flex-col gap-1 overflow-y-auto bg-gradient-to-b from-ink via-indigo-600 to-brass px-3 py-4 shadow-2xl"
+            style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)", paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+          >
+            <div className="mb-3 flex items-center justify-between px-2">
+              <Logo variant="light" />
+              <button type="button" onClick={() => setMenuOpen(false)} aria-label="Close menu" className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15 text-white">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+              </button>
+            </div>
+
+            {mobileExtras && <div className="mb-2 flex flex-col gap-2 rounded-xl bg-white p-2.5">{mobileExtras}</div>}
+
+            {mainItems.map((item) => (
+              <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
+            ))}
+            <p className="mb-1 mt-4 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">{t.nav.reports}</p>
+            {reportItems.map((item) => (
+              <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
+            ))}
+            <p className="mb-1 mt-4 px-3.5 text-[0.68rem] font-semibold uppercase tracking-wider text-blue-200/80">{t.nav.settings}</p>
+            {settingsItems.map((item) => (
+              <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
+            ))}
+            <div className="mt-2 border-t border-white/10 pt-2">
+              <NavLink item={{ href: "/dashboard/contact-us", label: "Contact Us", icon: "message" }} onNavigate={() => setMenuOpen(false)} />
+            </div>
+
+            {resolvedPlan === "starter" && (
+              <button
+                type="button"
+                onClick={() => { setMenuOpen(false); setUpgradeOpen(true); }}
+                className="mt-3 rounded-xl bg-white px-3 py-2.5 text-sm font-semibold text-ink"
+              >
+                👑 Upgrade to Pro
+              </button>
+            )}
+            <p className="mt-3 px-2 text-xs text-blue-200/70">Version {config.version}</p>
+          </nav>
+        </div>
+      )}
 
       {upgradeOpen && (
         <PlanComparisonModal currentPlan={resolvedPlan} onClose={() => setUpgradeOpen(false)} />
-      )}
-    </>
-  );
-}
-
-interface NavItem {
-  href: string;
-  label: string;
-  icon: keyof typeof ICONS;
-  locked?: boolean;
-}
-
-function MobileNav({
-  items,
-  isActive,
-}: {
-  items: NavItem[];
-  isActive: (href: string) => boolean;
-}) {
-  const [moreOpen, setMoreOpen] = useState(false);
-  const { t } = useTranslation();
-
-  // Keep the bottom bar to 4 primary tabs + "More" — 8 items squeezed into
-  // one row would be unreadable on a phone-width screen. Anything beyond
-  // the first 4 lives behind the "More" sheet instead.
-  const primary = items.slice(0, 4);
-  const overflow = items.slice(4);
-  const overflowHasActive = overflow.some((item) => isActive(item.href));
-
-  return (
-    <>
-      <nav
-        className="fixed inset-x-0 bottom-0 z-20 flex border-t border-paper-fold bg-paper-card/95 backdrop-blur md:hidden"
-        aria-label="Main navigation"
-        style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      >
-        {primary.map((item) => {
-          const active = isActive(item.href);
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[0.68rem] font-medium ${
-                active ? "text-ink" : "text-text-soft"
-              }`}
-            >
-              <span className={active ? "text-ink" : ""}>
-                <Icon name={item.icon} />
-              </span>
-              {item.label}
-            </Link>
-          );
-        })}
-
-        <button
-          type="button"
-          onClick={() => setMoreOpen(true)}
-          className={`flex flex-1 flex-col items-center gap-0.5 py-2.5 text-[0.68rem] font-medium ${
-            overflowHasActive ? "text-ink" : "text-text-soft"
-          }`}
-        >
-          <span className={overflowHasActive ? "text-ink" : ""}>
-            <Icon name="more" />
-          </span>
-          More
-        </button>
-      </nav>
-
-      {moreOpen && (
-        <div
-          className="fixed inset-0 z-30 flex items-end bg-ink/40 backdrop-blur-sm md:hidden"
-          onClick={() => setMoreOpen(false)}
-        >
-          <div
-            onClick={(e) => e.stopPropagation()}
-            className="w-full rounded-t-xl2 bg-paper-card p-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] shadow-card"
-          >
-            <div className="mb-3 flex items-center justify-between px-2">
-              <span className="font-display text-base font-semibold text-text">
-                More
-              </span>
-              <button
-                onClick={() => setMoreOpen(false)}
-                className="text-sm font-medium text-text-soft"
-                aria-label="Close"
-              >
-                Close
-              </button>
-            </div>
-            <div className="flex flex-col gap-1">
-              {overflow.map((item) => {
-                const active = isActive(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setMoreOpen(false)}
-                    className={`flex items-center gap-3 rounded-lg px-3 py-3 text-sm font-medium ${
-                      active ? "bg-ink/[0.06] text-ink" : "text-text"
-                    }`}
-                  >
-                    <Icon name={item.icon} />
-                    <span className="flex-1">{item.label}</span>
-                    {item.locked && (
-                      <span className="rounded-full bg-brass/15 px-2 py-0.5 text-[0.65rem] font-semibold uppercase tracking-wide text-brass-dark">
-                        {t.nav.pro}
-                      </span>
-                    )}
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
-        </div>
       )}
     </>
   );

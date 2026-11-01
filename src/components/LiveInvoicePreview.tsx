@@ -1,5 +1,6 @@
 "use client";
 
+import { PdfCanvasView, needsCanvasPdf } from "@/components/PdfCanvasView";
 import { useEffect, useRef, useState } from "react";
 import { generateSaleDocumentPdf } from "@/lib/generateSaleDocumentPdf";
 import type { Business, DocDesignSettings, Plan } from "@/types/database";
@@ -116,11 +117,15 @@ export function LiveInvoicePreview({
       </div>
       <div className="relative overflow-hidden rounded-xl border border-paper-fold bg-paper">
         {url ? (
-          <iframe
-            title="Invoice preview"
-            src={`${url}#toolbar=0&navpanes=0&view=FitH`}
-            className="h-[70vh] min-h-[480px] w-full bg-white"
-          />
+          needsCanvasPdf() ? (
+            <PdfCanvasView url={url} className="max-h-[70vh] min-h-[320px] overflow-y-auto bg-paper" />
+          ) : (
+            <iframe
+              title="Invoice preview"
+              src={`${url}#toolbar=0&navpanes=0&view=FitH`}
+              className="h-[70vh] min-h-[480px] w-full bg-white"
+            />
+          )
         ) : (
           <div className="flex h-[70vh] min-h-[480px] items-center justify-center text-sm text-text-soft">
             {error ?? "Drawing preview…"}
