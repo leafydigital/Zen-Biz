@@ -219,7 +219,7 @@ function AddBusinessForm({
 
   return (
     <div
-      className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-40 flex items-end justify-center bg-ink/40 sm:items-center"
       onClick={onClose}
     >
       <form

@@ -3,7 +3,7 @@ import { Logo } from "@/components/Logo";
 
 export function LandingHeader() {
   return (
-    <header className="sticky top-0 z-30 border-b border-paper-fold bg-paper/90 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-paper-fold bg-paper/90">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-3.5 sm:px-6">
         <Link href="/" aria-label="Zen Biz home">
           <Logo />

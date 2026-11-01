@@ -310,7 +310,7 @@ export function ReportClient({
       </div>
 
       {mail && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm" onClick={() => !sending && setMail(null)}>
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4" onClick={() => !sending && setMail(null)}>
           <div onClick={(e) => e.stopPropagation()} className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl2 bg-paper-card p-5 shadow-card">
             <p className="text-sm font-semibold text-text">Email this report</p>
             <input type="email" value={mail.to} onChange={(e) => setMail({ ...mail, to: e.target.value })} placeholder="To: email address" className={input} />

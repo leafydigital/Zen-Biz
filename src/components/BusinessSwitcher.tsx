@@ -10,9 +10,12 @@ import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 export function BusinessSwitcher({
   activeBusiness,
   businesses,
+  inline = false,
 }: {
   activeBusiness: Business;
   businesses: Business[];
+  /** Phone menu: show the business list directly (no pop-up that the menu would clip). */
+  inline?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
@@ -33,6 +36,37 @@ export function BusinessSwitcher({
         router.refresh();
       }
     });
+  }
+
+  if (inline) {
+    return (
+      <div className="flex flex-col gap-1">
+        <p className="px-1 text-[0.68rem] font-semibold uppercase tracking-wide text-text-soft">Business</p>
+        {businesses.map((b) => (
+          <button
+            key={b.id}
+            type="button"
+            disabled={pending}
+            data-close
+            onClick={() => handleSwitch(b.id)}
+            className={`flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-left text-sm transition disabled:opacity-60 ${
+              b.id === activeBusiness.id ? "bg-ink/[0.07] font-semibold text-ink" : "text-text hover:bg-paper"
+            }`}
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.7rem] font-semibold uppercase text-white">
+              {(b.business_name || "Z").charAt(0)}
+            </span>
+            <span className="min-w-0 flex-1 truncate">{b.business_name || "Untitled business"}</span>
+            {b.id === activeBusiness.id && (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            )}
+          </button>
+        ))}
+        <Link href="/dashboard/settings?tab=businesses" data-close className="rounded-lg px-2.5 py-2 text-sm font-medium text-ink hover:bg-paper">
+          + Manage businesses
+        </Link>
+      </div>
+    );
   }
 
   return (

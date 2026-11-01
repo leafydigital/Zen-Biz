@@ -46,7 +46,7 @@ export function GlobalLoaderProvider({ children }: { children: React.ReactNode }
       {children}
       {visible && (
         <div
-          className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/30 backdrop-blur-[2px]"
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-ink/30-[2px]"
           role="status"
           aria-live="polite"
           aria-label={message ?? "Loading"}

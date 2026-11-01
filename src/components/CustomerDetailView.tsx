@@ -90,7 +90,7 @@ export function CustomerDetailView({ customer, plan }: { customer: Customer; pla
 
       {confirmingDelete && (
         <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 backdrop-blur-sm"
+          className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40"
           onClick={() => !deleting && setConfirmingDelete(false)}
         >
           <div

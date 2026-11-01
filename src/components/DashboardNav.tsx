@@ -1,8 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
+import { clearLoginVerification } from "@/lib/actions/otpActions";
 import { useAppConfig } from "@/lib/AppConfigContext";
 import { getLabels } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
@@ -79,6 +81,25 @@ export function DashboardNav({
   const features = getPlanFeatures(resolvedPlan);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const router = useRouter();
+
+  // While the phone menu is open the page behind it must not scroll —
+  // that is what made the menu bounce and flash blank at the bottom.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [menuOpen]);
+
+  async function signOut() {
+    await clearLoginVerification();
+    await createClient().auth.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   const mainItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard", label: t.nav.overview, icon: "home" },
@@ -176,7 +197,7 @@ export function DashboardNav({
 
         {resolvedPlan === "starter" && (
           <div className="mt-auto pt-5">
-            <div className="rounded-2xl bg-white/15 p-4 text-center backdrop-blur-sm">
+            <div className="rounded-2xl bg-white/15 p-4 text-center">
               <span className="text-xl" aria-hidden="true">👑</span>
               <p className="mt-1.5 text-sm font-semibold text-white">Upgrade to Pro</p>
               <p className="mt-1 text-xs text-blue-100">
@@ -211,8 +232,8 @@ export function DashboardNav({
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
           <div className="absolute inset-0 bg-black/40" onClick={() => setMenuOpen(false)} />
           <nav
-            className="absolute inset-y-0 left-0 flex w-[80%] max-w-xs flex-col gap-1 overflow-y-auto bg-gradient-to-b from-ink via-indigo-600 to-brass px-3 py-4 shadow-2xl"
-            style={{ paddingTop: "calc(env(safe-area-inset-top) + 1rem)", paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
+            className="absolute left-0 top-0 flex w-[80%] max-w-xs flex-col gap-1 overflow-y-auto overscroll-contain bg-gradient-to-b from-ink via-indigo-600 to-brass px-3 py-4 shadow-2xl"
+            style={{ height: "100dvh", WebkitOverflowScrolling: "touch", paddingTop: "calc(env(safe-area-inset-top) + 1rem)", paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
           >
             <div className="mb-3 flex items-center justify-between px-2">
               <Logo variant="light" />
@@ -221,7 +242,14 @@ export function DashboardNav({
               </button>
             </div>
 
-            {mobileExtras && <div className="mb-2 flex flex-col gap-2 rounded-xl bg-white p-2.5">{mobileExtras}</div>}
+            {mobileExtras && (
+              <div
+                className="mb-2 flex flex-col gap-2 rounded-xl bg-white p-2.5"
+                onClick={(e) => { if ((e.target as HTMLElement).closest("[data-close]")) setMenuOpen(false); }}
+              >
+                {mobileExtras}
+              </div>
+            )}
 
             {mainItems.map((item) => (
               <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
@@ -236,6 +264,14 @@ export function DashboardNav({
             ))}
             <div className="mt-2 border-t border-white/10 pt-2">
               <NavLink item={{ href: "/dashboard/contact-us", label: "Contact Us", icon: "message" }} onNavigate={() => setMenuOpen(false)} />
+              <button
+                type="button"
+                onClick={signOut}
+                className="flex w-full items-center gap-3 rounded-xl px-3.5 py-2.5 text-left text-sm font-medium text-red-100 transition hover:bg-red-500/30 hover:text-white"
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M9 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h4M16 8l4 4-4 4M20 12H9" /></svg>
+                <span className="flex-1">Sign out</span>
+              </button>
             </div>
 
             {resolvedPlan === "starter" && (

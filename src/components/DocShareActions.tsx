@@ -148,7 +148,7 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase"; 
       <button type="button" onClick={() => run("email")} disabled={busy !== null} className={`${B} bg-amber-600 hover:bg-amber-700`}>{busy === "email" ? "Preparing…" : "Email"}</button>
 
       {draft && (
-        <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm" onClick={() => !sending && setDraft(null)}>
+        <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4" onClick={() => !sending && setDraft(null)}>
           <div onClick={(e) => e.stopPropagation()} className="flex max-h-[90vh] w-full max-w-md flex-col gap-3 overflow-y-auto rounded-xl2 bg-paper-card p-5 shadow-card">
             <p className="text-sm font-semibold text-text">Email {draft.label.toLowerCase()}</p>
             <input type="email" value={draft.to} onChange={(e) => setDraft({ ...draft, to: e.target.value })} placeholder="To: email address" className={field} />

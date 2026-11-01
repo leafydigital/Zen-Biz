@@ -100,8 +100,7 @@ export default async function DashboardLayout({
           mobileExtras={
             <>
               <PlanBadge plan={profile.plan} />
-              <BusinessSwitcher activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />
-              <SignOutButton />
+              <BusinessSwitcher inline activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />
             </>
           }
         />

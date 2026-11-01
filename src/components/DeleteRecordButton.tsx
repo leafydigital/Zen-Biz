@@ -53,7 +53,7 @@ export function DeleteRecordButton({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 backdrop-blur-sm"
+      className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40"
       onClick={() => !deleting && setConfirming(false)}
     >
       <div onClick={(e) => e.stopPropagation()} className="w-full max-w-[340px] rounded-xl2 bg-paper-card p-5 shadow-card">

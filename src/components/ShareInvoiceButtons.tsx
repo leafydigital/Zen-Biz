@@ -164,7 +164,7 @@ export function ShareInvoiceButtons({ invoiceId }: { invoiceId: string }) {
       )}
       {draft && (
         <div
-          className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4"
           onClick={() => !sending && setDraft(null)}
         >
           <div

@@ -173,7 +173,7 @@ export function ProductFormModal({
 
   return (
     <div
-      className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40 backdrop-blur-sm sm:items-center"
+      className="fixed inset-0 z-30 flex items-end justify-center bg-ink/40 sm:items-center"
       onClick={onClose}
     >
       <div
