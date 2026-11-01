@@ -6,11 +6,10 @@ import { getActiveBusiness } from "@/lib/getActiveBusiness";
 import { ProductsList } from "@/components/ProductsList";
 import type { Product } from "@/types/database";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function ProductsPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const activeBusiness = await getActiveBusiness();
   const businessId = activeBusiness?.id ?? "";

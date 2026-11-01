@@ -5,11 +5,10 @@ import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness } from "@/lib/getActiveBusiness";
 import type { Customer } from "@/types/database";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function CustomersPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const activeBusiness = await getActiveBusiness();
   const businessId = activeBusiness?.id ?? "";

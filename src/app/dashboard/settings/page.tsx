@@ -8,11 +8,10 @@ import { getMyAccess } from "@/lib/getMyAccess";
 import { getBusinessRoles } from "@/lib/getBusinessRoles";
 import { getActiveBusiness, getUserBusinesses, getBusinessMembers } from "@/lib/getActiveBusiness";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function SettingsPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) redirect("/login");
 

@@ -6,11 +6,10 @@ import { mergeBusinessIntoProfile } from "@/lib/getActiveBusiness";
 import type { Business } from "@/types/database";
 import type { Customer, Invoice, InvoiceItem, Product } from "@/types/database";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function EditInvoicePage({ params }: { params: { id: string } }) {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const [invoiceResult, itemsResult, profile] = await Promise.all([
     supabase.from("invoices" as never).select("*").eq("id", params.id).maybeSingle(),

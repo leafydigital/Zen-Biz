@@ -2,6 +2,7 @@ import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 import type { Profile } from "@/types/database";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 /**
  * Fetches the signed-in owner's full profile row, memoized per request via
  * React's cache(). The dashboard layout and most dashboard pages each need
@@ -17,9 +18,7 @@ import type { Profile } from "@/types/database";
  */
 export const getCurrentProfile = cache(async (): Promise<Profile | null> => {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) return null;
 

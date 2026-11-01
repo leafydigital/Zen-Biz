@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getActiveBusiness } from "@/lib/getActiveBusiness";
 import { ALL_PERMISSION_KEYS, DEFAULT_ROLE_PERMISSIONS, type PermissionKey } from "@/lib/permissions";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export interface MyAccess {
   role: string;
   /** Always the full list for owner/admin. */
@@ -14,9 +15,7 @@ export interface MyAccess {
 export const getMyAccess = cache(async (): Promise<MyAccess> => {
   const full: MyAccess = { role: "owner", permissions: ALL_PERMISSION_KEYS, isFull: true };
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   const business = await getActiveBusiness();
   if (!user || !business || !business.id) return full;
   if (business.owner_id === user.id) return full;

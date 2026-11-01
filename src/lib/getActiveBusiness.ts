@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import type { Business, BusinessMember, Profile } from "@/types/database";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export const ACTIVE_BUSINESS_COOKIE = "zenbiz-active-business";
 
 /**
@@ -12,9 +13,7 @@ export const ACTIVE_BUSINESS_COOKIE = "zenbiz-active-business";
  */
 export const getUserBusinesses = cache(async (): Promise<(Business & { role: BusinessMember["role"] })[]> => {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
   if (!user) return [];
 
   const { data, error: membersError } = (await supabase

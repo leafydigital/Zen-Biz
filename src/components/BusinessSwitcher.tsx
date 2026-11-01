@@ -53,9 +53,14 @@ export function BusinessSwitcher({
               b.id === activeBusiness.id ? "bg-ink/[0.07] font-semibold text-ink" : "text-text hover:bg-paper"
             }`}
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-ink text-[0.7rem] font-semibold uppercase text-white">
-              {(b.business_name || "Z").charAt(0)}
-            </span>
+            {b.logo_url ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={b.logo_url} alt="" className="h-8 w-8 shrink-0 rounded-full border border-paper-fold bg-white object-contain" />
+            ) : (
+              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-ink text-xs font-semibold uppercase text-white">
+                {(b.business_name || "Z").charAt(0)}
+              </span>
+            )}
             <span className="min-w-0 flex-1 truncate">{b.business_name || "Untitled business"}</span>
             {b.id === activeBusiness.id && (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" aria-hidden="true"><path d="M20 6 9 17l-5-5" strokeLinecap="round" strokeLinejoin="round" /></svg>

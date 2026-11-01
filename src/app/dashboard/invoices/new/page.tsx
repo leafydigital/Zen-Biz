@@ -5,6 +5,7 @@ import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, mergeBusinessIntoProfile } from "@/lib/getActiveBusiness";
 import type { Customer, Product } from "@/types/database";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function NewInvoicePage({
   searchParams,
 }: {
@@ -12,9 +13,7 @@ export default async function NewInvoicePage({
 }) {
   const isBillingRecord = searchParams.type === "billing";
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const activeBusiness = await getActiveBusiness();
   const businessId = activeBusiness?.id ?? "";

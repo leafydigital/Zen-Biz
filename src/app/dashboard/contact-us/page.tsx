@@ -7,11 +7,10 @@ import { MyTickets } from "@/components/MyTickets";
 import type { SupportTicket } from "@/types/database";
 import { ContactUsTab } from "@/components/ContactUsTab";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function ContactUsPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) redirect("/login");
 

@@ -17,6 +17,7 @@ import { I18nProvider } from "@/lib/i18n/I18nContext";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function DashboardLayout({
   children,
 }: {
@@ -28,18 +29,22 @@ export default async function DashboardLayout({
   // "not signed in" apart from "signed in but onboarding not finished
   // yet", since both cases return a null profile.
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   if (!user) redirect("/login");
   if (loginOtpRequired(user)) redirect("/login/verify");
 
-  const profile = await getCurrentProfile();
+  // All of these only need the (already shared) user, so fetch them together
+  // instead of one after another.
+  const [profile, activeBusiness, businesses, appConfig, access] = await Promise.all([
+    getCurrentProfile(),
+    getActiveBusiness(),
+    getUserBusinesses(),
+    getAppConfig(),
+    getMyAccess(),
+  ]);
 
   if (!profile || !profile.onboarding_complete) redirect("/onboarding");
-
-  const [activeBusiness, businesses, appConfig] = await Promise.all([getActiveBusiness(), getUserBusinesses(), getAppConfig()]);
 
   // EMERGENCY FALLBACK: normally getActiveBusiness() should always find a
   // business for anyone with onboarding_complete = true (onboarding
@@ -86,7 +91,6 @@ export default async function DashboardLayout({
   if (!resolvedBusiness) redirect("/onboarding");
 
   // Role-based access: block pages the person's role doesn't tick.
-  const access = await getMyAccess();
   const needed = permissionForPath(headers().get("x-pathname") ?? "");
   if (needed && !access.permissions.includes(needed)) redirect("/dashboard");
 

@@ -7,11 +7,10 @@ import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, mergeBusinessIntoProfile } from "@/lib/getActiveBusiness";
 import type { Customer, Product } from "@/types/database";
 
+import { getAuthUser } from "@/lib/getAuthUser";
 export default async function NewChallanPage() {
   const supabase = createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const user = await getAuthUser();
 
   const activeBusiness = await getActiveBusiness();
   const businessId = activeBusiness?.id ?? "";

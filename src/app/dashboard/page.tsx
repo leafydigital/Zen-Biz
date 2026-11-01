@@ -218,14 +218,24 @@ export default async function DashboardHome() {
   return (
     <div className="flex flex-col gap-6 sm:gap-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="font-display text-2xl font-semibold text-text sm:text-3xl">
-            {t.dashboard.title}
-            {activeBusiness?.business_name ? `, ${activeBusiness.business_name}` : ""} 👋
-          </h1>
-          <p className="mt-1 text-sm text-text-soft">
-            {t.dashboard.subtitle}
-          </p>
+        <div className="flex items-center gap-3">
+          {activeBusiness?.logo_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={activeBusiness.logo_url} alt="" className="h-12 w-12 shrink-0 rounded-full border border-paper-fold bg-white object-contain sm:h-14 sm:w-14" />
+          ) : (
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-ink text-lg font-semibold uppercase text-white sm:h-14 sm:w-14">
+              {(activeBusiness?.business_name || "Z").charAt(0)}
+            </div>
+          )}
+          <div className="min-w-0">
+            <h1 className="font-display text-2xl font-semibold text-text sm:text-3xl">
+              {t.dashboard.title}
+              {activeBusiness?.business_name ? `, ${activeBusiness.business_name}` : ""} 👋
+            </h1>
+            <p className="mt-1 text-sm text-text-soft">
+              {t.dashboard.subtitle}
+            </p>
+          </div>
         </div>
         <div className="flex gap-2">
           <Link
