@@ -4,8 +4,9 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { canEdit, checkConsoleLogin, endAdminSession, getConsoleSession, hashPassword, startAdminSession } from "@/lib/adminAuth";
+import { canEdit, canView, checkConsoleLogin, endAdminSession, getConsoleSession, hashPassword, startAdminSession } from "@/lib/adminAuth";
 import { cleanPerms, allEdit, type SectionId } from "@/lib/consoleSections";
+import type { CustomerRow } from "@/lib/customerTypes";
 import { passwordIssue } from "@/lib/passwordValidation";
 import { computeDiscount } from "@/lib/discounts";
 import { getAppConfig } from "@/lib/getAppConfig";
@@ -297,5 +298,96 @@ export async function deleteConsoleUser(id: string) {
   const { err } = await superOnly();
   if (err) return { error: err };
   const { error } = await createAdminClient().from("console_users" as never).delete().eq("id", id).eq("is_super", false);
+  return { error: error?.message ?? null };
+}
+
+// ---------- customers & payment reminders ----------
+
+export async function getCustomers(): Promise<{ error: string | null; rows: CustomerRow[]; alertDays: number }> {
+  const s = await getConsoleSession();
+  if (!s || !(canView(s, "customers") || canView(s, "renewals"))) return { error: "Not allowed.", rows: [], alertDays: 7 };
+  const admin = createAdminClient();
+
+  const users = new Map<string, { email: string; created: string | null }>();
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage: 1000 });
+    if (error || !data?.users?.length) break;
+    for (const u of data.users) users.set(u.id, { email: u.email ?? "", created: u.created_at ?? null });
+    if (data.users.length < 1000) break;
+  }
+
+  const [profiles, businesses, followups, alert] = await Promise.all([
+    admin.from("profiles" as never).select("id, plan, billing_cycle, plan_renews_at, phone, business_name, created_at"),
+    admin.from("businesses" as never).select("owner_id, business_name, phone").order("created_at", { ascending: true }),
+    admin.from("renewal_followups" as never).select("user_id, remind_on, note"),
+    admin.from("app_settings" as never).select("value").eq("key", "renewal_alert_days").maybeSingle(),
+  ]);
+  if (profiles.error) return { error: profiles.error.message, rows: [], alertDays: 7 };
+
+  const byOwner = new Map<string, { name: string; phone: string }[]>();
+  for (const b of (businesses.data ?? []) as any[]) {
+    const list = byOwner.get(b.owner_id) ?? [];
+    list.push({ name: b.business_name ?? "", phone: b.phone ?? "" });
+    byOwner.set(b.owner_id, list);
+  }
+  const fu = new Map<string, { remind_on: string | null; note: string | null }>();
+  for (const f of (followups.data ?? []) as any[]) fu.set(f.user_id, f);
+
+  const rows: CustomerRow[] = ((profiles.data ?? []) as any[]).map((p) => {
+    const bs = byOwner.get(p.id) ?? [];
+    const u = users.get(p.id);
+    return {
+      id: p.id,
+      email: u?.email ?? "",
+      name: bs[0]?.name || p.business_name || "(no business name)",
+      phone: p.phone || bs.find((b) => b.phone)?.phone || "",
+      businesses: bs,
+      plan: p.plan,
+      cycle: p.billing_cycle,
+      renewsAt: p.plan_renews_at,
+      joined: u?.created ?? p.created_at ?? null,
+      remindOn: fu.get(p.id)?.remind_on ?? null,
+      note: fu.get(p.id)?.note ?? null,
+    };
+  });
+  rows.sort((a, b) => String(b.joined).localeCompare(String(a.joined)));
+  const days = Number((alert.data as any)?.value);
+  return { error: null, rows, alertDays: Number.isFinite(days) && days > 0 ? days : 7 };
+}
+
+export async function saveAlertDays(days: number) {
+  const g = await guard("renewals");
+  if (g) return { error: g };
+  const n = Math.round(Number(days));
+  if (!(n >= 1 && n <= 365)) return { error: "Enter 1 to 365 days." };
+  return saveSetting("renewal_alert_days", n);
+}
+
+export async function saveFollowup(userId: string, remindOn: string | null, note: string) {
+  const g = await guard("renewals");
+  if (g) return { error: g };
+  if (remindOn && !/^\d{4}-\d{2}-\d{2}$/.test(remindOn)) return { error: "Pick a valid date." };
+  const { error } = await createAdminClient()
+    .from("renewal_followups" as never)
+    .upsert({ user_id: userId, remind_on: remindOn || null, note: note.trim().slice(0, 300) || null, updated_at: new Date().toISOString() } as never);
+  return { error: error?.message ?? null };
+}
+
+/** Manual plan change (e.g. an offline payment): sets plan, billing cycle and expiry date. */
+export async function setCustomerPlan(userId: string, plan: string, cycle: string | null, renewsAt: string | null) {
+  const g = await guard("customers");
+  if (g) return { error: g };
+  if (!["starter", "professional", "business"].includes(plan)) return { error: "Pick a plan." };
+  const paid = plan !== "starter";
+  if (paid && cycle && !["monthly", "yearly"].includes(cycle)) return { error: "Pick monthly or yearly." };
+  if (renewsAt && !/^\d{4}-\d{2}-\d{2}$/.test(renewsAt)) return { error: "Pick a valid expiry date." };
+  const { error } = await createAdminClient()
+    .from("profiles" as never)
+    .update({
+      plan,
+      billing_cycle: paid ? cycle || null : null,
+      plan_renews_at: paid && renewsAt ? new Date(renewsAt + "T23:59:59+05:30").toISOString() : null,
+    } as never)
+    .eq("id", userId);
   return { error: error?.message ?? null };
 }

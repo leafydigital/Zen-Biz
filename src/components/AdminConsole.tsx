@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { SECTIONS, type Level, type Perms, type SectionId } from "@/lib/consoleSections";
 import type { ConsoleSession } from "@/lib/adminAuth";
+import { CustomersPanel, RenewalsPanel } from "@/components/AdminCustomers";
+import { dueCustomers, type CustomerRow } from "@/lib/customerTypes";
 import { WEEK_DAYS, formatWorkingHours, type AppConfig } from "@/lib/appConfigDefaults";
 import {
   adminLogout,
@@ -16,6 +18,7 @@ import {
   updateConsoleUser,
   deleteDiscount,
   deleteTicket,
+  getCustomers,
   saveContact,
   savePricing,
   saveVersion,
@@ -122,6 +125,20 @@ export function AdminConsole({
   const [query, setQuery] = useState("");
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
   const [users, setUsers] = useState<CUser[]>(initialUsers);
+
+  // Customers & renewals: loaded once on entering the console, again after edits.
+  const [custRows, setCustRows] = useState<CustomerRow[] | null>(null);
+  const [custError, setCustError] = useState<string | null>(null);
+  const [alertDays, setAlertDays] = useState(7);
+  const [planFilter, setPlanFilter] = useState("all");
+  const wantsCustomers = lvl("customers") !== "none" || lvl("renewals") !== "none";
+  const loadCustomers = useCallback(async () => {
+    const r = await getCustomers();
+    setCustError(r.error);
+    if (!r.error) { setCustRows(r.rows); setAlertDays(r.alertDays); }
+  }, []);
+  useEffect(() => { if (wantsCustomers) loadCustomers(); }, [wantsCustomers, loadCustomers]);
+  const dueNow = custRows && lvl("renewals") !== "none" ? dueCustomers(custRows, alertDays).length : 0;
 
   // Only the ticket lists refresh themselves — nothing else on the page reloads,
   // so edits in other sections are never lost.
@@ -255,6 +272,7 @@ export function AdminConsole({
               className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === id ? "bg-ink text-paper" : "bg-white text-text hover:bg-paper-fold/60"}`}
             >
               {label}
+              {id === "renewals" && dueNow > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 text-[0.65rem] text-white">{dueNow}</span>}
               {id === "issues" && openCount("issue") > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 text-[0.65rem] text-white">{openCount("issue")}</span>}
               {id === "enquiries" && openCount("info") > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[0.65rem] text-white">{openCount("info")}</span>}
             </button>
@@ -283,6 +301,12 @@ export function AdminConsole({
           <p className="rounded-lg bg-sky-50 px-3 py-2 text-xs font-medium text-sky-700">View only — you can look but not change anything here.</p>
         )}
 
+        {dueNow > 0 && tab !== "renewals" && (
+          <button type="button" onClick={() => setTab("renewals")} className="rounded-lg bg-amber-50 px-3 py-2 text-left text-sm font-semibold text-amber-800 hover:bg-amber-100">
+            ⚠ {dueNow} paid plan{dueNow === 1 ? "" : "s"} ended or ending within {alertDays} days (or follow-up due) — tap to view
+          </button>
+        )}
+
         {msg && <p className={`rounded-lg px-3 py-2 text-sm ${msg.ok ? "bg-green-50 text-green-700" : "bg-alert-bg text-alert"}`}>{msg.text}</p>}
 
         {tab === "overview" && (
@@ -296,13 +320,43 @@ export function AdminConsole({
               ["Open enquiries", openCount("info"), "bg-amber-50 text-amber-700 border-amber-200"],
               ["App version", config.version, "bg-indigo-50 text-indigo-700 border-indigo-200"],
               ["Active discounts", discounts.filter((x) => x.active).length, "bg-rose-50 text-rose-700 border-rose-200"],
-            ].map(([l, v, c]) => (
-              <div key={String(l)} className={`rounded-xl2 border p-4 ${c}`}>
-                <p className="text-xs font-medium uppercase tracking-wide opacity-80">{l}</p>
-                <p className="mt-1.5 font-ledger text-2xl font-semibold">{v}</p>
-              </div>
-            ))}
+            ].map(([l, v, c]) => {
+              const label = String(l);
+              const route: Record<string, [Tab, string?]> = {
+                "Starter users": ["customers", "starter"],
+                "Professional users": ["customers", "professional"],
+                "Business users": ["customers", "business"],
+                Businesses: ["customers", "all"],
+                "Open problems": ["issues"],
+                "Open enquiries": ["enquiries"],
+                "App version": ["settings"],
+                "Active discounts": ["discounts"],
+              };
+              const [target, plan] = route[label];
+              const allowed = lvl(target as SectionId) !== "none";
+              return (
+                <button
+                  key={label}
+                  type="button"
+                  disabled={!allowed}
+                  onClick={() => { setMsg(null); if (plan) setPlanFilter(plan); setTab(target); }}
+                  className={`rounded-xl2 border p-4 text-left transition ${c} ${allowed ? "hover:shadow-card active:scale-[0.98]" : "cursor-default"}`}
+                >
+                  <p className="text-xs font-medium uppercase tracking-wide opacity-80">{l}</p>
+                  <p className="mt-1.5 font-ledger text-2xl font-semibold">{v}</p>
+                  {allowed && <p className="mt-1 text-[0.65rem] opacity-70">Tap to open →</p>}
+                </button>
+              );
+            })}
           </div>
+        )}
+
+        {tab === "customers" && (
+          <CustomersPanel key={planFilter} rows={custRows} error={custError} alertDays={alertDays} canEditPlan={lvl("customers") === "edit"} initialPlan={planFilter} onChanged={loadCustomers} setMsg={setMsg} />
+        )}
+
+        {tab === "renewals" && (
+          <RenewalsPanel rows={custRows} error={custError} alertDays={alertDays} canEdit={lvl("renewals") === "edit"} onChanged={loadCustomers} setMsg={setMsg} setAlertDays={setAlertDays} />
         )}
 
         {tab === "issues" && <fieldset disabled={lvl("issues") !== "edit"}><TicketList type="issue" /></fieldset>}

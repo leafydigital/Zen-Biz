@@ -64,3 +64,6 @@ body {
 ::-webkit-scrollbar-thumb:hover {
   background: #2563eb;
 }
+
+/* Hidden inside the Android app (the app has no marketing home page). */
+.is-native .web-only { display: none !important; }

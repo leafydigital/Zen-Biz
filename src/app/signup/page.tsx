@@ -15,7 +15,7 @@ export default function SignupPage() {
       <div className="w-full max-w-[880px]">
         <Link
           href="/"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-text-soft transition hover:text-ink"
+          className="web-only mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-text-soft transition hover:text-ink"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
             <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />

@@ -15,7 +15,7 @@ export default function LoginPage() {
       <div className="w-full max-w-[880px]">
         <Link
           href="/"
-          className="mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-text-soft transition hover:text-ink"
+          className="web-only mb-4 inline-flex items-center gap-1.5 text-sm font-medium text-text-soft transition hover:text-ink"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
             <path d="M15 18l-6-6 6-6" strokeLinecap="round" strokeLinejoin="round" />
@@ -63,6 +63,12 @@ export default function LoginPage() {
           </p>
         </div>
         </div>
+        <nav className="mt-5 flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm font-medium text-ink" aria-label="About Zen Biz">
+          <Link href="/about-app?tab=about" className="underline-offset-2 hover:underline">About the app</Link>
+          <Link href="/about-app?tab=how" className="underline-offset-2 hover:underline">How to use</Link>
+          <Link href="/about-app?tab=features" className="underline-offset-2 hover:underline">Features</Link>
+          <Link href="/about-app?tab=pricing" className="underline-offset-2 hover:underline">Pricing</Link>
+        </nav>
       </div>
     </main>
   );

@@ -264,6 +264,7 @@ export function DashboardNav({
             ))}
             <div className="mt-2 border-t border-white/10 pt-2">
               <NavLink item={{ href: "/dashboard/contact-us", label: "Contact Us", icon: "message" }} onNavigate={() => setMenuOpen(false)} />
+              <NavLink item={{ href: "/about-app", label: "About & how to use", icon: "file" }} onNavigate={() => setMenuOpen(false)} />
               <button
                 type="button"
                 onClick={signOut}

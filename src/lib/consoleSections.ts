@@ -1,6 +1,8 @@
 /** Owner-console sections and the access levels a console user can be given. */
 export const SECTIONS = [
   ["overview", "Overview"],
+  ["customers", "Customers"],
+  ["renewals", "Payment reminders"],
   ["issues", "Problems raised"],
   ["enquiries", "Enquiries"],
   ["settings", "Version & contact"],

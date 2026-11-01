@@ -12,6 +12,9 @@ export function NativeAppBridge() {
   useEffect(() => {
     const cap = (window as any).Capacitor;
     if (!cap?.isNativePlatform?.()) return;
+    document.documentElement.classList.add("is-native");
+    // The app opens on the login page (a signed-in user is sent on to the dashboard).
+    if (window.location.pathname === "/") window.location.replace("/login");
     // registerPlugin works on a remote (live-site) app; Plugins.X is the older fallback.
     const get = (name: string) => cap.Plugins?.[name] ?? cap.registerPlugin?.(name);
     const App = get("App");
