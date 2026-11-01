@@ -102,15 +102,17 @@ export function AuthForm({ mode }: { mode: Mode }) {
     const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: native ? "zenbiz://auth/callback" : `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: native ? `${window.location.origin}/auth/app-return` : `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
         skipBrowserRedirect: native,
       },
     });
     if (!error && native && data?.url) {
       try {
-        await cap.Plugins.Browser.open({ url: data.url });
+        const browser = cap.Plugins?.Browser ?? cap.registerPlugin?.("Browser");
+        if (browser?.open) await browser.open({ url: data.url });
+        else window.open(data.url, "_system");
       } catch {
-        window.location.href = data.url;
+        window.open(data.url, "_system");
       }
       setLoading(null);
       hideLoader();

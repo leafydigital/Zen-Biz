@@ -4,7 +4,8 @@ import { getMyAccess } from "@/lib/getMyAccess";
 import { permissionForPath } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/DashboardNav";
-import { MobileHeaderLead } from "@/components/MobileHeaderLead";
+import { Logo } from "@/components/Logo";
+import { PageBackButton } from "@/components/PageBackButton";
 import { SignOutButton } from "@/components/SignOutButton";
 import { PlanBadge } from "@/components/PlanBadge";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -107,7 +108,7 @@ export default async function DashboardLayout({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
-            <MobileHeaderLead />
+            <Logo className="ml-11 shrink-0 md:hidden" />
 
             <GlobalSearch className="hidden min-w-0 flex-1 md:block md:max-w-md" />
 
@@ -125,6 +126,7 @@ export default async function DashboardLayout({
         </div>
 
         <main className="flex-1 px-4 pb-8 pt-5 sm:px-6 md:px-8">
+          <PageBackButton />
           {children}
         </main>
       </div>

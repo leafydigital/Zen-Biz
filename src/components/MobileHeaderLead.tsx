@@ -24,9 +24,10 @@ export function MobileHeaderLead() {
           type="button"
           onClick={goBack}
           aria-label="Back"
-          className="flex h-9 w-9 items-center justify-center rounded-xl bg-paper text-text active:bg-paper-fold"
+          className="flex h-8 items-center gap-0.5 rounded-lg bg-paper py-1 pl-1.5 pr-2.5 text-sm font-medium text-text active:bg-paper-fold"
         >
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7" /></svg>
+          Back
         </button>
       )}
       <Logo className="shrink-0" />

@@ -12,17 +12,21 @@ export function NativeAppBridge() {
   useEffect(() => {
     const cap = (window as any).Capacitor;
     if (!cap?.isNativePlatform?.()) return;
-    const App = cap.Plugins?.App;
-    const Browser = cap.Plugins?.Browser;
+    // registerPlugin works on a remote (live-site) app; Plugins.X is the older fallback.
+    const get = (name: string) => cap.Plugins?.[name] ?? cap.registerPlugin?.(name);
+    const App = get("App");
+    const Browser = get("Browser");
     if (!App?.addListener) return;
 
-    const handle = App.addListener("appUrlOpen", (event: { url: string }) => {
-      const url = event?.url ?? "";
+    const finish = (url: string) => {
       if (!url.startsWith("zenbiz://auth")) return;
       const query = url.includes("?") ? url.slice(url.indexOf("?") + 1) : "";
       try { Browser?.close?.(); } catch { /* already closed */ }
       window.location.replace(`/auth/callback?${query}`);
-    });
+    };
+    const handle = App.addListener("appUrlOpen", (event: { url: string }) => finish(event?.url ?? ""));
+    // App was closed when the link arrived.
+    Promise.resolve(App.getLaunchUrl?.()).then((r: any) => r?.url && finish(r.url)).catch(() => {});
     return () => {
       Promise.resolve(handle).then((h: any) => h?.remove?.());
     };
