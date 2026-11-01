@@ -4,7 +4,7 @@ import { getMyAccess } from "@/lib/getMyAccess";
 import { permissionForPath } from "@/lib/permissions";
 import { createClient } from "@/lib/supabase/server";
 import { DashboardNav } from "@/components/DashboardNav";
-import { Logo } from "@/components/Logo";
+import { MobileHeaderLead } from "@/components/MobileHeaderLead";
 import { SignOutButton } from "@/components/SignOutButton";
 import { PlanBadge } from "@/components/PlanBadge";
 import { GlobalSearch } from "@/components/GlobalSearch";
@@ -107,7 +107,7 @@ export default async function DashboardLayout({
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
-            <Logo className="ml-11 shrink-0 md:hidden" />
+            <MobileHeaderLead />
 
             <GlobalSearch className="hidden min-w-0 flex-1 md:block md:max-w-md" />
 

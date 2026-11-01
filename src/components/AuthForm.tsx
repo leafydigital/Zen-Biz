@@ -95,12 +95,27 @@ export function AuthForm({ mode }: { mode: Mode }) {
     setError(null);
     setLoading("google");
     showLoader("Connecting to Google…");
-    const { error } = await supabase.auth.signInWithOAuth({
+    // Inside the Android app Google must open in a browser tab and come back
+    // through the zenbiz:// link (handled by NativeAppBridge).
+    const cap = (window as any).Capacitor;
+    const native = !!cap?.isNativePlatform?.();
+    const { data, error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        redirectTo: native ? "zenbiz://auth/callback" : `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`,
+        skipBrowserRedirect: native,
       },
     });
+    if (!error && native && data?.url) {
+      try {
+        await cap.Plugins.Browser.open({ url: data.url });
+      } catch {
+        window.location.href = data.url;
+      }
+      setLoading(null);
+      hideLoader();
+      return;
+    }
     if (error) {
       setError(error.message);
       setLoading(null);

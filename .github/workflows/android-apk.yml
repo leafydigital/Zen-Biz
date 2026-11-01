@@ -1,7 +1,7 @@
 name: Build Android APK
 
 on:
-  workflow_dispatch:
+  workflow_dispatch: {}
 
 jobs:
   apk:
@@ -20,10 +20,25 @@ jobs:
 
       # Installed here only, so your website's package.json is not touched.
       - name: Install Capacitor
-        run: npm install --no-save --no-package-lock @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/assets@3
+        run: npm install --no-package-lock @capacitor/core@6 @capacitor/cli@6 @capacitor/android@6 @capacitor/app@6 @capacitor/browser@6 @capacitor/assets@3
 
       - name: Create Android project
         run: npx cap add android
+
+      - name: Let Google sign-in return to the app
+        run: |
+          python3 - <<'PY'
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p).read()
+          f = """<intent-filter>
+                  <action android:name="android.intent.action.VIEW" />
+                  <category android:name="android.intent.category.DEFAULT" />
+                  <category android:name="android.intent.category.BROWSABLE" />
+                  <data android:scheme="zenbiz" android:host="auth" />
+              </intent-filter>
+          </activity>"""
+          open(p, "w").write(s.replace("</activity>", f, 1))
+          PY
 
       - name: Generate icon and splash
         run: npx capacitor-assets generate --android
