@@ -1,0 +1,14 @@
+{
+  "appId": "com.leafydigital.zenbiz",
+  "appName": "Zen Biz",
+  "webDir": "capacitor-web",
+  "server": {
+    "url": "https://zen-biz-ka6g.vercel.app",
+    "androidScheme": "https",
+    "cleartext": false,
+    "allowNavigation": ["zen-biz-ka6g.vercel.app", "*.supabase.co"]
+  },
+  "android": {
+    "allowMixedContent": false
+  }
+}
