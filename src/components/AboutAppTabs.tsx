@@ -50,7 +50,7 @@ export function AboutAppTabs({ pricing, starter, professional, business, initial
   const plans = [
     { name: "Starter", price: "Free", note: "For getting going", lim: starter, tone: "border-slate-200", extra: ["Invoices with a Zen Biz footer", "Quotations"] },
     { name: "Professional", price: `${inr(pricing.professional.monthly)}/month`, note: `or ${inr(pricing.professional.yearly)}/year`, lim: professional, tone: "border-sky-300", extra: ["GST billing & reports", "Purchases & delivery challans", "Profit & Loss", "WhatsApp sharing", "Team users & roles", "Low-stock alerts"] },
-    { name: "Business", price: `${inr(pricing.business.monthly)}/month`, note: `or ${inr(pricing.business.yearly)}/year`, lim: business, tone: "border-violet-300", extra: ["Everything in Professional", "Higher limits", "Barcode scanning (coming)"] },
+    { name: "Business", price: `${inr(pricing.business.monthly)}/month`, note: `or ${inr(pricing.business.yearly)}/year`, lim: business, tone: "border-violet-300", extra: ["Everything in Professional", "Higher limits", "Barcode scanning"] },
   ];
 
   return (

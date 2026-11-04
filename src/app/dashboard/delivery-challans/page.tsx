@@ -2,6 +2,7 @@ import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ChallanStatusSelect } from "@/components/ChallanStatusSelect";
+import { DocShareActions } from "@/components/DocShareActions";
 import { DownloadChallanButton } from "@/components/DownloadChallanButton";
 import { LockedFeature } from "@/components/LockedFeature";
 import { getPlanFeatures } from "@/lib/planFeatures";
@@ -83,6 +84,7 @@ export default async function DeliveryChallansPage() {
                 <div className="flex flex-wrap items-center gap-3">
                   <ChallanStatusSelect challanId={c.id} status={c.status} />
                   <Link href={`/dashboard/delivery-challans/${c.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700">View</Link>
+                  <DocShareActions kind="challan" id={c.id} />
                   <DownloadChallanButton challanId={c.id} />
                   <DeleteRecordButton table="delivery_challans" id={c.id} label="delivery challan" />
                 </div>

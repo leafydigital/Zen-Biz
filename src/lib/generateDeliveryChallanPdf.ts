@@ -48,12 +48,14 @@ export async function generateDeliveryChallanPdf({
   items,
   customer,
   profile,
+  preview,
 }: {
   challan: DeliveryChallan;
   items: DeliveryChallanItem[];
   customer: Customer | null;
   profile: Profile;
-}) {
+  preview?: boolean;
+}): Promise<Blob | void> {
   const doc = new jsPDF({ unit: "pt", format: "a4" });
   const marginX = 40;
   const rightX = 555;
@@ -263,5 +265,6 @@ export async function generateDeliveryChallanPdf({
   doc.setTextColor(...NAVY_SOFT);
   doc.text("Generated with Zen Biz", rightX, footerY, { align: "right" });
 
+  if (preview) return doc.output("blob");
   doc.save(`Challan-${challan.challan_number}.pdf`);
 }

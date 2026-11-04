@@ -40,6 +40,18 @@ jobs:
           open(p, "w").write(s.replace("</activity>", f, 1))
           PY
 
+      - name: Allow the camera (barcode scanning)
+        run: |
+          python3 - <<'PY'
+          p = "android/app/src/main/AndroidManifest.xml"
+          s = open(p).read()
+          perms = """<uses-permission android:name="android.permission.CAMERA" />
+              <uses-feature android:name="android.hardware.camera" android:required="false" />
+              <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
+          </manifest>"""
+          open(p, "w").write(s.replace("</manifest>", perms, 1))
+          PY
+
       - name: Generate icon and splash
         run: npx capacitor-assets generate --android
 

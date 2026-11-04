@@ -4,11 +4,12 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateQuotationPdf } from "@/lib/generateQuotationPdf";
 import { generatePurchasePdf } from "@/lib/generatePurchasePdf";
+import { generateDeliveryChallanPdf } from "@/lib/generateDeliveryChallanPdf";
 import { sharePdfToWhatsApp } from "@/lib/shareFile";
 import { sendInvoiceEmail } from "@/lib/actions/emailActions";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import { CURRENCY_SYMBOLS } from "@/types/database";
-import type { Business, Customer, Profile, Purchase, PurchaseItem, Quotation, QuotationItem, Supplier } from "@/types/database";
+import type { Business, Customer, DeliveryChallan, DeliveryChallanItem, Profile, Purchase, PurchaseItem, Quotation, QuotationItem, Supplier } from "@/types/database";
 
 type Loaded = {
   blob: Blob;
@@ -23,7 +24,7 @@ type Loaded = {
 };
 
 /** Print / WhatsApp / Email for a quotation or a purchase, using the same PDF as Download. */
-export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase"; id: string }) {
+export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase" | "challan"; id: string }) {
   const supabase = createClient();
   const { showLoader, hideLoader } = useGlobalLoader();
   const [busy, setBusy] = useState<string | null>(null);
@@ -34,9 +35,10 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase"; 
 
   async function load(): Promise<Loaded | null> {
     const isQ = kind === "quotation";
+    const isC = kind === "challan";
     const [doc, its, prof] = await Promise.all([
-      supabase.from((isQ ? "quotations" : "purchases") as never).select("*").eq("id", id).single(),
-      supabase.from((isQ ? "quotation_items" : "purchase_items") as never).select("*").eq(isQ ? "quotation_id" : "purchase_id", id),
+      supabase.from((isC ? "delivery_challans" : isQ ? "quotations" : "purchases") as never).select("*").eq("id", id).single(),
+      supabase.from((isC ? "delivery_challan_items" : isQ ? "quotation_items" : "purchase_items") as never).select("*").eq(isC ? "challan_id" : isQ ? "quotation_id" : "purchase_id", id),
       supabase.from("profiles" as never).select("*").single(),
     ]);
     const d = doc.data as any;
@@ -49,7 +51,11 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase"; 
     let party: Loaded["party"] = null;
     let blob: Blob | void;
     let number: string;
-    if (isQ) {
+    if (isC) {
+      if (d.customer_id) party = ((await supabase.from("customers" as never).select("*").eq("id", d.customer_id).single()).data as Customer | null);
+      blob = await generateDeliveryChallanPdf({ challan: d as DeliveryChallan, items: (its.data as DeliveryChallanItem[] | null) ?? [], customer: party as Customer | null, profile: profileForPdf, preview: true });
+      number = (d as DeliveryChallan).challan_number;
+    } else if (isQ) {
       if (d.customer_id) party = ((await supabase.from("customers" as never).select("*").eq("id", d.customer_id).single()).data as Customer | null);
       blob = await generateQuotationPdf({ quotation: d as Quotation, items: (its.data as QuotationItem[] | null) ?? [], customer: party as Customer | null, profile: profileForPdf, preview: true });
       number = (d as Quotation).quotation_number;
@@ -59,13 +65,13 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase"; 
       number = (d as Purchase).purchase_number;
     }
     if (!blob) return null;
-    const label = isQ ? "Quotation" : "Purchase";
+    const label = isC ? "Delivery challan" : isQ ? "Quotation" : "Purchase";
     return {
       blob,
-      filename: `${label}-${number}.pdf`,
+      filename: `${isC ? "Challan" : label}-${number}.pdf`,
       label,
       number,
-      totalText: `${CURRENCY_SYMBOLS[d.currency ?? "INR"] ?? ""}${Number(d.total).toLocaleString("en-IN")}`,
+      totalText: isC ? "" : `${CURRENCY_SYMBOLS[d.currency ?? "INR"] ?? ""}${Number(d.total).toLocaleString("en-IN")}`,
       party,
       businessId: d.business_id,
       businessName: business?.business_name ?? "",
@@ -99,7 +105,7 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase"; 
         };
         document.body.appendChild(frame);
       } else if (action === "whatsapp") {
-        const text = `Hi${l.party?.name ? " " + l.party.name : ""}, here's ${l.label.toLowerCase()} #${l.number} for ${l.totalText}${l.businessName ? ` from ${l.businessName}` : ""}.`;
+        const text = `Hi${l.party?.name ? " " + l.party.name : ""}, here's ${l.label.toLowerCase()} #${l.number}${l.totalText ? ` for ${l.totalText}` : ""}${l.businessName ? ` from ${l.businessName}` : ""}.`;
         await sharePdfToWhatsApp({
           blob: l.blob,
           filename: l.filename,
@@ -114,7 +120,7 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase"; 
           ...l,
           to: l.party?.email ?? "",
           subject: `${l.label} #${l.number}${l.businessName ? ` from ${l.businessName}` : ""}`,
-          message: `Hi${l.party?.name ? " " + l.party.name : ""},\n\nPlease find attached ${l.label.toLowerCase()} #${l.number} for ${l.totalText}.\n\nThank you,\n${l.businessName}`,
+          message: `Hi${l.party?.name ? " " + l.party.name : ""},\n\nPlease find attached ${l.label.toLowerCase()} #${l.number}${l.totalText ? ` for ${l.totalText}` : ""}.\n\nThank you,\n${l.businessName}`,
         });
       }
     } finally {

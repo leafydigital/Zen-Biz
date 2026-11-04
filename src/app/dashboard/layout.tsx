@@ -126,7 +126,7 @@ export default async function DashboardLayout({
           <header className="sticky top-0 z-20 flex items-center gap-3 border-b border-paper-fold bg-paper-card px-4 py-3.5 sm:px-6 md:px-8">
             <Logo className="ml-11 shrink-0 md:hidden" />
 
-            {billingOnly ? <div className="flex-1" /> : <GlobalSearch className="hidden min-w-0 flex-1 md:block md:max-w-md" />}
+            {billingOnly ? <div className="flex-1" /> : <GlobalSearch className="zb-search hidden min-w-0 flex-1 md:block md:max-w-md" />}
 
             <div className="ml-auto flex shrink-0 items-center gap-3">
               <PlanBadge plan={profile.plan} className="hidden sm:inline-flex" />
@@ -138,7 +138,7 @@ export default async function DashboardLayout({
           </header>
 
         {!billingOnly && (
-          <div className="border-b border-paper-fold bg-paper-card px-4 py-3 sm:px-6 md:hidden">
+          <div className="zb-search border-b border-paper-fold bg-paper-card px-4 py-3 sm:px-6 md:hidden">
             <GlobalSearch />
           </div>
         )}

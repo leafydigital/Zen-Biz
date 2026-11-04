@@ -40,6 +40,7 @@ export function ActivityLogTab({
   const [notice, setNotice] = useState<string | null>(null);
   const [retention, setRetention] = useState(retentionDays ? String(retentionDays) : "");
   const [before, setBefore] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const load = useCallback(
     async (offset: number, term: string) => {
@@ -71,7 +72,10 @@ export function ActivityLogTab({
   }
 
   async function saveRetention() {
+    setSaving(true);
+    setNotice(null);
     const res = await setLogRetention(retention ? Number(retention) : null);
+    setSaving(false);
     if (res.error) return setError(res.error);
     setError(null);
     setNotice(retention ? `Entries older than ${retention} days are now deleted automatically.` : "Log entries are kept forever.");
@@ -101,8 +105,13 @@ export function ActivityLogTab({
               ))}
             </select>
           </label>
-          <button type="button" onClick={saveRetention} className="rounded-lg bg-ink px-3.5 py-2 text-sm font-semibold text-paper hover:bg-ink-light">
-            Save
+          <button
+            type="button"
+            onClick={saveRetention}
+            disabled={saving}
+            className="rounded-lg bg-ink px-3.5 py-2 text-sm font-semibold text-paper hover:bg-ink-light disabled:opacity-70"
+          >
+            {saving ? "Saving…" : "Save"}
           </button>
           <p className="basis-full text-xs text-text-soft">Auto-deleted entries are removed permanently and cannot be recovered.</p>
         </div>

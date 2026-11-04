@@ -22,7 +22,17 @@ async function whoAmI() {
   const [user, business, access] = await Promise.all([getAuthUser(), getActiveBusiness(), getMyAccess()]);
   if (!user || !business?.id) return null;
   const isOwner = business.owner_id === user.id;
+  const { data: member } = (await createAdminClient()
+    .from("business_members" as never)
+    .select("full_name, username")
+    .eq("business_id", business.id)
+    .eq("user_id", user.id)
+    .limit(1)
+    .maybeSingle()) as { data: { full_name: string | null; username: string | null } | null };
+  const base = member?.full_name || member?.username || (user.user_metadata?.full_name as string | undefined) || user.email || "User";
   return {
+    userId: user.id,
+    userName: isOwner ? `${base} (Owner)` : base,
     businessId: business.id,
     isOwner,
     canView: isOwner || (!access.isFull && access.permissions.includes("activity_log")),
@@ -64,12 +74,29 @@ export async function deleteActivityLogs(input: { ids?: string[]; before?: strin
   const me = await whoAmI();
   if (!me || !me.canDelete) return { error: "You don't have permission to delete log entries." };
   const admin = createAdminClient();
-  let q = admin.from("activity_logs" as never).delete().eq("business_id", me.businessId);
+  let q = admin.from("activity_logs" as never).delete({ count: "exact" }).eq("business_id", me.businessId);
   if (input.ids?.length) q = q.in("id", input.ids);
   else if (input.before) q = q.lt("created_at", new Date(`${input.before}T00:00:00`).toISOString());
   else if (!input.all) return { error: "Nothing to delete." };
-  const { error } = await q;
-  return { error: error?.message ?? null };
+  const { count, error } = await q;
+  if (error) return { error: error.message };
+
+  // Leave a trace of the clean-up itself (written after the delete so it survives).
+  const what = input.ids?.length
+    ? `${count ?? input.ids.length} log entr${(count ?? input.ids.length) === 1 ? "y" : "ies"}`
+    : input.before
+      ? `all log entries before ${input.before}`
+      : "the entire activity log";
+  await admin.from("activity_logs" as never).insert({
+    business_id: me.businessId,
+    user_id: me.userId,
+    user_name: me.userName,
+    action: "deleted",
+    entity: "Activity log",
+    entity_name: null,
+    details: `Deleted ${what}`,
+  } as never);
+  return { error: null };
 }
 
 export async function setLogRetention(days: number | null) {

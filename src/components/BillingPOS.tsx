@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -9,6 +9,8 @@ import { CURRENCY_SYMBOLS } from "@/types/database";
 import type { Plan, Product, TaxType } from "@/types/database";
 import { ProductFormModal } from "@/components/ProductFormModal";
 import { LimitReachedModal } from "@/components/LimitReachedModal";
+import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
+import { getPlanFeatures } from "@/lib/planFeatures";
 
 type PayMethod = "cash" | "upi" | "credit_card";
 
@@ -90,6 +92,10 @@ export function BillingPOS({
 }) {
   const router = useRouter();
   const supabase = createClient();
+  useEffect(() => {
+    document.documentElement.classList.add("on-billing");
+    return () => document.documentElement.classList.remove("on-billing");
+  }, []);
   const [cart, setCart] = useState<Record<string, number>>({});
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState<string | null>(null);
@@ -105,6 +111,8 @@ export function BillingPOS({
   const [limitOpen, setLimitOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [scanOpen, setScanOpen] = useState(false);
+  const [scanLockedOpen, setScanLockedOpen] = useState(false);
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category?.trim()).filter(Boolean) as string[])).sort(),
@@ -149,6 +157,34 @@ export function BillingPOS({
     if (!p.is_active) return;
     setSavedId(null);
     setCart((c) => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }));
+  }
+
+  const canScan = getPlanFeatures(plan).barcodeScanning;
+
+  /** Matches a scanned code against item codes; returns a message for the user. */
+  function addByCode(raw: string): string {
+    const code = raw.trim().toLowerCase();
+    if (!code) return "";
+    const p = products.find((x) => x.item_code?.trim().toLowerCase() === code);
+    if (!p) return `No item with code "${raw.trim()}"`;
+    if (!p.is_active) return `${p.name} is hidden`;
+    add(p);
+    return `Added ${p.name}`;
+  }
+
+  // USB / Bluetooth scanners type the code and press Enter — handle that in the search box.
+  function onSearchEnter(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key !== "Enter" || !search.trim()) return;
+    e.preventDefault();
+    if (!canScan) return;
+    const exact = products.find((x) => x.item_code?.trim().toLowerCase() === search.trim().toLowerCase());
+    if (exact) {
+      addByCode(search);
+      setSearch("");
+    } else if (visible.length === 1) {
+      add(visible[0]);
+      setSearch("");
+    }
   }
 
   function remove(p: Product) {
@@ -546,9 +582,22 @@ ${d.customerPhone ? `<div>Phone: ${escapeHtml(d.customerPhone)}</div>` : ""}
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search items…"
+          onKeyDown={onSearchEnter}
+          placeholder={canScan ? "Search items or scan barcode…" : "Search items…"}
           className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink sm:max-w-xs sm:flex-none"
         />
+        <button
+          type="button"
+          onClick={() => (canScan ? setScanOpen(true) : setScanLockedOpen((o) => !o))}
+          className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-sm font-semibold text-text hover:bg-paper"
+        >
+          {canScan ? "Scan barcode" : "Scan barcode 🔒"}
+        </button>
+        {scanLockedOpen && !canScan && (
+          <p className="basis-full rounded-lg bg-brass/15 px-3 py-2 text-xs text-brass-dark">
+            Barcode scanning is available on the Professional and Business plans. Upgrade to scan items with your phone camera or a barcode scanner.
+          </p>
+        )}
         {itemPerms.add && (
         <button
           type="button"
@@ -651,6 +700,7 @@ ${d.customerPhone ? `<div>Phone: ${escapeHtml(d.customerPhone)}</div>` : ""}
           onClose={() => setFormOpen(false)}
         />
       )}
+      {scanOpen && <BarcodeScannerModal onScan={addByCode} onClose={() => setScanOpen(false)} />}
       {limitOpen && productLimit !== null && (
         <LimitReachedModal kind="products" limit={productLimit} currentPlan={plan} onClose={() => setLimitOpen(false)} />
       )}

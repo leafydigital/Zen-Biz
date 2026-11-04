@@ -67,3 +67,6 @@ body {
 
 /* Hidden inside the Android app (the app has no marketing home page). */
 .is-native .web-only { display: none !important; }
+
+/* Billing screen in the Android app: no top search bar, more room for the bill. */
+.is-native.on-billing .zb-search { display: none !important; }

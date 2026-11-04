@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { DocumentDetailView } from "@/components/DocumentDetailView";
 import { ChallanStatusSelect } from "@/components/ChallanStatusSelect";
+import { DocShareActions } from "@/components/DocShareActions";
 import { DownloadChallanButton } from "@/components/DownloadChallanButton";
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 
@@ -28,6 +29,7 @@ export default async function ViewChallanPage({ params }: { params: { id: string
       actions={
         <>
           <ChallanStatusSelect challanId={c.id} status={c.status} />
+          <DocShareActions kind="challan" id={c.id} />
           <DownloadChallanButton challanId={c.id} />
           <DeleteRecordButton table="delivery_challans" id={c.id} label="delivery challan" redirectTo="/dashboard/delivery-challans" />
         </>

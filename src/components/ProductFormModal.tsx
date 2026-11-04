@@ -348,12 +348,12 @@ export function ProductFormModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">
-                Item code <span className="text-text-soft">(optional)</span>
+                Item code / barcode <span className="text-text-soft">(optional)</span>
               </span>
               <input
                 value={itemCode}
                 onChange={(e) => setItemCode(e.target.value)}
-                placeholder="Your own SKU/code"
+                placeholder="SKU, or the number under the barcode"
                 className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
               />
             </label>
