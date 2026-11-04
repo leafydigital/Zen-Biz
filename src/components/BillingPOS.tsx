@@ -700,7 +700,17 @@ ${d.customerPhone ? `<div>Phone: ${escapeHtml(d.customerPhone)}</div>` : ""}
           onClose={() => setFormOpen(false)}
         />
       )}
-      {scanOpen && <BarcodeScannerModal onScan={addByCode} onClose={() => setScanOpen(false)} />}
+      {scanOpen && (
+        <BarcodeScannerModal
+          onScan={addByCode}
+          onClose={() => setScanOpen(false)}
+          lines={totals.rows.map((r) => ({ id: r.product.id, name: r.product.name, qty: r.qty, amount: money(r.result.taxableAmount + r.result.taxAmount, currency) }))}
+          total={money(totals.total, currency)}
+          count={itemCount}
+          onInc={(id) => { const p = products.find((x) => x.id === id); if (p) add(p); }}
+          onDec={(id) => { const p = products.find((x) => x.id === id); if (p) remove(p); }}
+        />
+      )}
       {limitOpen && productLimit !== null && (
         <LimitReachedModal kind="products" limit={productLimit} currentPlan={plan} onClose={() => setLimitOpen(false)} />
       )}

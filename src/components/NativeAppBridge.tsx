@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 
 /**
@@ -10,6 +11,7 @@ import { createClient } from "@/lib/supabase/client";
  * the sign-in code to the site's normal /auth/callback inside the app.
  */
 export function NativeAppBridge() {
+  const router = useRouter();
   useEffect(() => {
     const cap = (window as any).Capacitor;
     if (!cap?.isNativePlatform?.()) return;
@@ -48,6 +50,14 @@ export function NativeAppBridge() {
     const Browser = get("Browser");
     if (!App?.addListener) return () => sub.subscription.unsubscribe();
 
+    // Keep screens fresh: changes made on the website show up without reopening the app.
+    const refresh = () => {
+      if (document.visibilityState === "visible" && !document.querySelector("input:focus, textarea:focus, select:focus")) router.refresh();
+    };
+    const timer = setInterval(refresh, 15_000);
+    document.addEventListener("visibilitychange", refresh);
+    const resume = App.addListener("appStateChange", (s: { isActive: boolean }) => s?.isActive && router.refresh());
+
     const finish = (url: string) => {
       if (!url.startsWith("zenbiz://auth")) return;
       const query = url.includes("?") ? url.slice(url.indexOf("?") + 1) : "";
@@ -59,6 +69,9 @@ export function NativeAppBridge() {
     Promise.resolve(App.getLaunchUrl?.()).then((r: any) => r?.url && finish(r.url)).catch(() => {});
     return () => {
       sub.subscription.unsubscribe();
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", refresh);
+      Promise.resolve(resume).then((h: any) => h?.remove?.());
       Promise.resolve(handle).then((h: any) => h?.remove?.());
     };
   }, []);
