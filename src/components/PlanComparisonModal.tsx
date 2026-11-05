@@ -24,6 +24,7 @@ const FEATURES: FeatureRow[] = [
   { label: "A4 / A5 / Thermal paper sizes", starter: true, professional: true, business: true },
   { label: "Terms & Conditions, signature, bank details", starter: true, professional: true, business: true },
   { label: "Purchases & Suppliers", starter: false, professional: true, business: true },
+  { label: "E-way bill details on invoices", starter: false, professional: true, business: true },
   { label: "Delivery Challan", starter: false, professional: true, business: true },
   { label: "Share via WhatsApp / email", starter: false, professional: true, business: true },
   { label: "Expense tracking", starter: false, professional: true, business: true },

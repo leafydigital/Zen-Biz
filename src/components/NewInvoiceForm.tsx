@@ -179,6 +179,12 @@ export function NewInvoiceForm({
   const [deliveryAddress, setDeliveryAddress] = useState(existingInvoice?.delivery_address ?? "");
   const [vehicleNumber, setVehicleNumber] = useState(existingInvoice?.vehicle_number ?? "");
   const [transportName, setTransportName] = useState(existingInvoice?.transport_name ?? "");
+  const canEway = getPlanFeatures(profile.plan).ewayBill;
+  const [ewayNumber, setEwayNumber] = useState(existingInvoice?.eway_bill_number ?? "");
+  const [ewayDate, setEwayDate] = useState(existingInvoice?.eway_bill_date ?? "");
+  const [ewayValidUntil, setEwayValidUntil] = useState(existingInvoice?.eway_valid_until ?? "");
+  const [ewayDistance, setEwayDistance] = useState(existingInvoice?.eway_distance_km != null ? String(existingInvoice.eway_distance_km) : "");
+  const [ewayTransporterId, setEwayTransporterId] = useState(existingInvoice?.eway_transporter_id ?? "");
 
   const [notes, setNotes] = useState(existingInvoice?.notes ?? "");
 
@@ -321,6 +327,11 @@ export function NewInvoiceForm({
 
     let invoice: Invoice | null;
 
+    if (canEway && ewayNumber.trim() && !/^\d{12}$/.test(ewayNumber.trim())) {
+      stopLoading();
+      setError("The e-way bill number must be exactly 12 digits.");
+      return;
+    }
     const commonFields = {
       customer_id: customerId || null,
       // Billing Records don't have a real invoice number yet — the
@@ -346,6 +357,16 @@ export function NewInvoiceForm({
       delivery_address: deliveryAddress.trim() || null,
       vehicle_number: vehicleNumber.trim() || null,
       transport_name: transportName.trim() || null,
+      // Only sent when used, so invoices keep saving even before the e-way columns exist.
+      ...(canEway && (ewayNumber || ewayDate || ewayValidUntil || ewayDistance || ewayTransporterId || existingInvoice?.eway_bill_number)
+        ? {
+            eway_bill_number: ewayNumber.trim() || null,
+            eway_bill_date: ewayDate || null,
+            eway_valid_until: ewayValidUntil || null,
+            eway_distance_km: ewayDistance ? parseFloat(ewayDistance) || null : null,
+            eway_transporter_id: ewayTransporterId.trim().toUpperCase() || null,
+          }
+        : {}),
       tax_type: taxType,
       place_of_supply_state: gstApplies ? selectedCustomer?.state ?? profile.state ?? null : null,
       subtotal,
@@ -1055,6 +1076,66 @@ export function NewInvoiceForm({
                 className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
               />
             </label>
+            {canEway ? (
+              <div className="grid gap-4 rounded-xl border border-paper-fold bg-paper/40 p-4 sm:col-span-2 sm:grid-cols-2">
+                <div className="sm:col-span-2">
+                  <p className="text-sm font-semibold text-text">E-way bill details</p>
+                  <p className="text-xs text-text-soft">
+                    Make the e-way bill on the GST portal (ewaybillgst.gov.in), then type its details here. They print on the invoice.
+                  </p>
+                </div>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-text">E-way bill number</span>
+                  <input
+                    inputMode="numeric"
+                    value={ewayNumber}
+                    onChange={(e) => setEwayNumber(e.target.value.replace(/\D/g, "").slice(0, 12))}
+                    placeholder="12 digits"
+                    className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-text">Distance (km)</span>
+                  <input
+                    inputMode="decimal"
+                    value={ewayDistance}
+                    onChange={(e) => setEwayDistance(e.target.value.replace(/[^0-9.]/g, ""))}
+                    className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-text">Generated on</span>
+                  <input
+                    type="date"
+                    value={ewayDate}
+                    onChange={(e) => setEwayDate(e.target.value)}
+                    className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5">
+                  <span className="text-sm font-medium text-text">Valid until</span>
+                  <input
+                    type="date"
+                    value={ewayValidUntil}
+                    onChange={(e) => setEwayValidUntil(e.target.value)}
+                    className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+                  />
+                </label>
+                <label className="flex flex-col gap-1.5 sm:col-span-2">
+                  <span className="text-sm font-medium text-text">Transporter ID (GSTIN)</span>
+                  <input
+                    value={ewayTransporterId}
+                    onChange={(e) => setEwayTransporterId(e.target.value.toUpperCase().slice(0, 15))}
+                    placeholder="optional"
+                    className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
+                  />
+                </label>
+              </div>
+            ) : (
+              <p className="rounded-xl bg-brass/10 px-3.5 py-2.5 text-xs text-brass-dark sm:col-span-2">
+                E-way bill details on invoices are available on the Professional and Business plans.
+              </p>
+            )}
             <label className="flex flex-col gap-1.5 sm:col-span-2">
               <span className="text-sm font-medium text-text">
                 Notes <span className="text-text-soft">(optional)</span>

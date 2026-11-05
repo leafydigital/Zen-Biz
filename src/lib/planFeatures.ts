@@ -30,6 +30,8 @@ export interface PlanFeatures {
    * Business only. Flag only for now; the scanning feature itself isn't
    * built yet. */
   barcodeScanning: boolean;
+  /** E-way bill details (number, validity, distance, transporter) on invoices — Professional and Business. */
+  ewayBill: boolean;
   /**
    * Usage ceilings for this plan. `null` means unlimited. These are the
    * actual enforced limits — checked at creation time for customers,
@@ -63,6 +65,7 @@ const STARTER_FEATURES: PlanFeatures = {
   customerOutstandingReport: false,
   posPrintSupport: true,
   barcodeScanning: false,
+  ewayBill: false,
   limits: {
     invoicesPerMonth: 50,
     customers: 75,
@@ -90,6 +93,7 @@ const PROFESSIONAL_FEATURES: PlanFeatures = {
   customerOutstandingReport: false,
   posPrintSupport: true,
   barcodeScanning: true,
+  ewayBill: true,
   limits: {
     invoicesPerMonth: null,
     customers: null,
@@ -117,6 +121,7 @@ const BUSINESS_FEATURES: PlanFeatures = {
   customerOutstandingReport: true,
   posPrintSupport: true,
   barcodeScanning: true,
+  ewayBill: true,
   limits: {
     invoicesPerMonth: null,
     customers: null,

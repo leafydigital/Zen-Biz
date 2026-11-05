@@ -11,6 +11,7 @@ import { passwordIssue } from "@/lib/passwordValidation";
 import { getAppConfig } from "@/lib/getAppConfig";
 import { encryptSecret, decryptSecret } from "@/lib/emailCrypto";
 import Razorpay from "razorpay";
+import { PENDING_MINUTES, type PaymentRow } from "@/lib/paymentTypes";
 
 const attempts = new Map<string, { n: number; first: number }>();
 
@@ -517,4 +518,57 @@ export async function savePaymentSettings(input: { keyId: string; keySecret: str
 
   // Public flag (no secrets) so the app knows whether to show Upgrade or "Coming soon".
   return saveSetting("payments_enabled", !!input.enabled);
+}
+
+// ── Payment history ────────────────────────────────────────────────────────
+
+/** Every plan checkout, newest first: paid, failed, waiting or not completed, with any discount used. */
+export async function getPaymentHistory(): Promise<{ error: string | null; rows: PaymentRow[] }> {
+  const s = await getConsoleSession();
+  if (!s || !canView(s, "history")) return { error: "You do not have access to Payment history.", rows: [] };
+  const admin = createAdminClient();
+  const { data, error } = await admin
+    .from("subscription_payments" as never)
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(500);
+  if (error) {
+    return { error: /discount_code|failure_reason/.test(error.message) ? "Run supabase/migration_48.sql and migration_49.sql in the Supabase SQL editor." : error.message, rows: [] };
+  }
+  const list = (data ?? []) as any[];
+
+  const ownerIds = Array.from(new Set(list.map((r) => r.owner_id as string)));
+  const [profiles, users] = await Promise.all([
+    admin.from("profiles" as never).select("id, business_name").in("id", ownerIds.length ? ownerIds : ["00000000-0000-0000-0000-000000000000"]),
+    Promise.all(ownerIds.map(async (id) => [id, (await admin.auth.admin.getUserById(id)).data.user?.email ?? ""] as const)),
+  ]);
+  const names = new Map(((profiles.data ?? []) as any[]).map((p) => [p.id, p.business_name as string]));
+  const emails = new Map(users);
+
+  const cutoff = Date.now() - PENDING_MINUTES * 60_000;
+  const rows: PaymentRow[] = list.map((r) => ({
+    id: r.id,
+    createdAt: r.created_at,
+    customer: names.get(r.owner_id) || "(no business name)",
+    email: emails.get(r.owner_id) || "",
+    plan: r.plan,
+    cycle: r.billing_cycle,
+    currency: r.currency || "INR",
+    listPrice: r.list_price != null ? Number(r.list_price) : null,
+    discountCode: r.discount_code ?? null,
+    discountAmount: Number(r.discount_amount ?? 0),
+    amount: Number(r.amount),
+    status:
+      r.status === "paid"
+        ? "paid"
+        : r.status === "failed"
+          ? "failed"
+          : r.status === "created" && new Date(r.created_at).getTime() >= cutoff
+            ? "pending"
+            : "abandoned",
+    failureReason: r.failure_reason ?? null,
+    orderId: r.razorpay_order_id,
+    paymentId: r.razorpay_payment_id ?? null,
+  }));
+  return { error: null, rows };
 }

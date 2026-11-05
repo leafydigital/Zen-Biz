@@ -53,7 +53,7 @@ export async function POST(request: Request) {
   const admin = createAdminClient();
   await admin
     .from("subscription_payments" as never)
-    .update({ status: "failed" } as never)
+    .update({ status: "cancelled" } as never)
     .eq("owner_id", user.id)
     .eq("status", "created");
 
@@ -127,7 +127,7 @@ export async function POST(request: Request) {
       .order("id", { ascending: true })
       .limit(maxUses)) as { data: { razorpay_order_id: string }[] | null };
     if (!(winners ?? []).some((w) => w.razorpay_order_id === order.id)) {
-      await admin.from("subscription_payments" as never).update({ status: "failed" } as never).eq("razorpay_order_id", order.id);
+      await admin.from("subscription_payments" as never).update({ status: "cancelled" } as never).eq("razorpay_order_id", order.id);
       return NextResponse.json({ error: "This code has just been fully used." }, { status: 409 });
     }
   }

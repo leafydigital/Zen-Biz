@@ -9,6 +9,7 @@ export const SECTIONS = [
   ["pricing", "Plan prices"],
   ["discounts", "Discounts"],
   ["payments", "Payments (Razorpay)"],
+  ["history", "Payment history"],
 ] as const;
 
 export type SectionId = (typeof SECTIONS)[number][0];

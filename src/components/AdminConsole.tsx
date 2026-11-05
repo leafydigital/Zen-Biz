@@ -6,6 +6,7 @@ import { SECTIONS, type Level, type Perms, type SectionId } from "@/lib/consoleS
 import type { ConsoleSession } from "@/lib/adminAuth";
 import { CustomersPanel, RenewalsPanel } from "@/components/AdminCustomers";
 import { PaymentsPanel } from "@/components/AdminPayments";
+import { PaymentHistoryPanel } from "@/components/AdminPaymentHistory";
 import { dueCustomers, type CustomerRow } from "@/lib/customerTypes";
 import { WEEK_DAYS, formatWorkingHours, type AppConfig } from "@/lib/appConfigDefaults";
 import {
@@ -502,6 +503,8 @@ export function AdminConsole({
             <p className="text-xs text-text-soft">Prices shown in the app update at once, and checkout charges exactly these. For dollar payments, turn on International Payments in your Razorpay account.</p>
           </fieldset>
         )}
+
+        {tab === "history" && <PaymentHistoryPanel />}
 
         {tab === "payments" && <PaymentsPanel canEdit={lvl("payments") === "edit"} setMsg={setMsg} />}
 

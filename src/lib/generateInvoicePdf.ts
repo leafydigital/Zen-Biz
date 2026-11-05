@@ -55,7 +55,7 @@ export async function generateInvoicePdf({
     igstAmount: Number(invoice.igst_amount ?? 0),
     roundOff: Number(invoice.round_off ?? 0),
     total: Number(invoice.total),
-    notes: invoice.notes,
+    notes: [invoice.notes, transportLines(invoice)].filter(Boolean).join("\n") || null,
     profile,
     filenamePrefix: "Invoice",
     design: designOverride ?? profile.document_design ?? DEFAULT_DOCUMENT_DESIGN,
@@ -70,4 +70,21 @@ export async function generateInvoicePdf({
     },
     qrUrl: profile.payment_qr_url,
   });
+}
+
+const fmtDate = (d: string) => new Date(d + "T00:00:00").toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+
+/** E-way bill, vehicle and transport details as printed lines (empty when none were entered). */
+function transportLines(inv: Invoice): string {
+  const parts: string[] = [];
+  if (inv.eway_bill_number) {
+    parts.push(`E-way bill no: ${inv.eway_bill_number}`);
+    if (inv.eway_bill_date) parts.push(`Dated: ${fmtDate(inv.eway_bill_date)}`);
+    if (inv.eway_valid_until) parts.push(`Valid until: ${fmtDate(inv.eway_valid_until)}`);
+    if (inv.eway_distance_km) parts.push(`Distance: ${inv.eway_distance_km} km`);
+  }
+  if (inv.vehicle_number) parts.push(`Vehicle: ${inv.vehicle_number}`);
+  if (inv.transport_name) parts.push(`Transport: ${inv.transport_name}`);
+  if (inv.eway_transporter_id) parts.push(`Transporter ID: ${inv.eway_transporter_id}`);
+  return parts.join("  |  ");
 }

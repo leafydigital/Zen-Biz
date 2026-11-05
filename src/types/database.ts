@@ -299,6 +299,12 @@ export interface Invoice {
   delivery_address: string | null;
   vehicle_number: string | null;
   transport_name: string | null;
+  /** E-way bill details (Professional and Business plans). */
+  eway_bill_number?: string | null;
+  eway_bill_date?: string | null;
+  eway_valid_until?: string | null;
+  eway_distance_km?: number | null;
+  eway_transporter_id?: string | null;
   tax_type: TaxType;
   place_of_supply_state: string | null;
   subtotal: number;
@@ -474,7 +480,7 @@ export interface DeliveryChallanItem {
   created_at: string;
 }
 
-export type PaymentStatus = "created" | "paid" | "failed";
+export type PaymentStatus = "created" | "paid" | "failed" | "cancelled";
 export type PayablePlan = "professional" | "business";
 
 export interface SubscriptionPayment {

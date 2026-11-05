@@ -126,7 +126,13 @@ export function UpgradeCheckout({
       },
     });
 
-    razorpay.on("payment.failed", function () {
+    razorpay.on("payment.failed", function (response: { error?: { description?: string } }) {
+      // Tell the server too, so the owner's Payment history shows the failed attempt.
+      void fetch("/api/razorpay/payment-failed", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: data.orderId, reason: response?.error?.description }),
+      }).catch(() => {});
       setStarting(false);
       setError("Payment failed or was cancelled. You can try again.");
     });

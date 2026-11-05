@@ -66,7 +66,11 @@ export async function POST(request: Request) {
     } else {
       await admin
         .from("subscription_payments" as never)
-        .update({ status: "failed", razorpay_payment_id: paymentId } as never)
+        .update({
+          status: "failed",
+          razorpay_payment_id: paymentId,
+          failure_reason: (payment?.error_description as string | undefined)?.slice(0, 300) ?? null,
+        } as never)
         .eq("razorpay_order_id", orderId)
         .neq("status", "paid");
     }
