@@ -97,18 +97,18 @@ export function SettingsTabs({
           <button
             type="button"
             onClick={() => setMenuOpen(true)}
+            aria-label="Open settings menu"
             className="flex items-center gap-3 rounded-xl bg-paper-card px-4 py-3 text-left text-sm font-semibold text-text shadow-card"
           >
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+            <span className="flex-1">{VISIBLE_TABS.find((x) => x.id === tab)?.label}</span>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
               <path d="M4 7h16M4 12h16M4 17h16" />
             </svg>
-            <span className="flex-1">{VISIBLE_TABS.find((x) => x.id === tab)?.label}</span>
-            <span className="text-xs font-normal text-text-soft">Menu</span>
           </button>
           {menuOpen && (
             <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
               <div className="absolute inset-0 bg-ink/40" onClick={() => setMenuOpen(false)} />
-              <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col gap-1 overflow-y-auto bg-paper-card p-4 shadow-card">
+              <div className="absolute inset-y-0 right-0 flex w-72 max-w-[85%] flex-col gap-1 overflow-y-auto bg-paper-card p-4 shadow-card">
                 <div className="mb-2 flex items-center justify-between">
                   <span className="font-display text-base font-semibold text-text">Settings</span>
                   <button onClick={() => setMenuOpen(false)} className="rounded-lg px-2 py-1 text-sm text-text-soft">
