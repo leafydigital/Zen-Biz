@@ -25,7 +25,7 @@ const stateCode = (name: string | null | undefined) => {
 };
 
 /** Portal unit codes (UQC) for the usual unit words. */
-function uqc(unit: string): string {
+export function uqc(unit: string): string {
   const u = unit.trim().toLowerCase();
   const map: Record<string, string> = {
     kg: "KGS", kgs: "KGS", g: "GMS", gm: "GMS", gram: "GMS", grams: "GMS", l: "LTR", ltr: "LTR", litre: "LTR", liter: "LTR", ml: "MLT",

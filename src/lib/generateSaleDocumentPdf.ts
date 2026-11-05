@@ -6,6 +6,7 @@ import { amountToWordsINR } from "@/lib/amountToWords";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { renderClassicPdf } from "@/lib/generateClassicPdf";
 import { normalizeStyle } from "@/lib/docDesign";
+import { getThermalTemplate } from "@/lib/docTemplates";
 
 /**
  * jsPDF's built-in fonts can't render the Rupee glyph (₹) reliably across
@@ -248,6 +249,7 @@ export async function generateSaleDocumentPdf({
       paperSize: design.paperSize,
       fontSize: design.fontSize,
       style: design.style,
+      thermalTemplate: design.thermalTemplate,
       terms,
       currency,
       bankDetails,
@@ -1093,6 +1095,7 @@ function renderThermalPdf(args: {
   paperSize: "thermal" | "thermal58";
   fontSize: number;
   style: string;
+  thermalTemplate?: string;
   terms?: string | null;
   currency?: string;
   bankDetails?: {
@@ -1116,8 +1119,10 @@ function renderThermalPdf(args: {
   // "Simple". "Default" uses solid double rules and a boxed TOTAL for a
   // more finished look; "Simple" uses dashed rules throughout for the
   // fastest, most ink-light print.
-  const isSimple = normalizeStyle(style) === "simple";
   const planFeatures = getPlanFeatures(profile.plan);
+  const tt = planFeatures.colourfulStyles || args.preview ? getThermalTemplate(args.thermalTemplate) : null;
+  const isSimple = tt ? tt.rule === "dash" || tt.rule === "stars" || tt.rule === "equals" : normalizeStyle(style) === "simple";
+  const leftAlign = tt?.align === "left";
   const showHsn = planFeatures.gstBilling;
   const showWatermark = planFeatures.invoiceWatermark;
   const is58 = paperSize === "thermal58";
@@ -1186,7 +1191,44 @@ function renderThermalPdf(args: {
 
   let y = is58 ? 16 : 20;
 
+  /** Wraps to the width and also breaks any single word that is wider than the line. */
+  function wrapHard(t: string, w: number): string[] {
+    const out: string[] = [];
+    for (const line of doc.splitTextToSize(t, w) as string[]) {
+      let rest = line;
+      while (rest.length > 1 && doc.getTextWidth(rest) > w) {
+        let n = rest.length - 1;
+        while (n > 1 && doc.getTextWidth(rest.slice(0, n)) > w) n--;
+        out.push(rest.slice(0, n));
+        rest = rest.slice(n);
+      }
+      out.push(rest);
+    }
+    return out.length ? out : [""];
+  }
+
   function rule(dashed: boolean, weight = 1) {
+    if (tt && (tt.rule === "stars" || tt.rule === "equals")) {
+      const fam = doc.getFont().fontName;
+      const sty = doc.getFont().fontStyle;
+      const size = doc.getFontSize();
+      doc.setFont("courier", "bold");
+      doc.setFontSize(base - 1);
+      doc.setTextColor(20, 20, 20);
+      const ch = tt.rule === "equals" ? "=" : dashed ? "*" : "=";
+      doc.text(ch.repeat(Math.max(4, Math.floor(contentWidth / doc.getTextWidth(ch)))), centerX, y, { align: "center" });
+      doc.setFont(fam, sty);
+      doc.setFontSize(size);
+      return;
+    }
+    if (tt?.rule === "double" && !dashed) {
+      doc.setLineDashPattern([], 0);
+      doc.setDrawColor(60, 60, 60);
+      doc.setLineWidth(0.8);
+      doc.line(marginX, y - 1.5, pageWidth - marginX, y - 1.5);
+      doc.line(marginX, y + 1.5, pageWidth - marginX, y + 1.5);
+      return;
+    }
     doc.setLineWidth(weight);
     doc.setDrawColor(60, 60, 60);
     if (dashed) doc.setLineDashPattern([2, 1.5], 0);
@@ -1195,26 +1237,39 @@ function renderThermalPdf(args: {
   }
 
   // ---- Centered header: business name, address, phone, GSTIN ----
+  const hx = leftAlign ? marginX : centerX;
+  const ha: "left" | "center" = leftAlign ? "left" : "center";
   doc.setFont("courier", "bold");
   doc.setFontSize(base + 2);
   doc.setTextColor(20, 20, 20);
-  doc.text(profile.business_name || "Your Business", centerX, y, { align: "center" });
-  y += is58 ? 12 : 15;
+  const nameStep = is58 ? 12 : 15;
+  const nameLines = wrapHard(profile.business_name || "Your Business", contentWidth - (tt?.invertHeader ? 8 : 0));
+  if (tt?.invertHeader) {
+    doc.setFillColor(0, 0, 0);
+    doc.rect(marginX - 2, y - base - 6, contentWidth + 4, base + 12 + (nameLines.length - 1) * nameStep, "F");
+    doc.setTextColor(255, 255, 255);
+  }
+  nameLines.forEach((line, i) => {
+    doc.text(line, tt?.invertHeader && leftAlign ? hx + 3 : hx, y + i * nameStep, { align: ha });
+  });
+  doc.setTextColor(20, 20, 20);
+  y += nameStep * nameLines.length;
+  if (tt?.invertHeader) y += 4;
 
   doc.setFont("courier", "normal");
   doc.setFontSize(base - 1);
   doc.setTextColor(50, 50, 50);
   if (profile.address) {
     const lines = doc.splitTextToSize(profile.address, contentWidth);
-    doc.text(lines, centerX, y, { align: "center" });
+    doc.text(lines, hx, y, { align: ha });
     y += lines.length * lineHeight;
   }
   if (profile.phone) {
-    doc.text(`Tel: ${profile.phone}`, centerX, y, { align: "center" });
+    doc.text(`Tel: ${profile.phone}`, hx, y, { align: ha });
     y += lineHeight;
   }
   if (profile.gst_number) {
-    doc.text(`GSTIN: ${profile.gst_number}`, centerX, y, { align: "center" });
+    doc.text(`GSTIN: ${profile.gst_number}`, hx, y, { align: ha });
     y += lineHeight;
   }
 
@@ -1224,7 +1279,7 @@ function renderThermalPdf(args: {
 
   doc.setFont("courier", "bold");
   doc.setFontSize(base + 1);
-  doc.text(docLabel, centerX, y, { align: "center" });
+  doc.text(docLabel, leftAlign ? marginX : centerX, y, { align: leftAlign ? "left" : "center" });
   y += 14;
 
   rule(isSimple, isSimple ? 1 : 1.4);
@@ -1238,9 +1293,15 @@ function renderThermalPdf(args: {
     doc.text(value, pageWidth - marginX, y, { align: "right" });
     y += lineHeight;
   }
-  metaLine("No.", docNumber);
-  metaLine("Date", docDate);
-  metaLine("Currency", currency);
+  if (tt?.metaInline && doc.getTextWidth(`No. ${docNumber}`) + doc.getTextWidth(docDate) + 8 <= contentWidth) {
+    doc.text(`No. ${docNumber}`, marginX, y);
+    doc.text(docDate, pageWidth - marginX, y, { align: "right" });
+    y += lineHeight;
+  } else {
+    metaLine("No.", docNumber);
+    metaLine("Date", docDate);
+  }
+  if (!tt?.compact) metaLine("Currency", currency);
   if (status) metaLine("Status", status.toUpperCase());
 
   if (party?.name) {
@@ -1262,11 +1323,99 @@ function renderThermalPdf(args: {
   rule(true);
   y += 13;
 
+  doc.setFont("courier", "normal");
+  doc.setFontSize(base - 1);
+  const qtyStrs = items.map((it) => Number(it.quantity).toLocaleString("en-IN", { maximumFractionDigits: 3 }));
+  const amtStrs = items.map((it) => formatCurrencyForPdf(Number(it.line_total), currency));
+  const maxAmtW = Math.max(doc.getTextWidth(is58 ? "AMT" : "RATE/AMT"), ...amtStrs.map((x) => doc.getTextWidth(x)));
+  const maxQtyW = Math.max(doc.getTextWidth("QTY"), ...qtyStrs.map((x) => doc.getTextWidth(x)));
+  const colGap = 6;
+  const qtyOff = maxAmtW + colGap;
+  const nameColW = Math.max(contentWidth - qtyOff - maxQtyW - colGap, 30);
+  if (tt && tt.items !== "three") {
+    doc.setFont("courier", "bold");
+    doc.setFontSize(base - 1);
+    if (tt.items === "grid") {
+      const amtW = maxAmtW + 8;
+      const qtyW = maxQtyW + 8;
+      const xAmt = pageWidth - marginX - amtW;
+      const xQty = xAmt - qtyW;
+      const cellW = xQty - marginX - 8;
+      doc.setDrawColor(40, 40, 40);
+      doc.setLineWidth(0.8);
+      doc.setLineDashPattern([], 0);
+      let top = y - lineHeight + 3;
+      const headH = lineHeight + 4;
+      doc.rect(marginX, top, contentWidth, headH);
+      doc.line(xQty, top, xQty, top + headH);
+      doc.line(xAmt, top, xAmt, top + headH);
+      doc.text("ITEM", marginX + 4, top + lineHeight - 1);
+      doc.text("QTY", xQty + qtyW / 2, top + lineHeight - 1, { align: "center" });
+      doc.text("AMT", pageWidth - marginX - 4, top + lineHeight - 1, { align: "right" });
+      top += headH;
+      doc.setFont("courier", "normal");
+      doc.setLineWidth(0.6);
+      items.forEach((item, idx) => {
+        const lines = wrapHard(item.description, cellW);
+        const rowH = lines.length * lineHeight + 4;
+        doc.rect(marginX, top, contentWidth, rowH);
+        doc.line(xQty, top, xQty, top + rowH);
+        doc.line(xAmt, top, xAmt, top + rowH);
+        lines.forEach((line, i) => doc.text(line, marginX + 4, top + lineHeight - 1 + i * lineHeight));
+        doc.text(qtyStrs[idx], xQty + qtyW / 2, top + lineHeight - 1, { align: "center" });
+        doc.text(amtStrs[idx], pageWidth - marginX - 4, top + lineHeight - 1, { align: "right" });
+        top += rowH;
+      });
+      y = top + 4;
+    } else {
+      doc.text("ITEM", marginX, y);
+      doc.text("AMT", pageWidth - marginX, y, { align: "right" });
+      y += lineHeight + 2;
+      rule(true);
+      y += 12;
+      items.forEach((item, idx) => {
+        const amt = amtStrs[idx];
+        const amtWidth = doc.getTextWidth(amt);
+        doc.setTextColor(20, 20, 20);
+        if (tt.items === "one") {
+          doc.setFont("courier", "normal");
+          doc.setFontSize(base - 1);
+          const lines = wrapHard(`${qtyStrs[idx]}x ${item.description}`, contentWidth - maxAmtW - colGap);
+          lines.forEach((line, i) => doc.text(line, marginX, y + i * lineHeight));
+          doc.text(amt, pageWidth - marginX, y, { align: "right" });
+          y += lines.length * lineHeight + 2;
+        } else {
+          doc.setFont("courier", "bold");
+          doc.setFontSize(base - 1);
+          const lines = wrapHard(item.description, contentWidth);
+          lines.forEach((line, i) => doc.text(line, marginX, y + i * lineHeight));
+          y += lines.length * lineHeight;
+          doc.setFont("courier", "normal");
+          doc.setFontSize(base - 2);
+          doc.setTextColor(70, 70, 70);
+          const extra = [item.item_code ? `#${item.item_code}` : null, showHsn && item.hsn_code ? `HSN ${item.hsn_code}` : null].filter(Boolean).join(" ");
+          const sub = `${qtyStrs[idx]} ${item.unit} x ${formatCurrencyForPdf(Number(item.unit_price), currency)}${extra ? " " + extra : ""}`;
+          const subLines = wrapHard(sub, contentWidth - 4);
+          const fits = subLines.length === 1 && doc.getTextWidth(sub) + amtWidth + colGap <= contentWidth - 4;
+          subLines.forEach((line, i) => doc.text(line, marginX + 4, y + i * lineHeight));
+          if (!fits) y += subLines.length * lineHeight;
+          doc.setFont("courier", "bold");
+          doc.setFontSize(base - 1);
+          doc.setTextColor(20, 20, 20);
+          doc.text(amt, pageWidth - marginX, y, { align: "right" });
+          y += lineHeight + 3;
+        }
+      });
+    }
+    doc.setFont("courier", "normal");
+    doc.setFontSize(base - 1);
+    doc.setTextColor(20, 20, 20);
+  } else {
   // ---- Items ----
   doc.setFont("courier", "bold");
   doc.setFontSize(base - 1);
   doc.text("ITEM", marginX, y);
-  doc.text("QTY", pageWidth - marginX - (is58 ? 60 : 75), y, { align: "right" });
+  doc.text("QTY", pageWidth - marginX - qtyOff, y, { align: "right" });
   doc.text(is58 ? "AMT" : "RATE/AMT", pageWidth - marginX, y, { align: "right" });
   y += lineHeight + 2;
   rule(true);
@@ -1274,9 +1423,9 @@ function renderThermalPdf(args: {
 
   doc.setFont("courier", "normal");
   for (const item of items) {
-    const nameLines = doc.splitTextToSize(item.description, contentWidth - (is58 ? 55 : 70));
+    const nameLines = wrapHard(item.description, nameColW);
     doc.text(nameLines, marginX, y);
-    doc.text(String(item.quantity), pageWidth - marginX - (is58 ? 60 : 75), y, { align: "right" });
+    doc.text(String(item.quantity), pageWidth - marginX - qtyOff, y, { align: "right" });
     doc.text(formatCurrencyForPdf(Number(item.line_total), currency), pageWidth - marginX, y, {
       align: "right",
     });
@@ -1300,9 +1449,23 @@ function renderThermalPdf(args: {
     y += 2;
   }
 
+  }
+
   y += 2;
   rule(isSimple, isSimple ? 1 : 1.4);
   y += 13;
+
+  function totalSize(start: number, pad: number) {
+    const amt = formatCurrencyForPdf(total, currency);
+    let sz = start;
+    doc.setFont("courier", "bold");
+    while (sz > 6) {
+      doc.setFontSize(sz);
+      if (doc.getTextWidth("TOTAL") + doc.getTextWidth(amt) + 10 <= contentWidth - pad) break;
+      sz -= 0.5;
+    }
+    return sz;
+  }
 
   // ---- Totals ----
   doc.setFont("courier", "normal");
@@ -1325,9 +1488,30 @@ function renderThermalPdf(args: {
 
   y += 3;
   rule(isSimple, isSimple ? 1 : 1.6);
-  y += 6;
+  y += 11;
 
-  if (!isSimple) {
+  if (tt?.total === "inverted") {
+    const boxHeight = lineHeight + 10;
+    doc.setFillColor(0, 0, 0);
+    doc.rect(marginX, y, contentWidth, boxHeight, "F");
+    y += boxHeight / 2 + 4;
+    doc.setFont("courier", "bold");
+    doc.setFontSize(totalSize(base + 1, 12));
+    doc.setTextColor(255, 255, 255);
+    doc.text("TOTAL", marginX + 6, y);
+    doc.text(formatCurrencyForPdf(total, currency), pageWidth - marginX - 6, y, { align: "right" });
+    doc.setTextColor(20, 20, 20);
+    y += boxHeight / 2 + 8;
+  } else if (tt?.total === "big") {
+    doc.setFont("courier", "bold");
+    const bigSize = totalSize(base + 4, 0);
+    doc.setFontSize(bigSize);
+    // Baseline sits a full cap-height below the rule above it, and the rule below is kept clear of the descenders.
+    const bigBase = y + bigSize * 0.75;
+    doc.text("TOTAL", marginX, bigBase);
+    doc.text(formatCurrencyForPdf(total, currency), pageWidth - marginX, bigBase, { align: "right" });
+    y = bigBase + 12;
+  } else if (tt ? tt.total === "box" : !isSimple) {
     // Boxed TOTAL row for the Default style, matching the reference's
     // bordered TOTAL — Simple style skips the box for minimal ink use.
     const boxHeight = lineHeight + 10;
@@ -1336,13 +1520,13 @@ function renderThermalPdf(args: {
     doc.rect(marginX, y, contentWidth, boxHeight);
     y += boxHeight / 2 + 4;
     doc.setFont("courier", "bold");
-    doc.setFontSize(base + 1);
+    doc.setFontSize(totalSize(base + 1, 12));
     doc.text("TOTAL", marginX + 6, y);
     doc.text(formatCurrencyForPdf(total, currency), pageWidth - marginX - 6, y, { align: "right" });
     y += boxHeight / 2 + 8;
   } else {
     doc.setFont("courier", "bold");
-    doc.setFontSize(base + 1);
+    doc.setFontSize(totalSize(base + 1, 12));
     doc.text("TOTAL", marginX, y);
     doc.text(formatCurrencyForPdf(total, currency), pageWidth - marginX, y, { align: "right" });
     y += lineHeight + 8;
@@ -1352,7 +1536,7 @@ function renderThermalPdf(args: {
   y += 13;
 
   // ---- Amount in words (INR only) ----
-  if (currency === "INR") {
+  if (currency === "INR" && !tt?.compact) {
     doc.setFont("courier", "normal");
     doc.setFontSize(base - 2);
     doc.setTextColor(50, 50, 50);
@@ -1393,8 +1577,10 @@ function renderThermalPdf(args: {
     doc.setFontSize(base - 2);
     doc.setTextColor(50, 50, 50);
     for (const line of bankLines) {
-      doc.text(line, marginX, y);
-      y += lineHeight;
+      for (const part of wrapHard(line, contentWidth)) {
+        doc.text(part, marginX, y);
+        y += lineHeight;
+      }
     }
     y += 4;
   }
@@ -1427,8 +1613,10 @@ function renderThermalPdf(args: {
 
   doc.setFont("courier", "normal");
   doc.setFontSize(base - 1);
-  doc.text(`For ${profile.business_name || "Your Business"}`, centerX, y, { align: "center" });
-  y += lineHeight;
+  for (const part of wrapHard(`For ${profile.business_name || "Your Business"}`, contentWidth)) {
+    doc.text(part, centerX, y, { align: "center" });
+    y += lineHeight;
+  }
   doc.setFontSize(base - 2);
   doc.setTextColor(70, 70, 70);
   doc.text("Authorized Signatory", centerX, y, { align: "center" });
@@ -1444,6 +1632,13 @@ function renderThermalPdf(args: {
     doc.setFontSize(base - 3);
     doc.setTextColor(140, 140, 140);
     doc.text("Generated by Zen Biz", centerX, y, { align: "center" });
+  }
+
+  if (tt?.border) {
+    doc.setLineDashPattern([], 0);
+    doc.setDrawColor(20, 20, 20);
+    doc.setLineWidth(1.2);
+    doc.rect(3, 3, pageWidth - 6, y + 12 - 3);
   }
 
   if (args.preview) return doc.output("blob");

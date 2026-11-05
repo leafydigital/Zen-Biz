@@ -6,6 +6,7 @@ import { ForgotPasswordForm } from "@/components/ForgotPasswordForm";
 export const metadata: Metadata = {
   title: "Forgot Password",
   description: "Reset your Zen Biz account password.",
+  robots: { index: false, follow: false },
 };
 
 export default function ForgotPasswordPage() {

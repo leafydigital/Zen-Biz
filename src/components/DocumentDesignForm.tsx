@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { LiveInvoicePreview } from "@/components/LiveInvoicePreview";
 import { ACCENT_PRESETS, DEFAULT_ACCENT, customOptions, normalizeStyle } from "@/lib/docDesign";
+import { DOC_TEMPLATES, THERMAL_TEMPLATES } from "@/lib/docTemplates";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import type { Business, DocCustomOptions, DocSizes, DocDesignSettings, DocFontFamily, DocFontSize, DocPaperSize, DocStyle, Plan } from "@/types/database";
 import { DEFAULT_DOCUMENT_DESIGN } from "@/types/database";
@@ -20,6 +21,7 @@ const PAPER_SIZE_OPTIONS: { value: DocPaperSize; label: string; hint: string }[]
 const STYLE_OPTIONS: { value: DocStyle; label: string; hint: string; paid?: boolean }[] = [
   { value: "simple", label: "Simple", hint: "Clean black & white" },
   { value: "colourful", label: "Colourful", hint: "Professional, your colour", paid: true },
+  { value: "template", label: "Templates", hint: "10 ready designs", paid: true },
   { value: "custom", label: "Custom", hint: "Pick colour, font & sections", paid: true },
 ];
 
@@ -65,7 +67,7 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
   const features = getPlanFeatures(plan);
   const [design, setDesign] = useState<DocDesignSettings>(() => {
     const d = business.document_design ?? DEFAULT_DOCUMENT_DESIGN;
-    return { ...d, style: normalizeStyle(d.style), accentColor: d.accentColor ?? DEFAULT_ACCENT };
+    return { ...d, style: d.style === "template" ? "template" : normalizeStyle(d.style), accentColor: d.accentColor ?? DEFAULT_ACCENT };
   });
   const [signaturePreview, setSignaturePreview] = useState<string | null>(business.signature_url);
   const [signatureFile, setSignatureFile] = useState<File | null>(null);
@@ -95,8 +97,8 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
 
   async function handleSave() {
     const usesSizes = Object.keys(design.sizes ?? {}).length > 0;
-    if ((normalizeStyle(design.style) !== "simple" || usesSizes) && !features.colourfulStyles) {
-      setError("Colourful, Custom styles and size adjustments are on the Professional and Business plans. Use Simple, or upgrade to save these.");
+    if ((normalizeStyle(design.style) !== "simple" || usesSizes || Boolean(design.thermalTemplate)) && !features.colourfulStyles) {
+      setError("Colourful, Templates, Custom styles, receipt styles and size adjustments are on the Professional and Business plans. Use Simple, or upgrade to save these.");
       return;
     }
     setSaving(true);
@@ -144,7 +146,8 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
     router.refresh();
   }
 
-  const style = normalizeStyle(design.style);
+  const style = design.style === "template" ? "template" : normalizeStyle(design.style);
+  const isThermal = design.paperSize === "thermal" || design.paperSize === "thermal58";
   const custom = customOptions(design);
   const paidLocked = !features.colourfulStyles;
 
@@ -198,7 +201,7 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
 
       <div>
         <p className="mb-2 text-sm font-medium text-text">Design style</p>
-        <div className="grid gap-2 sm:grid-cols-3">
+        <div className="grid gap-2 sm:grid-cols-2">
           {STYLE_OPTIONS.map((opt) => {
             const active = style === opt.value;
             return (
@@ -232,7 +235,80 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
         )}
       </div>
 
-      {style !== "simple" && (
+      {style === "template" && !isThermal && (
+        <div>
+          <p className="mb-2 text-sm font-medium text-text">Choose a template</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {DOC_TEMPLATES.map((t) => {
+              const active = design.template === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => update({ template: t.id, accentColor: t.accent })}
+                  className={`flex flex-col gap-1.5 rounded-xl border p-2 text-left transition ${active ? "border-ink ring-2 ring-ink/20" : "border-paper-fold bg-white hover:border-ink/40"}`}
+                >
+                  <span className="relative block h-16 overflow-hidden rounded-md border border-paper-fold bg-white">
+                    {t.header === "band" && <span className="absolute inset-x-0 top-0 h-4" style={{ backgroundColor: t.accent }} />}
+                    {t.header === "sidebar" && <span className="absolute inset-y-0 left-0 w-4" style={{ backgroundColor: t.accent }} />}
+                    {t.header === "center" && (
+                      <>
+                        <span className="absolute left-1/2 top-1.5 h-1.5 w-8 -translate-x-1/2 rounded-sm" style={{ backgroundColor: t.accent }} />
+                        <span className="absolute left-1/2 top-4 h-0.5 w-12 -translate-x-1/2 bg-paper-fold" />
+                      </>
+                    )}
+                    {t.header === "split" && (
+                      <>
+                        <span className="absolute left-1.5 top-1.5 h-1.5 w-6 rounded-sm bg-paper-fold" />
+                        <span className="absolute right-1.5 top-1.5 h-2.5 w-8 rounded-sm" style={{ backgroundColor: t.accent }} />
+                      </>
+                    )}
+                    {(t.header === "left" || t.header === "minimal") && (
+                      <>
+                        <span className="absolute left-1.5 top-1.5 h-1.5 w-8 rounded-sm" style={{ backgroundColor: t.accent }} />
+                        <span className="absolute inset-x-1.5 top-4 h-0.5" style={{ backgroundColor: t.header === "left" ? t.accent : "transparent" }} />
+                      </>
+                    )}
+                    <span className={`absolute right-1.5 top-6 h-3 rounded-sm ${t.parties === "cards" ? "w-[44%]" : "w-[30%]"}`} style={{ backgroundColor: t.accent, opacity: t.parties === "bar" ? 0.9 : 0.15 }} />
+                    <span className="absolute left-5 top-6 h-3 w-[30%] rounded-sm" style={{ backgroundColor: t.accent, opacity: t.parties === "bar" ? 0.9 : 0.15 }} />
+                    <span className="absolute inset-x-1.5 top-[2.35rem] h-1.5 rounded-sm" style={{ left: t.header === "sidebar" ? "1.25rem" : undefined, backgroundColor: t.accent, opacity: t.table === "solid" || t.table === "zebra" ? 1 : 0.25 }} />
+                    <span className="absolute inset-x-1.5 top-[3.05rem] h-1 rounded-sm" style={{ left: t.header === "sidebar" ? "1.25rem" : undefined, backgroundColor: t.accent, opacity: t.table === "zebra" ? 0.2 : 0.07 }} />
+                    <span className="absolute bottom-1 right-1.5 h-2 rounded-sm" style={{ width: t.totals === "bar" ? "70%" : "35%", backgroundColor: t.accent }} />
+                  </span>
+                  <span className="text-sm font-semibold text-text">{t.name}</span>
+                  <span className="text-[0.7rem] leading-tight text-text-soft">{t.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {!design.template && <p className="mt-2 text-xs text-text-soft">Pick one to use it. You can still change its colour below.</p>}
+        </div>
+      )}
+
+      {isThermal && (
+        <div>
+          <p className="mb-2 text-sm font-medium text-text">Receipt style</p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+            {[{ id: "", name: "Standard", hint: "Your current receipt" }, ...THERMAL_TEMPLATES].map((t) => {
+              const active = (design.thermalTemplate ?? "") === t.id;
+              return (
+                <button
+                  key={t.id || "standard"}
+                  type="button"
+                  onClick={() => update({ thermalTemplate: t.id || undefined })}
+                  className={`flex flex-col gap-0.5 rounded-xl border px-3 py-2.5 text-left transition ${active ? "border-ink bg-ink text-paper" : "border-paper-fold bg-white text-text hover:border-ink/40"}`}
+                >
+                  <span className="text-sm font-semibold">{t.name}</span>
+                  <span className={`text-[0.7rem] leading-tight ${active ? "text-paper/70" : "text-text-soft"}`}>{t.hint}</span>
+                </button>
+              );
+            })}
+          </div>
+          {paidLocked && <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">Receipt styles are on the Professional and Business plans.</p>}
+        </div>
+      )}
+
+      {style !== "simple" && !isThermal && (
         <div>
           <p className="mb-2 text-sm font-medium text-text">Colour</p>
           <div className="flex flex-wrap items-center gap-2">

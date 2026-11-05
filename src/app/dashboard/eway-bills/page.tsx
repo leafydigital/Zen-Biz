@@ -19,6 +19,7 @@ export default async function EwayBillsPage() {
 
   return (
     <EwayBillCenter
+      kind="eway"
       invoices={(data ?? []).map(({ customers, ...inv }) => ({ invoice: inv as Invoice, customer: customers ?? null }))}
       business={business}
       allowed={getPlanFeatures(profile?.plan ?? "starter").ewayBill}

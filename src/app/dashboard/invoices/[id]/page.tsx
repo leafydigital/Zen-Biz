@@ -11,6 +11,7 @@ import type { Customer, Invoice, InvoiceItem } from "@/types/database";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { EwayBillPanel } from "@/components/EwayBillPanel";
+import { EinvoicePanel } from "@/components/EinvoicePanel";
 import type { Business } from "@/types/database";
 
 function formatCurrency(n: number, currency: string = "INR") {
@@ -103,6 +104,13 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
       </div>
 
       <EwayBillPanel
+        invoice={invoice}
+        items={items ?? []}
+        customer={customer}
+        business={business}
+        allowed={getPlanFeatures(profile?.plan ?? "starter").ewayBill}
+      />
+      <EinvoicePanel
         invoice={invoice}
         items={items ?? []}
         customer={customer}

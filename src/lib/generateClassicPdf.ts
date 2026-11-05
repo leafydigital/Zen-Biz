@@ -4,6 +4,8 @@ import type { DocDesignSettings, Profile } from "@/types/database";
 import { CURRENCY_SYMBOLS } from "@/types/database";
 import { amountToWordsINR } from "@/lib/amountToWords";
 import { getPlanFeatures } from "@/lib/planFeatures";
+import { getDocTemplate } from "@/lib/docTemplates";
+import { renderTemplatePdf } from "@/lib/generateTemplatePdf";
 import { customOptions, hexToRgb, lighten, normalizeStyle, type RGB } from "@/lib/docDesign";
 
 /**
@@ -121,6 +123,8 @@ export async function renderClassicPdf(args: ClassicArgs): Promise<Blob | void> 
   const plan = getPlanFeatures(profile.plan);
   let style = normalizeStyle(design.style);
   if (style !== "simple" && !plan.colourfulStyles && !preview) style = "simple";
+  const template = style !== "simple" && design.style === "template" ? getDocTemplate(design.template) : null;
+  if (template) return renderTemplatePdf(args, template);
   const opts = customOptions(design);
   const isSimple = style === "simple";
   const isCustom = style === "custom";

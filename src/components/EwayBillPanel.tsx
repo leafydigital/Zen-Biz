@@ -1,7 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { createClient } from "@/lib/supabase/client";
 import { buildEwayBillJson, type EwayExtra } from "@/lib/ewayBillJson";
 import type { Business, Customer, Invoice, InvoiceItem } from "@/types/database";
 
@@ -23,7 +24,14 @@ export function EwayBillPanel({
   business: Business | null;
   allowed: boolean;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
+  const [entering, setEntering] = useState(false);
+  const [saved, setSaved] = useState<{ no: string | null; until: string | null }>({ no: invoice.eway_bill_number ?? null, until: invoice.eway_valid_until ?? null });
+  const [numInput, setNumInput] = useState(invoice.eway_bill_number ?? "");
+  const [untilInput, setUntilInput] = useState(invoice.eway_valid_until ?? "");
+  const [saveMsg, setSaveMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [saving, setSaving] = useState(false);
   const [problems, setProblems] = useState<string[]>([]);
   const [done, setDone] = useState(false);
   const [f, setF] = useState<EwayExtra>({
@@ -37,6 +45,25 @@ export function EwayBillPanel({
     transporterName: invoice.transport_name ?? "",
   });
   const set = (k: keyof EwayExtra) => (e: React.ChangeEvent<HTMLInputElement>) => setF({ ...f, [k]: e.target.value });
+
+  async function saveNumber() {
+    const no = numInput.replace(/\s/g, "");
+    if (no && !/^\d{12}$/.test(no)) return setSaveMsg({ ok: false, text: "An e-way bill number has 12 digits." });
+    setSaving(true);
+    setSaveMsg(null);
+    const patch = {
+      eway_bill_number: no || null,
+      eway_bill_date: no ? invoice.eway_bill_date ?? new Date().toISOString().slice(0, 10) : null,
+      eway_valid_until: no ? untilInput || null : null,
+    };
+    const { error } = await createClient().from("invoices" as never).update(patch as never).eq("id", invoice.id);
+    setSaving(false);
+    if (error) return setSaveMsg({ ok: false, text: error.message });
+    setSaved({ no: patch.eway_bill_number, until: patch.eway_valid_until });
+    setSaveMsg({ ok: true, text: no ? "Saved. It now prints on the invoice." : "Removed." });
+    setEntering(false);
+    router.refresh();
+  }
 
   function download() {
     if (!business) return setProblems(["Business details could not be loaded."]);
@@ -57,10 +84,10 @@ export function EwayBillPanel({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wide text-text-soft">E-way bill</p>
-          {invoice.eway_bill_number ? (
+          {saved.no ? (
             <p className="mt-1 text-sm text-text">
-              <span className="font-ledger font-semibold">{invoice.eway_bill_number}</span>
-              {invoice.eway_valid_until && <span className="text-text-soft"> · valid until {invoice.eway_valid_until}</span>}
+              <span className="font-ledger font-semibold">{saved.no}</span>
+              {saved.until && <span className="text-text-soft"> · valid until {saved.until}</span>}
               {invoice.eway_distance_km ? <span className="text-text-soft"> · {invoice.eway_distance_km} km</span> : null}
             </p>
           ) : (
@@ -72,14 +99,25 @@ export function EwayBillPanel({
             <button onClick={() => setOpen((o) => !o)} className="rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-paper hover:bg-ink-light">
               Make e-way bill (free)
             </button>
-            <Link href={`/dashboard/invoices/${invoice.id}/edit`} className="rounded-lg border border-paper-fold bg-white px-3 py-1.5 text-xs font-semibold text-text hover:bg-paper">
-              {invoice.eway_bill_number ? "Edit details" : "Enter e-way bill number"}
-            </Link>
+            <button onClick={() => setEntering((o) => !o)} className="rounded-lg border border-paper-fold bg-white px-3 py-1.5 text-xs font-semibold text-text hover:bg-paper">
+              {saved.no ? "Edit e-way bill number" : "Enter e-way bill number"}
+            </button>
           </div>
         ) : (
           <p className="rounded-lg bg-brass/10 px-3 py-1.5 text-xs text-brass-dark">Available on the Professional and Business plans.</p>
         )}
       </div>
+
+      {allowed && entering && (
+        <div className="mt-4 grid gap-3 border-t border-paper-fold pt-4 sm:grid-cols-[1fr_1fr_auto] sm:items-end">
+          <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">E-way bill number (12 digits)</span>
+            <input inputMode="numeric" maxLength={12} value={numInput} onChange={(e) => setNumInput(e.target.value.replace(/\D/g, ""))} className={input} autoFocus /></label>
+          <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Valid until (optional)</span>
+            <input type="date" value={untilInput} onChange={(e) => setUntilInput(e.target.value)} className={input} /></label>
+          <button onClick={saveNumber} disabled={saving} className="rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper hover:bg-ink-light disabled:opacity-50">{saving ? "Saving…" : "Save"}</button>
+        </div>
+      )}
+      {saveMsg && <p className={`mt-3 rounded-lg px-3 py-2 text-sm ${saveMsg.ok ? "bg-success-bg text-success" : "bg-alert-bg text-alert"}`}>{saveMsg.text}</p>}
 
       {allowed && open && (
         <div className="mt-4 flex flex-col gap-4 border-t border-paper-fold pt-4">

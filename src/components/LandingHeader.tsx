@@ -20,6 +20,18 @@ export function LandingHeader() {
             Home
           </Link>
           <Link
+            href="#demo"
+            className="text-sm font-medium text-text-soft transition hover:text-ink"
+          >
+            Demo
+          </Link>
+          <Link
+            href="#about"
+            className="text-sm font-medium text-text-soft transition hover:text-ink"
+          >
+            About
+          </Link>
+          <Link
             href="#pricing"
             className="text-sm font-medium text-text-soft transition hover:text-ink"
           >

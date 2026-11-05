@@ -1,7 +1,5 @@
 import type { MetadataRoute } from "next";
-
-// Keep this in sync with SITE_URL in src/app/layout.tsx.
-const SITE_URL = "https://zenbiz.app";
+import { SITE_URL } from "@/lib/siteConfig";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -9,11 +7,11 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        // The dashboard is private, signed-in data — no reason for search
-        // engines to try crawling it, and RLS would block them anyway.
-        disallow: ["/dashboard", "/onboarding"],
+        // Private, signed-in or technical pages: nothing here belongs in search results.
+        disallow: ["/dashboard", "/onboarding", "/api/", "/app", "/auth/", "/reset-password", "/forgot-password"],
       },
     ],
     sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

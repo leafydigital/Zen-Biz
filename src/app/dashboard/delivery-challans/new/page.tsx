@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { CloseButton } from "@/components/CloseButton";
 import { createClient } from "@/lib/supabase/server";
 import { getNextDocumentNumber } from "@/lib/getNextDocumentNumber";
 import { NewChallanForm } from "@/components/NewChallanForm";
@@ -34,7 +35,8 @@ export default async function NewChallanPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
+      <div className="relative pr-12">
+        <CloseButton href="/dashboard/delivery-challans" />
         <h1 className="font-display text-2xl font-semibold text-text">
           New delivery challan
         </h1>

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { CloseButton } from "@/components/CloseButton";
 import { getNextDocumentNumber } from "@/lib/getNextDocumentNumber";
 import { NewQuotationForm } from "@/components/NewQuotationForm";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
@@ -28,7 +29,8 @@ export default async function NewQuotationPage() {
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
+      <div className="relative pr-12">
+        <CloseButton href="/dashboard/quotations" />
         <h1 className="font-display text-2xl font-semibold text-text">New quotation</h1>
         <p className="text-sm text-text-soft">Fill in the details and save.</p>
       </div>

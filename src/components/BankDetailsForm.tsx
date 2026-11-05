@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { LiveInvoicePreview } from "@/components/LiveInvoicePreview";
 import { DEFAULT_ACCENT, normalizeStyle } from "@/lib/docDesign";
 import { DEFAULT_DOCUMENT_DESIGN } from "@/types/database";
-import type { Business, Plan } from "@/types/database";
+import type { Business, DocDesignSettings, Plan } from "@/types/database";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 export function BankDetailsForm({ business, plan }: { business: Business; plan: Plan }) {
@@ -87,7 +87,7 @@ export function BankDetailsForm({ business, plan }: { business: Business; plan: 
   const savedDesign = business.document_design ?? DEFAULT_DOCUMENT_DESIGN;
   const previewDesign = {
     ...savedDesign,
-    style: normalizeStyle(savedDesign.style),
+    style: (savedDesign.style === "template" ? "template" : normalizeStyle(savedDesign.style)) as DocDesignSettings["style"],
     accentColor: savedDesign.accentColor ?? DEFAULT_ACCENT,
   };
 

@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { CloseButton } from "@/components/CloseButton";
 import { createClient } from "@/lib/supabase/server";
 import { NewInvoiceForm } from "@/components/NewInvoiceForm";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
@@ -47,7 +48,8 @@ export default async function EditInvoicePage({ params }: { params: { id: string
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
+      <div className="relative pr-12">
+        <CloseButton href="/dashboard/invoices" />
         <h1 className="font-display text-2xl font-semibold text-text">
           {isBillingRecord ? "Edit billing record" : `Edit invoice #${invoice.invoice_number}`}
         </h1>

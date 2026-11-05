@@ -7,6 +7,7 @@ import { AuthForm } from "@/components/AuthForm";
 export const metadata: Metadata = {
   title: "Log In",
   description: "Log in to your Zen Biz account to manage your products, customers, and invoices.",
+  alternates: { canonical: "/login" },
 };
 
 export default function LoginPage() {

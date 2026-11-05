@@ -8,13 +8,19 @@ export function LandingFooter() {
         <div>
           <Logo />
           <p className="mt-2 max-w-xs text-sm text-text-soft">
-            The private billing software for businesses who'd rather run
-            their shop than fight their spreadsheet.
+            Billing, GST invoices and barcode stock software for small
+            businesses who'd rather run their shop than fight their spreadsheet.
           </p>
         </div>
         <nav className="flex gap-6 text-sm text-text-soft" aria-label="Footer">
           <Link href="#features" className="hover:text-ink">
             Features
+          </Link>
+          <Link href="#barcode" className="hover:text-ink">
+            Barcode
+          </Link>
+          <Link href="/about-app" className="hover:text-ink">
+            About
           </Link>
           <Link href="#pricing" className="hover:text-ink">
             Pricing

@@ -6,7 +6,7 @@ export const PERMISSIONS = [
   { key: "overview", label: "Overview (dashboard home)", paths: [] as string[] },
   { key: "products", label: "Products / Items", paths: ["/dashboard/products", "/dashboard/stock"] },
   { key: "customers", label: "Customers", paths: ["/dashboard/customers"] },
-  { key: "invoices", label: "Invoices", paths: ["/dashboard/invoices", "/dashboard/eway-bills"] },
+  { key: "invoices", label: "Invoices", paths: ["/dashboard/invoices", "/dashboard/eway-bills", "/dashboard/e-invoices"] },
   { key: "billing", label: "Billing POS (make new bills)", paths: ["/dashboard/billing-records"] },
   { key: "billing_records", label: "Billing records (see past bills)", paths: [] as string[] },
   { key: "billing_add_item", label: "Billing: add item", paths: [] as string[] },

@@ -83,6 +83,8 @@ function transportLines(inv: Invoice): string {
     if (inv.eway_valid_until) parts.push(`Valid until: ${fmtDate(inv.eway_valid_until)}`);
     if (inv.eway_distance_km) parts.push(`Distance: ${inv.eway_distance_km} km`);
   }
+  if (inv.irn) parts.push(`IRN: ${inv.irn}`);
+  if (inv.irn_ack_no) parts.push(`Ack no: ${inv.irn_ack_no}`);
   if (inv.vehicle_number) parts.push(`Vehicle: ${inv.vehicle_number}`);
   if (inv.transport_name) parts.push(`Transport: ${inv.transport_name}`);
   if (inv.eway_transporter_id) parts.push(`Transporter ID: ${inv.eway_transporter_id}`);

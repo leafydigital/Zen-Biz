@@ -20,6 +20,7 @@ export const ACCENT_PRESETS: { name: string; hex: string }[] = [
 /** Old saved values map onto the three current styles. */
 export function normalizeStyle(style: DocStyle | string | undefined): ResolvedStyle {
   switch (style) {
+    case "template":
     case "colourful":
     case "colourful_paid":
     case "default":

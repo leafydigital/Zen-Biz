@@ -6,7 +6,8 @@ import { AuthForm } from "@/components/AuthForm";
 
 export const metadata: Metadata = {
   title: "Sign Up Free",
-  description: "Create your free Zen Biz account and start managing your products, customers, and invoices in one private billing software.",
+  description: "Create your free Zen Biz account and start billing: GST invoices, barcode scanning, stock and label printing in one private billing software.",
+  alternates: { canonical: "/signup" },
 };
 
 export default function SignupPage() {

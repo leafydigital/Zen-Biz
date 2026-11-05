@@ -19,7 +19,7 @@ export type GstPricingMode = "inclusive" | "exclusive";
 
 export type DocPaperSize = "a4" | "a5" | "thermal" | "thermal58";
 /** "default" / "thermal_simple" / "colourful_paid" are old saved values, still understood. */
-export type DocStyle = "simple" | "colourful" | "custom" | "default" | "thermal_simple" | "colourful_paid";
+export type DocStyle = "simple" | "colourful" | "custom" | "template" | "default" | "thermal_simple" | "colourful_paid";
 export type DocFontSize = 9 | 10 | 11 | 12 | 13 | 14;
 
 export type DocFontFamily = "helvetica" | "times" | "courier";
@@ -55,6 +55,10 @@ export interface DocDesignSettings {
   fontSize: DocFontSize;
   /** Hex colour such as "#1d4ed8" — used by Colourful and Custom. */
   accentColor?: string;
+  /** Id of a ready-made look (see docTemplates.ts), used when style is "template". */
+  template?: string;
+  /** Id of a thermal receipt look, used on 58/80 mm paper. */
+  thermalTemplate?: string;
   custom?: Partial<DocCustomOptions>;
   /** Separate size adjustments (paid plans). Unset = automatic. */
   sizes?: DocSizes;
@@ -305,6 +309,10 @@ export interface Invoice {
   eway_valid_until?: string | null;
   eway_distance_km?: number | null;
   eway_transporter_id?: string | null;
+  /** E-invoice (IRN) details. */
+  irn?: string | null;
+  irn_ack_no?: string | null;
+  irn_date?: string | null;
   tax_type: TaxType;
   place_of_supply_state: string | null;
   subtotal: number;

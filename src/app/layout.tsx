@@ -4,6 +4,7 @@ import { I18nProvider } from "@/lib/i18n/I18nContext";
 import { GlobalLoaderProvider } from "@/lib/GlobalLoaderContext";
 import { NativeAppBridge } from "@/components/NativeAppBridge";
 import { OfflineSupport } from "@/components/OfflineSupport";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/siteConfig";
 import "./globals.css";
 
 const fraunces = Fraunces({
@@ -28,35 +29,40 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
-// Change this to your real domain once you have one (custom domain or your
-// Netlify URL). It's the single source of truth for canonical links, the
-// sitemap, and social preview cards — update it here and everything else
-// (metadataBase, sitemap.ts, robots.ts) picks it up automatically.
-const SITE_URL = "https://zenbiz.app";
-
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Zen Biz — Free Business Billing Software for Products, Customers & Invoices",
+    default: SITE_TITLE,
     template: "%s · Zen Biz",
   },
-  description:
-    "Zen Biz is free online billing software for small businesses. Manage products & services, customers, and invoices in one private, secure dashboard — works on laptop, tablet, and mobile. No card required to start.",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
   keywords: [
-    "business billing software",
-    "free invoice software India",
-    "small business billing software",
-    "customer management software",
-    "invoice generator online free",
-    "product inventory management free",
+    "billing software for small business",
+    "free billing software India",
     "GST invoice software",
-    "quotation software for small business",
-    "billing software for shop",
-    "billing app for small business",
+    "GST billing app",
+    "barcode billing software",
+    "barcode scanner billing app mobile",
+    "barcode label printing software",
+    "stock management software",
+    "inventory management app for shop",
+    "e-way bill software",
+    "e-invoice software",
+    "invoice generator online free",
+    "quotation software",
+    "thermal receipt printer billing",
+    "offline billing app",
+    "billing app for shop",
+    "POS software for small business",
+    "supermarket billing software",
+    "kirana store billing app",
   ],
-  authors: [{ name: "Zen Biz" }],
-  creator: "Zen Biz",
-  publisher: "Zen Biz",
+  authors: [{ name: SITE_NAME, url: SITE_URL }],
+  creator: SITE_NAME,
+  publisher: SITE_NAME,
+  category: "business",
+  formatDetection: { telephone: false, email: false, address: false },
   robots: {
     index: true,
     follow: true,
@@ -64,6 +70,8 @@ export const metadata: Metadata = {
       index: true,
       follow: true,
       "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
     },
   },
   alternates: {
@@ -72,29 +80,19 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     url: SITE_URL,
-    siteName: "Zen Biz",
-    title: "Zen Biz — Free Business Billing Software for Products, Customers & Invoices",
-    description:
-      "Track products, customers, and invoices in one private billing software built for small businesses. Free to start, works on any device.",
-    images: [
-      {
-        url: "/og-image.png",
-        width: 1200,
-        height: 630,
-        alt: "Zen Biz — the private business billing software dashboard",
-      },
-    ],
+    siteName: SITE_NAME,
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
     locale: "en_IN",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Zen Biz — Free Business Billing Software",
-    description:
-      "Track products, customers, and invoices in one private billing software. Free to start, works on any device.",
-    images: ["/og-image.png"],
+    title: SITE_TITLE,
+    description: SITE_DESCRIPTION,
   },
-  icons: {
-    icon: "/favicon.ico",
+  verification: {
+    google: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION || undefined,
+    other: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ? { "msvalidate.01": process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION } : undefined,
   },
 };
 
@@ -112,17 +110,24 @@ export default function RootLayout({
 }) {
   const jsonLd = {
     "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    name: "Zen Biz",
-    applicationCategory: "BusinessApplication",
-    operatingSystem: "Web, Android, iOS",
-    description:
-      "Zen Biz is free online billing software for small businesses to manage products, services, customers, and invoices in one private, secure dashboard.",
-    offers: {
-      "@type": "Offer",
-      price: "0",
-      priceCurrency: "INR",
-    },
+    "@graph": [
+      {
+        "@type": "Organization",
+        "@id": `${SITE_URL}/#organization`,
+        name: SITE_NAME,
+        url: SITE_URL,
+        logo: `${SITE_URL}/apple-icon`,
+      },
+      {
+        "@type": "WebSite",
+        "@id": `${SITE_URL}/#website`,
+        url: SITE_URL,
+        name: SITE_NAME,
+        description: SITE_DESCRIPTION,
+        inLanguage: "en",
+        publisher: { "@id": `${SITE_URL}/#organization` },
+      },
+    ],
   };
 
   return (

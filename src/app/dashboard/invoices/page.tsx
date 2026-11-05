@@ -5,6 +5,7 @@ import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
 import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
 import { CURRENCY_SYMBOLS } from "@/types/database";
 import { getActiveBusiness } from "@/lib/getActiveBusiness";
+import { InvoiceTabs } from "@/components/InvoiceTabs";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -24,6 +25,7 @@ export default async function InvoicesPage() {
 
   return (
     <div className="flex flex-col gap-5">
+      <InvoiceTabs active="invoices" />
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="font-display text-2xl font-semibold text-text">Invoices</h1>
