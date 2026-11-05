@@ -3,6 +3,8 @@
 import { useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { EwayBillPanel } from "@/components/EwayBillPanel";
+import { EwayConnectModal } from "@/components/EwayConnectModal";
+import { GearIcon } from "@/components/CategoryManagerModal";
 import type { Business, Customer, Invoice, InvoiceItem } from "@/types/database";
 
 type Row = { invoice: Invoice; customer: Customer | null };
@@ -16,6 +18,7 @@ export function EwayBillCenter({ invoices, business, allowed }: { invoices: Row[
   const [openId, setOpenId] = useState<string | null>(null);
   const [items, setItems] = useState<Record<string, InvoiceItem[]>>({});
   const [loading, setLoading] = useState(false);
+  const [connectOpen, setConnectOpen] = useState(false);
 
   const q = query.trim().toLowerCase();
   const rows = useMemo(
@@ -41,12 +44,25 @@ export function EwayBillCenter({ invoices, business, allowed }: { invoices: Row[
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-text">E-way Bill</h1>
-        <p className="text-sm text-text-soft">
-          Make an e-way bill for any invoice for free on the GST portal, then keep its number here so it prints on the invoice.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className="font-display text-2xl font-semibold text-text">E-way Bill</h1>
+          <p className="text-sm text-text-soft">
+            Make an e-way bill for any invoice for free on the GST portal, then keep its number here so it prints on the invoice.
+          </p>
+        </div>
+        {allowed && business && (
+          <button
+            onClick={() => setConnectOpen(true)}
+            title="Connect e-way bill account"
+            aria-label="Connect e-way bill account"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-paper-fold bg-white text-text transition hover:bg-paper"
+          >
+            <GearIcon />
+          </button>
+        )}
       </div>
+      {connectOpen && business && <EwayConnectModal businessId={business.id} gstin={business.gst_number} onClose={() => setConnectOpen(false)} />}
 
       {!allowed && (
         <p className="rounded-xl bg-brass/10 px-4 py-3 text-sm text-brass-dark">
