@@ -538,18 +538,23 @@ export async function getPaymentHistory(): Promise<{ error: string | null; rows:
   const list = (data ?? []) as any[];
 
   const ownerIds = Array.from(new Set(list.map((r) => r.owner_id as string)));
-  const [profiles, users] = await Promise.all([
-    admin.from("profiles" as never).select("id, business_name").in("id", ownerIds.length ? ownerIds : ["00000000-0000-0000-0000-000000000000"]),
+  const noOwner = ["00000000-0000-0000-0000-000000000000"];
+  const [profiles, businesses, users] = await Promise.all([
+    admin.from("profiles" as never).select("id, business_name").in("id", ownerIds.length ? ownerIds : noOwner),
+    admin.from("businesses" as never).select("owner_id, business_name, created_at").in("owner_id", ownerIds.length ? ownerIds : noOwner).order("created_at", { ascending: true }),
     Promise.all(ownerIds.map(async (id) => [id, (await admin.auth.admin.getUserById(id)).data.user?.email ?? ""] as const)),
   ]);
-  const names = new Map(((profiles.data ?? []) as any[]).map((p) => [p.id, p.business_name as string]));
+  const names = new Map<string, string>();
+  for (const p of (profiles.data ?? []) as any[]) if (p.business_name) names.set(p.id, p.business_name);
+  // The business name is kept in the businesses table; the owner's first business wins.
+  for (const b of (businesses.data ?? []) as any[]) if (b.business_name && !names.has(b.owner_id)) names.set(b.owner_id, b.business_name);
   const emails = new Map(users);
 
   const cutoff = Date.now() - PENDING_MINUTES * 60_000;
   const rows: PaymentRow[] = list.map((r) => ({
     id: r.id,
     createdAt: r.created_at,
-    customer: names.get(r.owner_id) || "(no business name)",
+    customer: names.get(r.owner_id) || emails.get(r.owner_id) || "(unknown customer)",
     email: emails.get(r.owner_id) || "",
     plan: r.plan,
     cycle: r.billing_cycle,

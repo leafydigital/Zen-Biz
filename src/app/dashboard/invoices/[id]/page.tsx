@@ -10,6 +10,8 @@ import { CURRENCY_SYMBOLS } from "@/types/database";
 import type { Customer, Invoice, InvoiceItem } from "@/types/database";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getPlanFeatures } from "@/lib/planFeatures";
+import { EwayBillPanel } from "@/components/EwayBillPanel";
+import type { Business } from "@/types/database";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -45,6 +47,9 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
       .maybeSingle();
     customer = data as Customer | null;
   }
+
+  const { data: bizRow } = await supabase.from("businesses" as never).select("*").eq("id", invoice.business_id).maybeSingle();
+  const business = (bizRow as Business | null) ?? null;
 
   const hasAnyTax = (items ?? []).some((it: any) => Number(it.tax_percent ?? 0) > 0);
   const totalLineTax = (items ?? []).reduce(
@@ -96,6 +101,14 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
           </div>
         </div>
       </div>
+
+      <EwayBillPanel
+        invoice={invoice}
+        items={items ?? []}
+        customer={customer}
+        business={business}
+        allowed={getPlanFeatures(profile?.plan ?? "starter").ewayBill}
+      />
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="rounded-xl2 border border-paper-fold bg-paper-card p-5 shadow-card">

@@ -109,6 +109,7 @@ export function DashboardNav({
     { href: "/dashboard/suppliers", label: t.nav.suppliers, icon: "truck", locked: !features.purchases },
     { href: "/dashboard/customers", label: t.nav.customers, icon: "users" },
     { href: "/dashboard/invoices", label: t.nav.invoices, icon: "file" },
+    { href: "/dashboard/eway-bills", label: "E-way Bill", icon: "truck", locked: !features.ewayBill },
     { href: "/dashboard/billing-records", label: t.nav.billingRecords, icon: "file" },
     { href: "/dashboard/quotations", label: t.nav.quotations, icon: "file" },
     { href: "/dashboard/delivery-challans", label: t.nav.deliveryChallans, icon: "truck", locked: !features.deliveryChallans },
