@@ -201,8 +201,13 @@ export interface LabelItem {
 export function labelLayout(s: BarcodeSettings) {
   const pad = Math.min(1.5, s.labelWidth * 0.04);
   const lineH = (s.fontSize * 0.3528) * 1.25; // pt -> mm line height
-  const barH = (s.labelHeight - pad * 2) * (s.barHeight / 100);
-  return { pad, lineH, barH };
+  // The bars never grow past the room left after the text lines, so nothing overlaps.
+  const lines = [s.showBusiness, s.showName, s.showCode, s.showPrice].filter(Boolean).length;
+  const free = s.labelHeight - pad * 2 - lines * lineH - 0.6;
+  const barH = Math.max(3, Math.min(free, (s.labelHeight - pad * 2) * (s.barHeight / 100)));
+  /** Bars are drawn a little narrower than the label so they never touch its edge. */
+  const barW = (s.labelWidth - pad * 2) * 0.92;
+  return { pad, lineH, barH, barW };
 }
 
 /** Builds the label PDF. `copies` labels are made for each item. */
@@ -222,7 +227,7 @@ export async function generateLabelsPdf(
   const labels: LabelItem[] = [];
   for (const { item, copies } of items) for (let i = 0; i < Math.max(1, copies); i++) labels.push(item);
 
-  const { pad, lineH, barH } = labelLayout(s);
+  const { pad, lineH, barH, barW } = labelLayout(s);
   const rowsPerPage =
     s.paperType === "sheet"
       ? Math.max(1, Math.floor((paper.height - s.marginY * 2 + s.gapY) / (s.labelHeight + s.gapY)))
@@ -261,7 +266,7 @@ export async function generateLabelsPdf(
     const textBelow = (s.showCode ? lineH : 0) + (s.showPrice ? lineH : 0);
     const availH = Math.max(4, y + s.labelHeight - pad - cy - textBelow);
     const h = Math.min(barH, availH);
-    const w = Math.min(innerW, Math.max(h * bars.ratio, innerW * 0.6));
+    const w = barW;
     const bx = s.align === "center" ? x + (s.labelWidth - w) / 2 : x + pad;
     doc.addImage(bars.url, "PNG", bx, cy + 0.3, w, h);
     cy += h + 0.6;
@@ -280,7 +285,7 @@ function labelsHtml(items: { item: LabelItem; copies: number }[], s: BarcodeSett
   const paper = paperSize(s);
   const labels: LabelItem[] = [];
   for (const { item, copies } of items) for (let i = 0; i < Math.max(1, copies); i++) labels.push(item);
-  const { pad, lineH, barH } = labelLayout(s);
+  const { pad, lineH, barH, barW } = labelLayout(s);
   const rowsPerPage =
     s.paperType === "sheet"
       ? Math.max(1, Math.floor((paper.height - s.marginY * 2 + s.gapY) / (s.labelHeight + s.gapY)))
@@ -295,7 +300,7 @@ function labelsHtml(items: { item: LabelItem; copies: number }[], s: BarcodeSett
     const x = s.marginX + col * (s.labelWidth + s.gapX);
     const y = (s.paperType === "sheet" ? s.marginY : 0) + row * (s.labelHeight + s.gapY);
     const bars = barcodePng(label.code, s);
-    const w = Math.min(s.labelWidth - pad * 2, Math.max(barH * bars.ratio, (s.labelWidth - pad * 2) * 0.6));
+    const w = barW;
     pages[pages.length - 1] +=
       `<div class="l" style="left:${x}mm;top:${y}mm;width:${s.labelWidth}mm;height:${s.labelHeight}mm;padding:${pad}mm;text-align:${s.align};font-size:${s.fontSize}pt;line-height:${lineH}mm">` +
       (s.showBusiness && businessName ? `<div class="t b">${esc(businessName)}</div>` : "") +

@@ -1,28 +1,31 @@
 "use client";
 
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { barcodeSvg, labelLayout, paperSize, type BarcodeSettings, type LabelItem } from "@/lib/barcode";
 
-const MM_TO_PX = 3.78;
+const MM = 3.78; // CSS px per mm at 100%
+const PT = 96 / 72; // CSS px per point
 
-/** Draws the label paper to scale, so what you see is the layout that prints. */
+/**
+ * Draws the label paper at its real size (mm, pt) and then shrinks the whole
+ * drawing to fit the screen, so nothing overlaps or spills out on a phone and
+ * the proportions are exactly those of the printed label.
+ */
 export function LabelPreview({
   settings: s,
   item,
   businessName,
-  maxWidthPx = 460,
   rows,
 }: {
   settings: BarcodeSettings;
   item: LabelItem;
   businessName: string;
-  maxWidthPx?: number;
   /** How many label rows to show (defaults to 2 on a roll, 3 on a sheet). */
   rows?: number;
 }) {
   const paper = paperSize(s);
   const showRows = rows ?? (s.paperType === "sheet" ? 3 : 2);
-  const { pad, lineH, barH } = labelLayout(s);
+  const { pad, lineH, barH, barW } = labelLayout(s);
   const svg = useMemo(() => {
     try {
       return barcodeSvg(item.code, s);
@@ -31,10 +34,38 @@ export function LabelPreview({
     }
   }, [item.code, s]);
 
-  const visibleH = s.paperType === "sheet" ? s.marginY + showRows * (s.labelHeight + s.gapY) : paper.height * showRows;
-  const scale = Math.min(MM_TO_PX, maxWidthPx / paper.width);
-  const px = (mm: number) => mm * scale;
-  const fontPx = s.fontSize * 0.3528 * scale;
+  const hostRef = useRef<HTMLDivElement>(null);
+  const [avail, setAvail] = useState(300);
+  useEffect(() => {
+    const el = hostRef.current;
+    if (!el) return;
+    const update = () => setAvail(el.clientWidth || 300);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const visibleMm = s.paperType === "sheet" ? s.marginY + showRows * (s.labelHeight + s.gapY) : paper.height * showRows;
+  const naturalW = paper.width * MM;
+  const naturalH = visibleMm * MM;
+  const k = Math.min(1.6, avail / naturalW);
+  const px = (mm: number) => mm * MM;
+
+  const line = (text: string, bold = false) => (
+    <div
+      style={{
+        height: px(lineH),
+        lineHeight: `${px(lineH)}px`,
+        whiteSpace: "nowrap",
+        overflow: "hidden",
+        textOverflow: "ellipsis",
+        fontWeight: bold ? 700 : 400,
+      }}
+    >
+      {text}
+    </div>
+  );
 
   const cells = [];
   for (let r = 0; r < showRows; r++) {
@@ -44,43 +75,54 @@ export function LabelPreview({
       cells.push(
         <div
           key={`${r}-${c}`}
-          className="absolute overflow-hidden border border-dashed border-gray-400 bg-white"
           style={{
+            position: "absolute",
+            boxSizing: "border-box",
             left: px(left),
             top: px(top),
             width: px(s.labelWidth),
             height: px(s.labelHeight),
             padding: px(pad),
-            fontSize: fontPx,
-            lineHeight: `${px(lineH)}px`,
+            overflow: "hidden",
+            background: "#fff",
+            border: "1px dashed #9ca3af",
             textAlign: s.align,
+            fontSize: s.fontSize * PT,
+            fontFamily: "Arial, Helvetica, sans-serif",
             color: "#000",
           }}
         >
-          {s.showBusiness && businessName && <div className="truncate font-bold">{businessName}</div>}
-          {s.showName && <div className="truncate">{item.name}</div>}
+          {s.showBusiness && businessName && line(businessName, true)}
+          {s.showName && line(item.name)}
           <div
             style={{
               height: px(barH),
-              margin: s.align === "center" ? "0 auto" : undefined,
-              width: "92%",
+              width: px(barW),
+              margin: `${px(0.3)}px ${s.align === "center" ? "auto" : "0"}`,
             }}
             dangerouslySetInnerHTML={{ __html: svg }}
           />
-          {s.showCode && <div className="truncate">{item.code}</div>}
-          {s.showPrice && item.price != null && <div className="truncate font-bold">Rs. {item.price}</div>}
+          {s.showCode && line(item.code)}
+          {s.showPrice && item.price != null && line(`Rs. ${item.price}`, true)}
         </div>
       );
     }
   }
 
   return (
-    <div className="overflow-x-auto">
-      <div
-        className="relative rounded border border-gray-300 bg-gray-100 shadow-inner"
-        style={{ width: px(paper.width), height: px(visibleH) }}
-      >
-        {cells}
+    <div ref={hostRef} className="w-full">
+      <div className="overflow-hidden rounded border border-gray-300 bg-gray-100" style={{ width: naturalW * k, height: naturalH * k }}>
+        <div
+          style={{
+            position: "relative",
+            width: naturalW,
+            height: naturalH,
+            transform: `scale(${k})`,
+            transformOrigin: "top left",
+          }}
+        >
+          {cells}
+        </div>
       </div>
       <p className="mt-2 text-xs text-text-soft">
         Paper {Math.round(paper.width * 10) / 10} mm wide · each label {s.labelWidth} × {s.labelHeight} mm · {s.columns}{" "}

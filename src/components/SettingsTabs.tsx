@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type { BusinessRole, Business, Plan, Profile } from "@/types/database";
 import { EmailConnectionForm } from "@/components/EmailConnectionForm";
@@ -80,13 +80,61 @@ export function SettingsTabs({
   const VISIBLE_TABS = TABS.filter((x) => VISIBLE.includes(x.id));
   const searchParams = useSearchParams();
   const initialTab = (searchParams.get("tab") as Tab) || "general";
+  // Only inside the Android app: tabs become a slide-in side menu. The website keeps the top tabs.
+  const [isNative, setIsNative] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  useEffect(() => {
+    setIsNative(Boolean((window as any).Capacitor?.isNativePlatform?.())); // eslint-disable-line @typescript-eslint/no-explicit-any
+  }, []);
   const [tab, setTab] = useState<Tab>(
     VISIBLE_TABS.some((tabDef) => tabDef.id === initialTab) ? initialTab : VISIBLE_TABS[0].id
   );
 
   return (
     <div className="flex flex-col gap-5">
-      <div className="flex gap-1 overflow-x-auto rounded-xl bg-paper-card p-1 shadow-card">
+      {isNative && (
+        <>
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            className="flex items-center gap-3 rounded-xl bg-paper-card px-4 py-3 text-left text-sm font-semibold text-text shadow-card"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+            <span className="flex-1">{VISIBLE_TABS.find((x) => x.id === tab)?.label}</span>
+            <span className="text-xs font-normal text-text-soft">Menu</span>
+          </button>
+          {menuOpen && (
+            <div className="fixed inset-0 z-40" role="dialog" aria-modal="true">
+              <div className="absolute inset-0 bg-ink/40" onClick={() => setMenuOpen(false)} />
+              <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col gap-1 overflow-y-auto bg-paper-card p-4 shadow-card">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-display text-base font-semibold text-text">Settings</span>
+                  <button onClick={() => setMenuOpen(false)} className="rounded-lg px-2 py-1 text-sm text-text-soft">
+                    Close
+                  </button>
+                </div>
+                {VISIBLE_TABS.map((t) => (
+                  <button
+                    key={t.id}
+                    onClick={() => {
+                      setTab(t.id);
+                      setMenuOpen(false);
+                    }}
+                    className={`rounded-xl px-3.5 py-3 text-left text-sm font-medium transition ${
+                      tab === t.id ? "bg-ink text-paper" : "text-text hover:bg-ink/[0.05]"
+                    }`}
+                  >
+                    {t.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+      <div className={`${isNative ? "hidden" : "flex"} gap-1 overflow-x-auto rounded-xl bg-paper-card p-1 shadow-card`}>
         {VISIBLE_TABS.map((t) => (
           <button
             key={t.id}
