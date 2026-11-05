@@ -165,7 +165,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-text">Business email</span>
+        <span className="text-sm font-medium text-text">{t.form.email}</span>
         <input
           type="email"
           value={email}
@@ -174,13 +174,12 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
           className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
         />
         <span className="text-xs text-text-soft">
-          Invoices emailed from Zen Biz are sent in your business name and customers&apos; replies come to this
-          address. Everyone on the team can see it; only people with General settings edit access can change it.
+          {t.form.emailHint}
         </span>
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-text">Business name</span>
+        <span className="text-sm font-medium text-text">{t.form.name}</span>
         <input
           required
           value={businessName}
@@ -190,7 +189,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
       </label>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-text">Business type</span>
+        <span className="text-sm font-medium text-text">{t.form.type}</span>
         <select
           required
           value={businessTypeSelect}
@@ -198,21 +197,21 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
           className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
         >
           <option value="" disabled>
-            Select your business type…
+            {t.form.type}…
           </option>
           {BUSINESS_TYPE_OPTIONS.map((opt) => (
             <option key={opt} value={opt}>
               {opt}
             </option>
           ))}
-          <option value={OTHER_VALUE}>Other (type your own)</option>
+          <option value={OTHER_VALUE}>{t.form.typeOther}</option>
         </select>
       </label>
 
       {businessTypeSelect === OTHER_VALUE && (
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-text">
-            Describe your business type
+            {t.form.type}
           </span>
           <input
             required
@@ -225,7 +224,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
 
       <div className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-text">
-          Business logo <span className="text-text-soft">(optional)</span>
+          {t.form.logo} <span className="text-text-soft">{t.form.optional}</span>
         </span>
         <div className="flex items-center gap-4">
           {logoPreview ? (
@@ -253,7 +252,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
                 onClick={removeLogo}
                 className="self-start text-xs font-medium text-alert"
               >
-                Remove
+                {t.form.remove}
               </button>
             )}
           </div>
@@ -262,7 +261,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-text">
-          Business address <span className="text-text-soft">(optional)</span>
+          {t.form.address} <span className="text-text-soft">{t.form.optional}</span>
         </span>
         <textarea
           value={address}
@@ -274,14 +273,14 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
 
       <label className="flex flex-col gap-1.5">
         <span className="text-sm font-medium text-text">
-          State <span className="text-text-soft">(for GST — CGST/SGST vs IGST)</span>
+          {t.form.state} <span className="text-text-soft">{t.form.stateHint}</span>
         </span>
         <select
           value={state}
           onChange={(e) => setState(e.target.value)}
           className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
         >
-          <option value="">Select state…</option>
+          <option value="">{t.form.selectState}</option>
           {INDIAN_STATE_NAMES.map((s) => (
             <option key={s} value={s}>
               {s}
@@ -297,7 +296,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-text">
-            Phone number <span className="text-text-soft">(optional)</span>
+            {t.form.phone} <span className="text-text-soft">{t.form.optional}</span>
           </span>
           <input
             value={phone}
@@ -308,7 +307,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
 
         <label className="flex flex-col gap-1.5">
           <span className="text-sm font-medium text-text">
-            GST number <span className="text-text-soft">(optional)</span>
+            {t.form.gst} <span className="text-text-soft">{t.form.optional}</span>
           </span>
           <input
             value={gstNumber}
@@ -331,7 +330,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
       </div>
 
       <label className="flex flex-col gap-1.5">
-        <span className="text-sm font-medium text-text">Default currency</span>
+        <span className="text-sm font-medium text-text">{t.form.currency}</span>
         <select
           value={defaultCurrency}
           onChange={(e) => setDefaultCurrency(e.target.value)}
@@ -344,8 +343,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
           ))}
         </select>
         <span className="text-xs text-text-soft">
-          Suggested by default on new invoices, quotations, and purchases —
-          you can still change it for any individual document.
+          {t.form.currencyHint}
         </span>
       </label>
 
@@ -372,7 +370,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
       )}
       {saved && !error && (
         <p className="rounded-lg bg-success-bg px-3.5 py-2.5 text-sm text-success" role="status">
-          Saved.
+          {t.form.saved}
         </p>
       )}
 
@@ -381,7 +379,7 @@ export function SettingsForm({ profile, business }: { profile: Profile; business
         disabled={saving}
         className="self-start rounded-xl bg-ink px-6 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60"
       >
-        {saving ? "Saving…" : "Save changes"}
+        {saving ? t.form.saving : t.form.save}
       </button>
     </form>
   );

@@ -48,16 +48,16 @@ export function SettingsTabs({
   const { t } = useTranslation();
   const TABS: { id: Tab; label: string }[] = [
     { id: "general", label: t.settings.general },
-    { id: "businesses", label: "Businesses" },
-    { id: "team", label: "Team" },
+    { id: "businesses", label: t.settings.businesses },
+    { id: "team", label: t.settings.team },
     { id: "appearance", label: t.settings.documentAppearance },
     { id: "terms", label: t.settings.termsConditions },
     { id: "bank", label: t.settings.bankPayment },
-    { id: "format", label: "Formats" },
-    { id: "barcode", label: "Barcode" },
+    { id: "format", label: t.settings.formats },
+    { id: "barcode", label: t.settings.barcode },
     { id: "plan", label: t.settings.planBilling },
-    { id: "security", label: "Security" },
-    { id: "log", label: "Activity log" },
+    { id: "security", label: t.settings.security },
+    { id: "log", label: t.settings.activityLog },
   ];
   // Owner/admin see every tab. Others see only the settings sections their
   // role ticks (view or edit), plus Security so everyone can change their
@@ -153,7 +153,7 @@ export function SettingsTabs({
       <div className={`${tab === "appearance" || tab === "bank" || tab === "barcode" ? "max-w-6xl" : "max-w-3xl"} rounded-xl2 border border-paper-fold bg-paper-card p-6 shadow-card`}>
         {levelFor(tab) === "view" && !isFullAccess && (
           <p className="mb-4 rounded-lg bg-brass/10 px-3.5 py-2.5 text-sm text-brass-dark">
-            View only — you can see these details but not change them.
+            {t.settings.viewOnly}
           </p>
         )}
         <fieldset key={business.id} disabled={levelFor(tab) === "view" && !isFullAccess} className="min-w-0 border-0 p-0">

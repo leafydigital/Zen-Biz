@@ -2,7 +2,7 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { createClient } from "@/lib/supabase/server";
 import { SettingsTabs } from "@/components/SettingsTabs";
-import { getTranslations } from "@/lib/i18n/translations";
+import { SettingsHeader } from "@/components/SettingsHeader";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getMyAccess } from "@/lib/getMyAccess";
 import { getBusinessRoles } from "@/lib/getBusinessRoles";
@@ -29,19 +29,11 @@ export default async function SettingsPage() {
     getBusinessRoles(business.owner_id),
   ]);
 
-  const t = getTranslations(profile.language);
   const isOwner = business.owner_id === user.id;
 
   return (
     <div className="flex flex-col gap-5">
-      <div>
-        <h1 className="font-display text-2xl font-semibold text-text">
-          {t.settings.title}
-        </h1>
-        <p className="text-sm text-text-soft">
-          {t.settings.subtitle}
-        </p>
-      </div>
+      <SettingsHeader />
       <Suspense>
         <SettingsTabs
           profile={profile}

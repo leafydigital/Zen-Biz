@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { clearLoginVerification } from "@/lib/actions/otpActions";
 import { useAppConfig } from "@/lib/AppConfigContext";
-import { getLabels } from "@/lib/businessLabels";
+import { getLabels, ITEM_PLURAL_KEYS } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { Logo } from "@/components/Logo";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
@@ -103,7 +103,7 @@ export function DashboardNav({
 
   const mainItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard", label: t.nav.overview, icon: "home" },
-    { href: "/dashboard/products", label: labels.itemPlural, icon: "box" },
+    { href: "/dashboard/products", label: (ITEM_PLURAL_KEYS[labels.itemPlural as keyof typeof ITEM_PLURAL_KEYS] && t.itemNames[ITEM_PLURAL_KEYS[labels.itemPlural as keyof typeof ITEM_PLURAL_KEYS]]) || labels.itemPlural, icon: "box" },
     { href: "/dashboard/stock", label: t.nav.stock, icon: "box" },
     { href: "/dashboard/purchases", label: t.nav.purchases, icon: "cart", locked: !features.purchases },
     { href: "/dashboard/suppliers", label: t.nav.suppliers, icon: "truck", locked: !features.purchases },

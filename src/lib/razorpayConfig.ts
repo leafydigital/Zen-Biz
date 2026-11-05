@@ -23,6 +23,8 @@ export async function getRazorpayConfig(): Promise<RazorpayConfig | null> {
     };
     if (data) {
       if (!data.enabled || !data.key_id || !data.key_secret_enc) return null;
+      // A test key saved earlier must never be used: payments stay off until live keys are saved.
+      if (!data.key_id.startsWith("rzp_live_")) return null;
       return {
         keyId: data.key_id,
         keySecret: decryptSecret(data.key_secret_enc),

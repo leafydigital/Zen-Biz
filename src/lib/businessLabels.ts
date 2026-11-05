@@ -172,3 +172,15 @@ export function getLabels(businessType?: string): BusinessTypeProfile {
   }
   return GENERIC_PROFILE;
 }
+
+/** The translation key for each English item-plural name, so the menu can follow the chosen language. */
+export const ITEM_PLURAL_KEYS = {
+  "Products & Services": "productsServices",
+  Packages: "packages",
+  Items: "items",
+  Products: "products",
+  "Menu items": "menuItems",
+  Services: "services",
+  Listings: "listings",
+  "Services & materials": "servicesMaterials",
+} as const;
