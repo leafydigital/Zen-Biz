@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppConfig } from "@/lib/AppConfigContext";
+import { formatPrice } from "@/lib/currency";
 import { useState } from "react";
 import Link from "next/link";
 import { PLAN_LABELS, getPlanFeatures } from "@/lib/planFeatures";
@@ -8,7 +9,7 @@ import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import type { Profile } from "@/types/database";
 
 export function PlanBillingTab({ profile }: { profile: Profile }) {
-  const { pricing: allPricing } = useAppConfig();
+  const { pricing: allPricing, currency } = useAppConfig();
   const [compareOpen, setCompareOpen] = useState(false);
   const features = getPlanFeatures(profile.plan);
   const pricing = profile.plan === "starter" ? null : allPricing[profile.plan];
@@ -32,7 +33,7 @@ export function PlanBillingTab({ profile }: { profile: Profile }) {
           {PLAN_LABELS[profile.plan]}
           {pricing && profile.billing_cycle && (
             <span className="ml-2 text-base font-normal text-text-soft">
-              ₹{pricing[profile.billing_cycle].toLocaleString("en-IN")}/
+              {formatPrice(pricing[profile.billing_cycle], currency)}/
               {profile.billing_cycle === "monthly" ? "mo" : "yr"}
             </span>
           )}

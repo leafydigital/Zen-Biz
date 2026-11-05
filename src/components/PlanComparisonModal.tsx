@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppConfig } from "@/lib/AppConfigContext";
+import { formatPrice } from "@/lib/currency";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import type { Plan } from "@/types/database";
@@ -72,7 +73,7 @@ export function PlanComparisonModal({
   currentPlan: Plan;
   onClose: () => void;
 }) {
-  const { pricing: allPricing, paymentsEnabled } = useAppConfig();
+  const { pricing: allPricing, paymentsEnabled, currency } = useAppConfig();
   const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
@@ -153,7 +154,7 @@ export function PlanComparisonModal({
                   {p.label}
                 </p>
                 <p className="font-display text-2xl font-bold text-text">
-                  {pricing ? `₹${pricing[cycle].toLocaleString("en-IN")}` : "₹0"}
+                  {pricing ? formatPrice(pricing[cycle], currency) : formatPrice(0, currency)}
                   {pricing && (
                     <span className="text-sm font-normal text-text-soft">
                       /{cycle === "monthly" ? "mo" : "yr"}

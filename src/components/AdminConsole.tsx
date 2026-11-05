@@ -51,6 +51,7 @@ type Discount = {
   plans: string[] | null;
   max_uses: number | null;
   used_count: number;
+  starts_at?: string | null;
   expires_at: string | null;
   active: boolean;
   note: string | null;
@@ -164,7 +165,8 @@ export function AdminConsole({
   const [version, setVersion] = useState(config.version);
   const [contact, setContact] = useState(config.contact);
   const [pricing, setPricing] = useState(config.pricing);
-  const [d, setD] = useState({ code: "", kind: "percent" as "percent" | "flat", value: "", plans: [] as string[], maxUses: "", expiresAt: "", note: "" });
+  const [pricingUsd, setPricingUsd] = useState(config.pricingUsd);
+  const [d, setD] = useState({ code: "", kind: "percent" as "percent" | "flat", value: "", plans: [] as string[], maxUses: "", startsAt: "", expiresAt: "", note: "" });
 
   function run(fn: () => Promise<{ error: string | null; code?: string }>, ok: string, refresh = false) {
     setMsg(null);
@@ -462,27 +464,42 @@ export function AdminConsole({
 
         {tab === "pricing" && (
           <fieldset disabled={lvl("pricing") !== "edit"} className={`${card} flex flex-col gap-4`}>
-            <h2 className="font-semibold text-text">Plan prices (₹)</h2>
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(["professional", "business"] as const).map((p) => (
-                <div key={p} className="flex flex-col gap-2 rounded-xl border border-paper-fold p-4">
-                  <p className="text-sm font-semibold capitalize text-text">{p}</p>
-                  {(["monthly", "yearly"] as const).map((c) => (
-                    <label key={c} className="flex flex-col gap-1">
-                      <span className="text-xs font-medium capitalize text-text-soft">{c}</span>
-                      <input
-                        inputMode="numeric"
-                        value={pricing[p][c]}
-                        onChange={(e) => setPricing({ ...pricing, [p]: { ...pricing[p], [c]: Number(e.target.value.replace(/\D/g, "")) } })}
-                        className={input}
-                      />
-                    </label>
+            <p className="text-xs text-text-soft">
+              Visitors see the prices for their country, found automatically from their internet connection. India sees rupees; every other country sees dollars.
+            </p>
+            {(
+              [
+                ["India · Indian rupees (₹)", pricing, setPricing, "numeric"],
+                ["Other countries · US dollars ($)", pricingUsd, setPricingUsd, "decimal"],
+              ] as const
+            ).map(([title, table, setTable, mode]) => (
+              <div key={title} className="flex flex-col gap-3">
+                <h2 className="font-semibold text-text">{title}</h2>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  {(["professional", "business"] as const).map((p) => (
+                    <div key={p} className="flex flex-col gap-2 rounded-xl border border-paper-fold p-4">
+                      <p className="text-sm font-semibold capitalize text-text">{p}</p>
+                      {(["monthly", "yearly"] as const).map((c) => (
+                        <label key={c} className="flex flex-col gap-1">
+                          <span className="text-xs font-medium capitalize text-text-soft">{c}</span>
+                          <input
+                            inputMode={mode}
+                            value={table[p][c]}
+                            onChange={(e) => {
+                              const v = mode === "numeric" ? e.target.value.replace(/\D/g, "") : e.target.value.replace(/[^0-9.]/g, "");
+                              setTable({ ...table, [p]: { ...table[p], [c]: Number(v) } });
+                            }}
+                            className={input}
+                          />
+                        </label>
+                      ))}
+                    </div>
                   ))}
                 </div>
-              ))}
-            </div>
-            <button disabled={pending} onClick={() => run(() => savePricing(JSON.parse(JSON.stringify(pricing))), "Prices saved.")} className={`${primary} self-start`}>Save prices</button>
-            <p className="text-xs text-text-soft">Prices shown in the app update at once. The payment route must read the same prices — see the setup note.</p>
+              </div>
+            ))}
+            <button disabled={pending} onClick={() => run(() => savePricing(JSON.parse(JSON.stringify(pricing)), JSON.parse(JSON.stringify(pricingUsd))), "Prices saved.")} className={`${primary} self-start`}>Save prices</button>
+            <p className="text-xs text-text-soft">Prices shown in the app update at once, and checkout charges exactly these. For dollar payments, turn on International Payments in your Razorpay account.</p>
           </fieldset>
         )}
 
@@ -499,8 +516,24 @@ export function AdminConsole({
                   <option value="percent">Percent off (%)</option><option value="flat">Flat amount off (₹)</option></select></label>
               <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Value</span>
                 <input inputMode="decimal" value={d.value} onChange={(e) => setD({ ...d, value: e.target.value.replace(/[^0-9.]/g, "") })} className={input} /></label>
-              <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Max uses (empty = unlimited)</span>
-                <input inputMode="numeric" value={d.maxUses} onChange={(e) => setD({ ...d, maxUses: e.target.value.replace(/\D/g, "") })} className={input} /></label>
+              <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Only for the first … customers (empty = no limit)</span>
+                <input inputMode="numeric" value={d.maxUses} onChange={(e) => setD({ ...d, maxUses: e.target.value.replace(/\D/g, "") })} placeholder="e.g. 50" className={input} />
+                <span className="flex flex-wrap items-center gap-1.5">
+                  {[10, 25, 50, 100].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setD({ ...d, maxUses: String(n) })}
+                      className="rounded-full border border-paper-fold bg-white px-2.5 py-0.5 text-xs font-semibold text-text-soft hover:bg-paper"
+                    >
+                      First {n}
+                    </button>
+                  ))}
+                  <span className="text-xs text-text-soft">or type any number. Each customer can use a code once.</span>
+                </span>
+              </label>
+              <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Starts on (optional — code works from this day)</span>
+                <input type="date" value={d.startsAt} onChange={(e) => setD({ ...d, startsAt: e.target.value })} className={input} /></label>
               <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Expiry date (code stops working automatically after this day)</span>
                 <input type="date" min={new Date().toLocaleDateString("en-CA")} value={d.expiresAt} onChange={(e) => setD({ ...d, expiresAt: e.target.value })} className={input} />
                 <span className="flex flex-wrap items-center gap-1.5">
@@ -537,7 +570,7 @@ export function AdminConsole({
                 disabled={pending}
                 onClick={() =>
                   run(
-                    () => createDiscount({ code: d.code, kind: d.kind, value: Number(d.value), plans: d.plans, maxUses: d.maxUses ? Number(d.maxUses) : null, expiresAt: d.expiresAt || null, note: d.note }),
+                    () => createDiscount({ code: d.code, kind: d.kind, value: Number(d.value), plans: d.plans, maxUses: d.maxUses ? Number(d.maxUses) : null, startsAt: d.startsAt || null, expiresAt: d.expiresAt || null, note: d.note }),
                     "Created code"
                   )
                 }
@@ -562,7 +595,8 @@ export function AdminConsole({
                       </p>
                       <p className="text-xs text-text-soft">
                         {x.kind === "percent" ? `${x.value}% off` : `₹${x.value} off`} · {x.plans?.length ? x.plans.join(", ") : "all plans"} · used {x.used_count}
-                        {x.max_uses !== null ? `/${x.max_uses}` : ""}
+                        {x.max_uses !== null ? `/${x.max_uses}${x.used_count >= x.max_uses ? " (full)" : ""}` : ""}
+                        {x.starts_at ? ` · from ${new Date(x.starts_at).toLocaleDateString("en-IN")}` : ""}
                         {x.expires_at ? ` · ${new Date(x.expires_at) < new Date() ? "expired" : "until"} ${new Date(x.expires_at).toLocaleDateString("en-IN")}` : ""}
                         {x.note ? ` · ${x.note}` : ""}
                       </p>

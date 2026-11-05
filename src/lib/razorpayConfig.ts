@@ -32,7 +32,8 @@ export async function getRazorpayConfig(): Promise<RazorpayConfig | null> {
   } catch (e) {
     console.error("Zen Biz: could not read payment settings", e);
   }
-  if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  // Only real (live) keys count; a placeholder or a test key in the env file is ignored.
+  if (process.env.RAZORPAY_KEY_ID?.startsWith("rzp_live_") && process.env.RAZORPAY_KEY_SECRET) {
     return {
       keyId: process.env.RAZORPAY_KEY_ID,
       keySecret: process.env.RAZORPAY_KEY_SECRET,

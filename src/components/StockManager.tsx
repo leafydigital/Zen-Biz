@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
+import { formatMessage, useTranslation } from "@/lib/i18n/I18nContext";
 import { generateUniqueBarcode, printLabelItems, type BarcodeSettings } from "@/lib/barcode";
 import { CategoryBar, inCategory } from "@/components/CategoryBar";
 import type { Product } from "@/types/database";
@@ -30,6 +31,8 @@ export function StockManager({
   const router = useRouter();
   const supabase = createClient();
   const { showLoader, hideLoader } = useGlobalLoader();
+  const { t } = useTranslation();
+  const st = t.stock;
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
   const [category, setCategory] = useState<string | null>(null);
@@ -80,25 +83,25 @@ export function StockManager({
     <div className="flex flex-col gap-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="font-display text-2xl font-semibold text-text">Stock</h1>
+          <h1 className="font-display text-2xl font-semibold text-text">{st.title}</h1>
           <p className="text-sm text-text-soft">
-            Update stock, change prices and print barcode labels for your {itemLabelPlural.toLowerCase()}.
+            {st.subtitle}
           </p>
         </div>
         <Link
           href="/dashboard/settings?tab=barcode"
           className="inline-flex items-center justify-center rounded-xl border border-paper-fold bg-white px-4 py-2.5 text-sm font-semibold text-text hover:bg-paper"
         >
-          Label size &amp; design
+          {st.labelDesign}
         </Link>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          ["Items tracked", String(tracked.length)],
-          ["Total units", String(totalUnits)],
-          ["Stock value", money(totalValue)],
-          ["Low / out", String(lowCount)],
+          [st.itemsTracked, String(tracked.length)],
+          [st.totalUnits, String(totalUnits)],
+          [st.stockValue, money(totalValue)],
+          [st.lowOut, String(lowCount)],
         ].map(([k, v]) => (
           <div key={k} className="rounded-xl border border-paper-fold bg-paper-card p-3.5 shadow-card">
             <div className="text-xs text-text-soft">{k}</div>
@@ -119,16 +122,16 @@ export function StockManager({
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="Search by name or barcode…"
+          placeholder={st.search}
           className="w-full rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink sm:max-w-xs"
         />
         <div className="flex flex-wrap gap-1.5">
           {(
             [
-              ["all", "All"],
-              ["low", "Low stock"],
-              ["out", "Out of stock"],
-              ["untracked", "Not tracked"],
+              ["all", st.all],
+              ["low", st.lowStock],
+              ["out", st.outOfStock],
+              ["untracked", st.notTracked],
             ] as [Filter, string][]
           ).map(([id, label]) => (
             <button
@@ -146,7 +149,7 @@ export function StockManager({
 
       {rows.length === 0 ? (
         <div className="rounded-xl2 border border-dashed border-paper-fold bg-paper-card py-12 text-center text-sm text-text-soft">
-          {products.length === 0 ? "No items yet. Add items first, then manage their stock here." : "Nothing matches."}
+          {products.length === 0 ? st.noItems : st.nothingMatches}
         </div>
       ) : (
         <ul className="flex flex-col gap-2">
@@ -165,7 +168,7 @@ export function StockManager({
                     {p.item_code ? (
                       <span className="ml-2 font-ledger">{p.item_code}</span>
                     ) : (
-                      <span className="ml-2 italic">no barcode yet</span>
+                      <span className="ml-2 italic">{st.noBarcode}</span>
                     )}
                   </div>
                 </div>
@@ -181,19 +184,19 @@ export function StockManager({
                             : "bg-green-100 text-green-800"
                     }`}
                   >
-                    {p.stock_qty === null ? "Not tracked" : `${p.stock_qty} ${p.unit}`}
+                    {p.stock_qty === null ? st.notTracked : `${p.stock_qty} ${p.unit}`}
                   </span>
                   <button
                     onClick={() => setTarget(p)}
                     className="rounded-lg bg-ink px-3 py-1.5 text-xs font-semibold text-paper hover:bg-ink-light"
                   >
-                    Update stock
+                    {st.updateStock}
                   </button>
                   <button
                     onClick={() => setLabelFor(p)}
                     className="rounded-lg border border-paper-fold bg-white px-3 py-1.5 text-xs font-semibold text-text hover:bg-paper"
                   >
-                    Barcode
+                    {st.barcode}
                   </button>
                 </div>
               </li>
@@ -227,15 +230,16 @@ function CopiesModal({
   onClose: () => void;
   onPrint: (copies: number) => void;
 }) {
+  const { t } = useTranslation();
+  const st = t.stock;
   const [copies, setCopies] = useState("1");
   return (
-    <Overlay onClose={onClose} title={`Barcode · ${product.name}`}>
+    <Overlay onClose={onClose} title={`${st.barcode} · ${product.name}`}>
       <p className="text-sm text-text-soft">
-        {product.item_code ? `Barcode ${product.item_code}.` : "A new unique barcode will be created for this item."} How
-        many labels?
+        {product.item_code ? formatMessage(st.barcodeUsed, { code: product.item_code }) : st.barcodeCreated} {st.howMany}
       </p>
       <input type="number" min="1" value={copies} onChange={(e) => setCopies(e.target.value)} className={inputCls} />
-      <Buttons onCancel={onClose} onOk={() => onPrint(Math.max(1, parseInt(copies, 10) || 1))} okLabel="Print labels" />
+      <Buttons onCancel={onClose} onOk={() => onPrint(Math.max(1, parseInt(copies, 10) || 1))} okLabel={st.printLabels} />
     </Overlay>
   );
 }
@@ -263,6 +267,8 @@ function UpdateStockModal({
   const router = useRouter();
   const supabase = createClient();
   const { showLoader, hideLoader } = useGlobalLoader();
+  const { t } = useTranslation();
+  const st = t.stock;
   const wasTracked = product.stock_qty !== null;
   const current = product.stock_qty ?? 0;
 
@@ -320,20 +326,18 @@ function UpdateStockModal({
   }
 
   return (
-    <Overlay onClose={onClose} title={`Update stock · ${product.name}`}>
+    <Overlay onClose={onClose} title={`${st.updateStock} · ${product.name}`}>
       {step === "qty" && (
         <>
           <p className="text-sm text-text-soft">
-            {wasTracked
-              ? `Current stock: ${current} ${product.unit}`
-              : "Stock is not tracked for this item yet; saving starts tracking it."}
+            {wasTracked ? formatMessage(st.currentStock, { qty: current, unit: product.unit }) : st.notTrackedYet}
           </p>
           <div className="flex gap-1.5">
             {(
               [
-                ["add", "Add"],
-                ["reduce", "Reduce"],
-                ["set", "Set exact"],
+                ["add", st.add],
+                ["reduce", st.reduce],
+                ["set", st.setExact],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -350,11 +354,11 @@ function UpdateStockModal({
           </div>
           {subUnits.length > 0 && (
             <div className="flex flex-col gap-2">
-              <span className="text-sm font-medium text-text">Count stock in</span>
+              <span className="text-sm font-medium text-text">{st.countIn}</span>
               <div className="flex gap-1.5">
                 {[
                   [false, product.unit],
-                  [true, "Packs"],
+                  [true, st.packs],
                 ].map(([v, label]) => (
                   <button
                     key={String(label)}
@@ -416,8 +420,8 @@ function UpdateStockModal({
           )}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-text">
-              {mode === "add" ? "Quantity to add" : mode === "reduce" ? "Quantity to reduce" : "New stock quantity"} (
-              {byPack ? `packs of ${packLabel}` : product.unit})
+              {mode === "add" ? st.qtyAdd : mode === "reduce" ? st.qtyReduce : st.qtyNew} (
+              {byPack ? formatMessage(st.packsOf, { size: packLabel }) : product.unit})
             </span>
             <input
               autoFocus
@@ -437,18 +441,18 @@ function UpdateStockModal({
                   <br />
                 </>
               )}
-              New stock: <strong>{newStock}</strong> {product.unit}
+              {st.newStock}: <strong>{newStock}</strong> {product.unit}
             </p>
           )}
-          <Buttons onCancel={onClose} onOk={() => setStep("price")} okLabel="Next" disabled={!valid} />
+          <Buttons onCancel={onClose} onOk={() => setStep("price")} okLabel={st.next} disabled={!valid} />
         </>
       )}
 
       {step === "price" && (
         <>
-          <p className="text-sm font-medium text-text">Update the price too?</p>
+          <p className="text-sm font-medium text-text">{st.priceQ}</p>
           <p className="text-sm text-text-soft">
-            Current price: {money(product.price)} / {product.unit}
+            {formatMessage(st.currentPrice, { price: `${money(product.price)} / ${product.unit}` })}
           </p>
           <div className="flex gap-2">
             {[true, false].map((yes) => (
@@ -460,13 +464,13 @@ function UpdateStockModal({
                   changePrice === yes ? "border-ink bg-ink text-paper" : "border-paper-fold bg-white text-text"
                 }`}
               >
-                {yes ? "Yes, change price" : "No"}
+                {yes ? st.yesChange : st.no}
               </button>
             ))}
           </div>
           {changePrice && (
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text">New price (₹ per {product.unit})</span>
+              <span className="text-sm font-medium text-text">{formatMessage(st.newPrice, { unit: product.unit })}</span>
               <input
                 autoFocus
                 type="number"
@@ -484,7 +488,7 @@ function UpdateStockModal({
               onClick={() => setStep("qty")}
               className="rounded-xl border border-paper-fold bg-white px-4 py-2.5 text-sm font-semibold text-text"
             >
-              Back
+              {st.back}
             </button>
             <button
               type="button"
@@ -492,7 +496,7 @@ function UpdateStockModal({
               onClick={() => setStep("barcode")}
               className="flex-1 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper disabled:opacity-50"
             >
-              Next
+              {st.next}
             </button>
           </div>
         </>
@@ -524,17 +528,17 @@ function BarcodeStep({
   onBack: () => void;
   onSave: (printCopies: number | null) => Promise<void>;
 }) {
+  const { t } = useTranslation();
+  const st = t.stock;
   const [print, setPrint] = useState<boolean | null>(null);
   const [copies, setCopies] = useState(String(defaultCopies));
   const [busy, setBusy] = useState(false);
 
   return (
     <>
-      <p className="text-sm font-medium text-text">Generate barcode labels to print?</p>
+      <p className="text-sm font-medium text-text">{st.labelsQ}</p>
       <p className="text-sm text-text-soft">
-        {product.item_code
-          ? `Barcode ${product.item_code} will be used.`
-          : "A new unique barcode will be created and saved on the item."}
+        {product.item_code ? formatMessage(st.barcodeUsed, { code: product.item_code }) : st.barcodeCreated}
       </p>
       <div className="flex gap-2">
         {[true, false].map((yes) => (
@@ -546,13 +550,13 @@ function BarcodeStep({
               print === yes ? "border-ink bg-ink text-paper" : "border-paper-fold bg-white text-text"
             }`}
           >
-            {yes ? "Yes, print labels" : "No"}
+            {yes ? st.yesPrint : st.no}
           </button>
         ))}
       </div>
       {print && (
         <label className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium text-text">Number of labels (one per unit added)</span>
+          <span className="text-sm font-medium text-text">{st.numLabels}</span>
           <input autoFocus type="number" min="1" value={copies} onChange={(e) => setCopies(e.target.value)} className={inputCls} />
         </label>
       )}
@@ -563,7 +567,7 @@ function BarcodeStep({
           onClick={onBack}
           className="rounded-xl border border-paper-fold bg-white px-4 py-2.5 text-sm font-semibold text-text"
         >
-          Back
+          {st.back}
         </button>
         <button
           type="button"
@@ -575,7 +579,7 @@ function BarcodeStep({
           }}
           className="flex-1 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper disabled:opacity-50"
         >
-          {print ? "Save & print labels" : "Save stock"}
+          {print ? st.saveAndPrint : st.saveStock}
         </button>
       </div>
     </>

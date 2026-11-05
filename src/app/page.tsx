@@ -1,4 +1,6 @@
 import { getAppConfig } from "@/lib/getAppConfig";
+import { localizeConfig } from "@/lib/visitorLocation";
+import { formatPrice } from "@/lib/currency";
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -79,8 +81,8 @@ const FAQ = [
 ];
 
 export default async function HomePage() {
-  const appConfig = await getAppConfig();
-  const rupees = (n: number) => `₹${n.toLocaleString("en-IN")}`;
+  const appConfig = localizeConfig(await getAppConfig());
+  const rupees = (n: number) => formatPrice(n, appConfig.currency);
   const supabase = createClient();
   const {
     data: { user },
@@ -212,7 +214,7 @@ export default async function HomePage() {
               <p className="text-sm font-semibold uppercase tracking-wide text-text-soft">
                 Starter
               </p>
-              <p className="mt-2 font-display text-3xl font-bold text-text">₹0</p>
+              <p className="mt-2 font-display text-3xl font-bold text-text">{rupees(0)}</p>
               <p className="mt-1 text-xs text-text-soft">Freelancers & small shops</p>
               <ul className="mt-5 flex flex-col gap-2.5 text-sm text-text-soft">
                 {[

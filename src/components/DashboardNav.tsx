@@ -104,7 +104,7 @@ export function DashboardNav({
   const mainItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard", label: t.nav.overview, icon: "home" },
     { href: "/dashboard/products", label: labels.itemPlural, icon: "box" },
-    { href: "/dashboard/stock", label: "Stock", icon: "box" },
+    { href: "/dashboard/stock", label: t.nav.stock, icon: "box" },
     { href: "/dashboard/purchases", label: t.nav.purchases, icon: "cart", locked: !features.purchases },
     { href: "/dashboard/suppliers", label: t.nav.suppliers, icon: "truck", locked: !features.purchases },
     { href: "/dashboard/customers", label: t.nav.customers, icon: "users" },
@@ -199,7 +199,7 @@ export function DashboardNav({
         </div>
 
         <div className="mt-2 flex flex-col gap-1 border-t border-white/10 pt-2">
-          <NavLink item={{ href: "/dashboard/contact-us", label: "Contact Us", icon: "message" }} />
+          <NavLink item={{ href: "/dashboard/contact-us", label: t.nav.contactUs, icon: "message" }} />
         </div>
 
         {resolvedPlan === "starter" && (
@@ -221,7 +221,7 @@ export function DashboardNav({
           </div>
         )}
 
-        <p className="mt-3 px-2 text-xs text-blue-200/60">Version {config.version}</p>
+        <p className="mt-3 px-2 text-xs text-blue-200/60">{t.nav.version} {config.version}</p>
       </nav>
 
       {/* Phone / app: 3-line button (top-left) opens a left-side menu with every page */}
@@ -270,8 +270,8 @@ export function DashboardNav({
               <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
             ))}
             <div className="mt-2 border-t border-white/10 pt-2">
-              <NavLink item={{ href: "/dashboard/contact-us", label: "Contact Us", icon: "message" }} onNavigate={() => setMenuOpen(false)} />
-              <NavLink item={{ href: "/about-app", label: "About & how to use", icon: "file" }} onNavigate={() => setMenuOpen(false)} />
+              <NavLink item={{ href: "/dashboard/contact-us", label: t.nav.contactUs, icon: "message" }} onNavigate={() => setMenuOpen(false)} />
+              <NavLink item={{ href: "/about-app", label: t.nav.aboutApp, icon: "file" }} onNavigate={() => setMenuOpen(false)} />
               <button
                 type="button"
                 onClick={signOut}
@@ -291,7 +291,7 @@ export function DashboardNav({
                 👑 Upgrade to Pro
               </button>
             )}
-            <p className="mt-3 px-2 text-xs text-blue-200/70">Version {config.version}</p>
+            <p className="mt-3 px-2 text-xs text-blue-200/70">{t.nav.version} {config.version}</p>
           </nav>
         </div>
       )}

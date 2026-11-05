@@ -1,4 +1,5 @@
 import { PLAN_PRICING } from "@/lib/planFeatures";
+import type { Currency } from "@/lib/currency";
 
 export interface AppConfig {
   version: string;
@@ -15,7 +16,12 @@ export interface AppConfig {
   };
   /** True once the owner has connected Razorpay and switched plan payments on (console → Payments). */
   paymentsEnabled: boolean;
+  /** Plan prices in INR (shown in India). */
   pricing: Record<"professional" | "business", { monthly: number; yearly: number }>;
+  /** Plan prices in USD (shown everywhere else). */
+  pricingUsd: Record<"professional" | "business", { monthly: number; yearly: number }>;
+  /** Currency of `pricing` as handed to the screen (the visitor's). */
+  currency: Currency;
 }
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
@@ -26,6 +32,11 @@ export const DEFAULT_APP_CONFIG: AppConfig = {
     professional: { ...PLAN_PRICING.professional },
     business: { ...PLAN_PRICING.business },
   },
+  pricingUsd: {
+    professional: { monthly: 9, yearly: 90 },
+    business: { monthly: 24, yearly: 240 },
+  },
+  currency: "INR",
 };
 
 export const WEEK_DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"] as const;

@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppConfig } from "@/lib/AppConfigContext";
+import { formatPrice } from "@/lib/currency";
 import { useState } from "react";
 import { getLimitMessage, type LimitKind } from "@/lib/planFeatures";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
@@ -22,7 +23,7 @@ export function LimitReachedModal({
   currentPlan: Plan;
   onClose: () => void;
 }) {
-  const { pricing: allPricing } = useAppConfig();
+  const { pricing: allPricing, currency } = useAppConfig();
   const [showComparison, setShowComparison] = useState(false);
   const message = getLimitMessage(kind, limit);
 
@@ -49,7 +50,7 @@ export function LimitReachedModal({
         <p className="mt-2 text-sm text-text-soft">{message.body}</p>
 
         <p className="mt-4 font-display text-2xl font-bold text-text">
-          ₹{allPricing.professional.monthly}
+          {formatPrice(allPricing.professional.monthly, currency)}
           <span className="text-sm font-normal text-text-soft">/month</span>
         </p>
 

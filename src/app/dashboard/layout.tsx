@@ -14,6 +14,7 @@ import { BusinessSwitcher } from "@/components/BusinessSwitcher";
 import { loginOtpRequired } from "@/lib/otp";
 import { AppConfigProvider } from "@/lib/AppConfigContext";
 import { getAppConfig } from "@/lib/getAppConfig";
+import { localizeConfig } from "@/lib/visitorLocation";
 import { I18nProvider } from "@/lib/i18n/I18nContext";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
@@ -107,7 +108,7 @@ export default async function DashboardLayout({
   const showSwitcher = businesses.length > 1 || resolvedBusiness.owner_id === user.id;
 
   return (
-    <AppConfigProvider config={appConfig}>
+    <AppConfigProvider config={localizeConfig(appConfig)}>
     <I18nProvider initialLanguage={profile.language}>
       <div className="flex min-h-screen flex-col bg-paper md:flex-row">
         <DashboardNav

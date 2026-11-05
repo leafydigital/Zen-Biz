@@ -1,6 +1,7 @@
 "use client";
 
 import { useAppConfig } from "@/lib/AppConfigContext";
+import { formatPrice } from "@/lib/currency";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Script from "next/script";
@@ -22,14 +23,42 @@ export function UpgradeCheckout({
   plan: PayablePlan;
   billingCycle: BillingCycle;
 }) {
-  const { pricing: allPricing } = useAppConfig();
+  const { pricing: allPricing, currency } = useAppConfig();
   const router = useRouter();
   const [scriptLoaded, setScriptLoaded] = useState(false);
   const [starting, setStarting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paid, setPaid] = useState(false);
 
-  const amount = allPricing[plan][billingCycle];
+  const listPrice = allPricing[plan][billingCycle];
+  const [codeInput, setCodeInput] = useState("");
+  const [applied, setApplied] = useState<{ code: string; discountAmount: number; finalAmount: number } | null>(null);
+  const [codeMsg, setCodeMsg] = useState<string | null>(null);
+  const [checking, setChecking] = useState(false);
+  const amount = applied ? applied.finalAmount : listPrice;
+
+  async function applyCode() {
+    setCodeMsg(null);
+    if (!codeInput.trim()) return;
+    setChecking(true);
+    try {
+      const res = await fetch("/api/razorpay/check-discount", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, billingCycle, code: codeInput }),
+      });
+      const data = await res.json();
+      if (data.valid) setApplied({ code: data.code, discountAmount: data.discountAmount, finalAmount: data.finalAmount });
+      else {
+        setApplied(null);
+        setCodeMsg(data.message || "This code isn't valid.");
+      }
+    } catch {
+      setCodeMsg("Could not check the code. Please try again.");
+    } finally {
+      setChecking(false);
+    }
+  }
 
   async function handlePay() {
     setError(null);
@@ -38,7 +67,7 @@ export function UpgradeCheckout({
     const res = await fetch("/api/razorpay/create-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan, billingCycle }),
+      body: JSON.stringify({ plan, billingCycle, discountCode: applied?.code }),
     });
     const data = await res.json();
 
@@ -142,11 +171,55 @@ export function UpgradeCheckout({
           {PLAN_LABELS[plan]} plan
         </p>
         <p className="mt-1 font-display text-3xl font-bold text-text">
-          ₹{amount.toLocaleString("en-IN")}
+          {formatPrice(amount, currency)}
           <span className="text-base font-normal text-text-soft">
             /{billingCycle === "monthly" ? "month" : "year"}
           </span>
         </p>
+        {applied && (
+          <p className="mt-1 text-sm text-success">
+            <span className="text-text-soft line-through">{formatPrice(listPrice, currency)}</span> · Code {applied.code} saves{" "}
+            {formatPrice(applied.discountAmount, currency)}
+          </p>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2 rounded-xl2 border border-paper-fold bg-paper-card p-4">
+        <span className="text-sm font-medium text-text">Discount code</span>
+        {applied ? (
+          <div className="flex items-center justify-between gap-3 rounded-lg bg-success-bg px-3 py-2 text-sm text-success">
+            <span>Applied: {applied.code}</span>
+            <button
+              type="button"
+              onClick={() => {
+                setApplied(null);
+                setCodeInput("");
+              }}
+              className="text-xs font-semibold underline"
+            >
+              Remove
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <input
+              value={codeInput}
+              onChange={(e) => setCodeInput(e.target.value.toUpperCase())}
+              onKeyDown={(e) => e.key === "Enter" && void applyCode()}
+              placeholder="Have a code?"
+              className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-sm text-text focus:border-ink"
+            />
+            <button
+              type="button"
+              onClick={applyCode}
+              disabled={checking || !codeInput.trim()}
+              className="rounded-xl border border-paper-fold bg-white px-4 text-sm font-semibold text-text hover:bg-paper disabled:opacity-60"
+            >
+              {checking ? "Checking…" : "Apply"}
+            </button>
+          </div>
+        )}
+        {codeMsg && <p className="text-xs text-alert">{codeMsg}</p>}
       </div>
 
       {error && (
@@ -160,7 +233,7 @@ export function UpgradeCheckout({
         disabled={starting || !scriptLoaded}
         className="rounded-xl bg-ink px-4 py-3 text-sm font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60"
       >
-        {starting ? "Opening payment window…" : `Pay ₹${amount.toLocaleString("en-IN")}`}
+        {starting ? "Opening payment window…" : `Pay ${formatPrice(amount, currency)}`}
       </button>
 
       <p className="text-xs text-text-soft">

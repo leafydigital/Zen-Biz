@@ -11,10 +11,22 @@ export const getAppConfig = cache(async (): Promise<AppConfig> => {
     };
     const map = new Map((data ?? []).map((r) => [r.key, r.value]));
     const pricing = map.get("pricing") ?? {};
+    const usd = map.get("pricing_usd") ?? {};
     const num = (v: any, d: number) => (typeof v === "number" && v >= 0 ? v : d);
     return {
       version: typeof map.get("version") === "string" ? map.get("version") : DEFAULT_APP_CONFIG.version,
       paymentsEnabled: map.get("payments_enabled") === true,
+      pricingUsd: {
+        professional: {
+          monthly: num(usd.professional?.monthly, DEFAULT_APP_CONFIG.pricingUsd.professional.monthly),
+          yearly: num(usd.professional?.yearly, DEFAULT_APP_CONFIG.pricingUsd.professional.yearly),
+        },
+        business: {
+          monthly: num(usd.business?.monthly, DEFAULT_APP_CONFIG.pricingUsd.business.monthly),
+          yearly: num(usd.business?.yearly, DEFAULT_APP_CONFIG.pricingUsd.business.yearly),
+        },
+      },
+      currency: "INR" as const,
       contact: { ...DEFAULT_APP_CONFIG.contact, ...(map.get("contact") ?? {}) },
       pricing: {
         professional: {

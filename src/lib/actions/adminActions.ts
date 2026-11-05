@@ -8,7 +8,6 @@ import { canEdit, canView, checkConsoleLogin, endAdminSession, getConsoleSession
 import { cleanPerms, allEdit, type SectionId } from "@/lib/consoleSections";
 import type { CustomerRow } from "@/lib/customerTypes";
 import { passwordIssue } from "@/lib/passwordValidation";
-import { computeDiscount } from "@/lib/discounts";
 import { getAppConfig } from "@/lib/getAppConfig";
 import { encryptSecret, decryptSecret } from "@/lib/emailCrypto";
 import Razorpay from "razorpay";
@@ -93,17 +92,28 @@ export async function saveContact(c: {
   });
 }
 
-export async function savePricing(p: Record<"professional" | "business", { monthly: number; yearly: number }>) {
-  const g = await guard("pricing");
-  if (g) return { error: g };
+type PriceTable = Record<"professional" | "business", { monthly: number; yearly: number }>;
+
+function cleanPrices(p: PriceTable, whole: boolean): string | null {
   for (const plan of ["professional", "business"] as const) {
     for (const cycle of ["monthly", "yearly"] as const) {
       const n = Number(p[plan]?.[cycle]);
-      if (!Number.isFinite(n) || n < 1 || n > 1_000_000) return { error: "Enter valid prices (whole rupees)." };
-      p[plan][cycle] = Math.round(n);
+      if (!Number.isFinite(n) || n < 1 || n > 1_000_000) return "Enter valid prices.";
+      p[plan][cycle] = whole ? Math.round(n) : Math.round(n * 100) / 100;
     }
   }
-  return saveSetting("pricing", p);
+  return null;
+}
+
+/** INR prices (India) and USD prices (everywhere else). */
+export async function savePricing(inr: PriceTable, usd: PriceTable) {
+  const g = await guard("pricing");
+  if (g) return { error: g };
+  const bad = cleanPrices(inr, true) || cleanPrices(usd, false);
+  if (bad) return { error: bad };
+  const r1 = await saveSetting("pricing", inr);
+  if (r1.error) return r1;
+  return saveSetting("pricing_usd", usd);
 }
 
 export async function updateTicketStatus(id: string, status: "open" | "in_progress" | "resolved") {
@@ -133,6 +143,7 @@ export async function createDiscount(input: {
   value: number;
   plans: string[];
   maxUses: number | null;
+  startsAt?: string | null;
   expiresAt: string | null;
   note: string;
 }) {
@@ -146,6 +157,11 @@ export async function createDiscount(input: {
     const endOfDay = new Date(input.expiresAt + "T23:59:59+05:30");
     if (endOfDay.getTime() < Date.now()) return { error: "The expiry date is already past. Pick today or a later date." };
   }
+  if (input.startsAt) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.startsAt)) return { error: "Pick a valid start date." };
+    if (input.expiresAt && input.startsAt > input.expiresAt) return { error: "The start date must be before the expiry date." };
+  }
+  if (input.maxUses !== null && input.maxUses !== undefined && !(Number(input.maxUses) >= 1)) return { error: "Number of customers must be 1 or more." };
   let code = input.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
   if (!code) {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -159,6 +175,7 @@ export async function createDiscount(input: {
       value,
       plans: input.plans.length ? input.plans : null,
       max_uses: input.maxUses && input.maxUses > 0 ? Math.floor(input.maxUses) : null,
+      starts_at: input.startsAt ? new Date(input.startsAt + "T00:00:00+05:30").toISOString() : null,
       expires_at: input.expiresAt ? new Date(input.expiresAt + "T23:59:59+05:30").toISOString() : null,
       note: input.note.trim() || null,
     } as never);
@@ -181,12 +198,6 @@ export async function deleteDiscount(id: string) {
   const { error } = await createAdminClient().from("discount_codes" as never).delete().eq("id", id);
   revalidatePath("/app");
   return { error: error?.message ?? null };
-}
-
-/** For the checkout screen: shows what a code would take off the chosen plan. */
-export async function checkDiscount(code: string, plan: "professional" | "business", cycle: "monthly" | "yearly") {
-  const cfg = await getAppConfig();
-  return computeDiscount(code, plan, cfg.pricing[plan][cycle]);
 }
 
 /** Fresh tickets for the auto-refresh — only the Problems/Enquiries lists call this. */
@@ -440,7 +451,7 @@ export async function getPaymentSettings() {
         hasSecret: !!row?.key_secret_enc,
         hasWebhookSecret: !!row?.webhook_secret_enc,
         enabled: !!row?.enabled,
-        fromEnv: !row && !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+        fromEnv: !row && !!(process.env.RAZORPAY_KEY_ID?.startsWith("rzp_live_") && process.env.RAZORPAY_KEY_SECRET),
       },
     };
   } catch {
@@ -453,7 +464,7 @@ export async function savePaymentSettings(input: { keyId: string; keySecret: str
   if (g) return { error: g };
 
   const keyId = String(input.keyId ?? "").trim();
-  if (!/^rzp_(test|live)_[A-Za-z0-9]+$/.test(keyId)) return { error: "Key ID should look like rzp_live_xxxxxxxx (or rzp_test_…)." };
+  if (!/^rzp_live_[A-Za-z0-9]+$/.test(keyId)) return { error: "Key ID should look like rzp_live_xxxxxxxx (live keys only)." };
 
   let existing: GatewayRow | null;
   try {

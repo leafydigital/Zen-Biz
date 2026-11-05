@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 
+import { formatPrice, type Currency } from "@/lib/currency";
+
 type Cfg = { professional: { monthly: number; yearly: number }; business: { monthly: number; yearly: number } };
 type Lim = { invoicesPerMonth: number | null; customers: number | null; products: number | null; businesses: number | null; users: number | null };
 
@@ -39,18 +41,17 @@ const STEPS: [string, string][] = [
   ["Add your team (Professional plan)", "In Settings, invite staff and tick the pages each person may view or edit."],
 ];
 
-const inr = (n: number) => `₹${n.toLocaleString("en-IN")}`;
 const lim = (n: number | null) => (n === null ? "Unlimited" : String(n));
 
-export function AboutAppTabs({ pricing, starter, professional, business, initialTab }: { pricing: Cfg; starter: Lim; professional: Lim; business: Lim; initialTab?: string }) {
+export function AboutAppTabs({ pricing, currency, starter, professional, business, initialTab }: { pricing: Cfg; currency: Currency; starter: Lim; professional: Lim; business: Lim; initialTab?: string }) {
   const router = useRouter();
   const [tab, setTab] = useState<Tab>((TABS.find(([id]) => id === initialTab)?.[0] as Tab) ?? "about");
   const card = "rounded-xl border border-paper-fold bg-white p-4 shadow-card";
 
   const plans = [
     { name: "Starter", price: "Free", note: "For getting going", lim: starter, tone: "border-slate-200", extra: ["Invoices with a Zen Biz footer", "Quotations"] },
-    { name: "Professional", price: `${inr(pricing.professional.monthly)}/month`, note: `or ${inr(pricing.professional.yearly)}/year`, lim: professional, tone: "border-sky-300", extra: ["GST billing & reports", "Purchases & delivery challans", "Profit & Loss", "WhatsApp sharing", "Team users & roles", "Low-stock alerts"] },
-    { name: "Business", price: `${inr(pricing.business.monthly)}/month`, note: `or ${inr(pricing.business.yearly)}/year`, lim: business, tone: "border-violet-300", extra: ["Everything in Professional", "Higher limits", "Barcode scanning"] },
+    { name: "Professional", price: `${formatPrice(pricing.professional.monthly, currency)}/month`, note: `or ${formatPrice(pricing.professional.yearly, currency)}/year`, lim: professional, tone: "border-sky-300", extra: ["GST billing & reports", "Purchases & delivery challans", "Profit & Loss", "WhatsApp sharing", "Team users & roles", "Low-stock alerts"] },
+    { name: "Business", price: `${formatPrice(pricing.business.monthly, currency)}/month`, note: `or ${formatPrice(pricing.business.yearly, currency)}/year`, lim: business, tone: "border-violet-300", extra: ["Everything in Professional", "Higher limits", "Barcode scanning"] },
   ];
 
   return (
@@ -123,7 +124,7 @@ export function AboutAppTabs({ pricing, starter, professional, business, initial
               </ul>
             </div>
           ))}
-          <p className="text-xs text-text-soft">Prices are in Indian rupees. Upgrade any time from inside the app.</p>
+          <p className="text-xs text-text-soft">Prices are shown in {currency === "INR" ? "Indian rupees" : "US dollars"}. Upgrade any time from inside the app.</p>
         </div>
       )}
     </div>

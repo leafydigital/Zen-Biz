@@ -1,4 +1,5 @@
 import { createAdminClient } from "@/lib/supabase/admin";
+import { syncUsedCount } from "@/lib/discounts";
 
 /**
  * Marks a subscription payment as paid and switches the owner's plan on.
@@ -13,7 +14,7 @@ export async function activateSubscription(orderId: string, paymentId: string | 
     .select("*")
     .eq("razorpay_order_id", orderId)
     .maybeSingle()) as {
-    data: { id: string; owner_id: string; plan: string; billing_cycle: string; status: string } | null;
+    data: { id: string; owner_id: string; plan: string; billing_cycle: string; status: string; discount_code: string | null } | null;
   };
   if (!row) return { found: false as const };
   if (row.status === "paid") return { found: true as const, ownerId: row.owner_id, alreadyPaid: true };
@@ -31,6 +32,8 @@ export async function activateSubscription(orderId: string, paymentId: string | 
     .from("profiles" as never)
     .update({ plan: row.plan, billing_cycle: row.billing_cycle, plan_renews_at: renewsAt.toISOString() } as never)
     .eq("id", row.owner_id);
+
+  if (row.discount_code) await syncUsedCount(row.discount_code);
 
   return { found: true as const, ownerId: row.owner_id, alreadyPaid: false };
 }
