@@ -127,6 +127,8 @@ export interface Business {
   /** Activity-log entries older than this many days are deleted automatically (null = keep forever). */
   log_retention_days?: number | null;
   format_settings?: import("@/lib/formatSettings").FormatSettings | null;
+  barcode_settings?: Partial<import("@/lib/barcode").BarcodeSettings> | null;
+  product_categories?: string[] | null;
   signature_url: string | null;
   invoice_terms: string | null;
   quotation_terms: string | null;
@@ -221,6 +223,7 @@ export interface Profile {
   // font/signature setting rather than three separate ones.
   document_design: DocDesignSettings;
   format_settings?: import("@/lib/formatSettings").FormatSettings | null;
+  barcode_settings?: Partial<import("@/lib/barcode").BarcodeSettings> | null;
   signature_url: string | null;
   // Terms & Conditions stay separate per document type.
   invoice_terms: string | null;

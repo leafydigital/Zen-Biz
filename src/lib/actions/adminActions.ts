@@ -10,6 +10,8 @@ import type { CustomerRow } from "@/lib/customerTypes";
 import { passwordIssue } from "@/lib/passwordValidation";
 import { computeDiscount } from "@/lib/discounts";
 import { getAppConfig } from "@/lib/getAppConfig";
+import { encryptSecret, decryptSecret } from "@/lib/emailCrypto";
+import Razorpay from "razorpay";
 
 const attempts = new Map<string, { n: number; first: number }>();
 
@@ -139,6 +141,11 @@ export async function createDiscount(input: {
   const value = Number(input.value);
   if (!(value > 0)) return { error: "Enter a discount value." };
   if (input.kind === "percent" && value > 100) return { error: "A percentage can't be more than 100." };
+  if (input.expiresAt) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(input.expiresAt)) return { error: "Pick a valid expiry date." };
+    const endOfDay = new Date(input.expiresAt + "T23:59:59+05:30");
+    if (endOfDay.getTime() < Date.now()) return { error: "The expiry date is already past. Pick today or a later date." };
+  }
   let code = input.code.trim().toUpperCase().replace(/[^A-Z0-9_-]/g, "");
   if (!code) {
     const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
@@ -207,10 +214,25 @@ export async function getTickets() {
 
 // ---------- console users & passwords ----------
 
-/** Any signed-in console user changes their OWN password — no current password needed. */
-export async function changeMyPassword(newPassword: string) {
+const pwAttempts = new Map<string, { n: number; first: number }>();
+
+/** A signed-in console user changes their OWN password. The current password must be typed correctly first. */
+export async function changeMyPassword(currentPassword: string, newPassword: string) {
   const s = await getConsoleSession();
   if (!s) return { error: "Not signed in." };
+
+  // Stops someone at an unlocked screen from guessing the current password.
+  const rec = pwAttempts.get(s.username);
+  if (rec && Date.now() - rec.first < 15 * 60_000 && rec.n >= 5) return { error: "Too many wrong attempts. Try again in 15 minutes." };
+  const ok = await checkConsoleLogin(s.username, String(currentPassword ?? ""));
+  if (!ok) {
+    const fresh = !rec || Date.now() - rec.first >= 15 * 60_000;
+    pwAttempts.set(s.username, { n: fresh ? 1 : rec!.n + 1, first: fresh ? Date.now() : rec!.first });
+    return { error: "Current password is wrong. Your password was not changed." };
+  }
+  pwAttempts.delete(s.username);
+  if (currentPassword === newPassword) return { error: "The new password must be different from the current one." };
+
   const issue = passwordIssue(newPassword);
   if (issue) return { error: issue };
   const admin = createAdminClient();
@@ -390,4 +412,98 @@ export async function setCustomerPlan(userId: string, plan: string, cycle: strin
     } as never)
     .eq("id", userId);
   return { error: error?.message ?? null };
+}
+
+// ── Payments: the Razorpay account plan payments are collected into ─────────
+
+type GatewayRow = { key_id: string | null; key_secret_enc: string | null; webhook_secret_enc: string | null; enabled: boolean };
+
+async function gatewayRow(): Promise<GatewayRow | null> {
+  const { data } = (await createAdminClient()
+    .from("payment_gateway" as never)
+    .select("key_id, key_secret_enc, webhook_secret_enc, enabled")
+    .eq("provider", "razorpay")
+    .maybeSingle()) as { data: GatewayRow | null };
+  return data;
+}
+
+/** Never returns the secrets, only whether they are saved. */
+export async function getPaymentSettings() {
+  const s = await getConsoleSession();
+  if (!s || !canView(s, "payments")) return { error: "You do not have access to Payments.", settings: null };
+  try {
+    const row = await gatewayRow();
+    return {
+      error: null,
+      settings: {
+        keyId: row?.key_id ?? "",
+        hasSecret: !!row?.key_secret_enc,
+        hasWebhookSecret: !!row?.webhook_secret_enc,
+        enabled: !!row?.enabled,
+        fromEnv: !row && !!(process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET),
+      },
+    };
+  } catch {
+    return { error: "Payment settings table is missing. Run supabase/migration_47.sql in the Supabase SQL editor.", settings: null };
+  }
+}
+
+export async function savePaymentSettings(input: { keyId: string; keySecret: string; webhookSecret: string; enabled: boolean }) {
+  const g = await guard("payments");
+  if (g) return { error: g };
+
+  const keyId = String(input.keyId ?? "").trim();
+  if (!/^rzp_(test|live)_[A-Za-z0-9]+$/.test(keyId)) return { error: "Key ID should look like rzp_live_xxxxxxxx (or rzp_test_…)." };
+
+  let existing: GatewayRow | null;
+  try {
+    existing = await gatewayRow();
+  } catch {
+    return { error: "Payment settings table is missing. Run supabase/migration_47.sql in the Supabase SQL editor." };
+  }
+
+  const newSecret = String(input.keySecret ?? "").trim();
+  const newWebhook = String(input.webhookSecret ?? "").trim();
+  let secretPlain = newSecret;
+  try {
+    if (!secretPlain && existing?.key_secret_enc) secretPlain = decryptSecret(existing.key_secret_enc);
+  } catch {
+    return { error: "The saved secret could not be read. Please type the key secret again." };
+  }
+  if (!secretPlain) return { error: "Enter the Key Secret." };
+  if (input.enabled && !newWebhook && !existing?.webhook_secret_enc) {
+    return { error: "Enter a webhook secret (and add the same one in Razorpay) so paid plans switch on automatically." };
+  }
+
+  // Check the keys with Razorpay before saving, so a typo is caught right here.
+  try {
+    await new Razorpay({ key_id: keyId, key_secret: secretPlain }).orders.all({ count: 1 });
+  } catch (e) {
+    const status = (e as { statusCode?: number })?.statusCode;
+    if (status === 401) return { error: "Razorpay rejected these keys. Check the Key ID and Key Secret." };
+    return { error: "Could not reach Razorpay to check the keys. Please try again." };
+  }
+
+  let secretEnc: string, webhookEnc: string | null;
+  try {
+    secretEnc = newSecret ? encryptSecret(newSecret) : existing!.key_secret_enc!;
+    webhookEnc = newWebhook ? encryptSecret(newWebhook) : existing?.webhook_secret_enc ?? null;
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+
+  const { error } = await createAdminClient()
+    .from("payment_gateway" as never)
+    .upsert({
+      provider: "razorpay",
+      key_id: keyId,
+      key_secret_enc: secretEnc,
+      webhook_secret_enc: webhookEnc,
+      enabled: !!input.enabled,
+      updated_at: new Date().toISOString(),
+    } as never);
+  if (error) return { error: error.message };
+
+  // Public flag (no secrets) so the app knows whether to show Upgrade or "Coming soon".
+  return saveSetting("payments_enabled", !!input.enabled);
 }

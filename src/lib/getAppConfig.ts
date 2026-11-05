@@ -14,6 +14,7 @@ export const getAppConfig = cache(async (): Promise<AppConfig> => {
     const num = (v: any, d: number) => (typeof v === "number" && v >= 0 ? v : d);
     return {
       version: typeof map.get("version") === "string" ? map.get("version") : DEFAULT_APP_CONFIG.version,
+      paymentsEnabled: map.get("payments_enabled") === true,
       contact: { ...DEFAULT_APP_CONFIG.contact, ...(map.get("contact") ?? {}) },
       pricing: {
         professional: {

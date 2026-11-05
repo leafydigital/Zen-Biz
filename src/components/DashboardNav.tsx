@@ -104,6 +104,7 @@ export function DashboardNav({
   const mainItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard", label: t.nav.overview, icon: "home" },
     { href: "/dashboard/products", label: labels.itemPlural, icon: "box" },
+    { href: "/dashboard/stock", label: "Stock", icon: "box" },
     { href: "/dashboard/purchases", label: t.nav.purchases, icon: "cart", locked: !features.purchases },
     { href: "/dashboard/suppliers", label: t.nav.suppliers, icon: "truck", locked: !features.purchases },
     { href: "/dashboard/customers", label: t.nav.customers, icon: "users" },

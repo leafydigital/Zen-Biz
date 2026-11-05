@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some(
-    (p) => path === p || path.startsWith("/auth/")
+    (p) => path === p || path.startsWith("/auth/") || path === "/api/razorpay/webhook"
   );
 
   // Not signed in and trying to reach a protected page -> send to login.
@@ -32,6 +32,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
   ],
 };

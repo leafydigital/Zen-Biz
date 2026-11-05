@@ -10,6 +10,7 @@ import type { Plan, Product, TaxType } from "@/types/database";
 import { ProductFormModal } from "@/components/ProductFormModal";
 import { LimitReachedModal } from "@/components/LimitReachedModal";
 import { BarcodeScannerModal } from "@/components/BarcodeScannerModal";
+import { CategoryBar, inCategory } from "@/components/CategoryBar";
 import { getPlanFeatures } from "@/lib/planFeatures";
 
 type PayMethod = "cash" | "upi" | "credit_card";
@@ -121,7 +122,7 @@ export function BillingPOS({
 
   const visible = products.filter(
     (p) =>
-      (category === null || p.category === category) &&
+      inCategory(p, category) &&
       p.name.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -336,9 +337,12 @@ ${d.customerPhone ? `<div>Phone: ${escapeHtml(d.customerPhone)}</div>` : ""}
     setError(null);
     const today = new Date().toISOString().slice(0, 10);
 
-    const { data: created, error: invErr } = await supabase
+    // The id is made here (not returned by the server) so a bill can be saved offline and synced later.
+    const invoiceId = crypto.randomUUID();
+    const { error: invErr } = await supabase
       .from("invoices" as never)
       .insert({
+        id: invoiceId,
         owner_id: ownerId,
         business_id: businessId,
         customer_id: null,
@@ -364,14 +368,11 @@ ${d.customerPhone ? `<div>Phone: ${escapeHtml(d.customerPhone)}</div>` : ""}
         notes: ["Created from POS", custName.trim() && `Customer: ${custName.trim()}`, custPhone.trim() && `Phone: ${custPhone.trim()}`]
           .filter(Boolean)
           .join("\n"),
-      } as never)
-      .select("id")
-      .single();
+      } as never);
 
-    const invoiceId = (created as { id: string } | null)?.id;
-    if (invErr || !invoiceId) {
+    if (invErr) {
       setSaving(false);
-      setError(invErr?.message ?? "Could not save the bill.");
+      setError(invErr.message || "Could not save the bill.");
       return null;
     }
 
@@ -620,22 +621,7 @@ ${d.customerPhone ? `<div>Phone: ${escapeHtml(d.customerPhone)}</div>` : ""}
         )}
       </div>
 
-      {categories.length > 0 && (
-        <div className="flex gap-1.5 overflow-x-auto pb-1">
-          {[null, ...categories].map((c) => (
-            <button
-              key={c ?? "__all"}
-              type="button"
-              onClick={() => setCategory(c)}
-              className={`shrink-0 rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                category === c ? "border-ink bg-ink text-paper" : "border-paper-fold bg-white text-text-soft hover:bg-paper"
-              }`}
-            >
-              {c ?? "All"}
-            </button>
-          ))}
-        </div>
-      )}
+      <CategoryBar items={products} value={category} onChange={setCategory} />
 
       {visible.length === 0 ? (
         <p className="rounded-xl2 border border-dashed border-paper-fold bg-paper-card py-10 text-center text-sm text-text-soft">

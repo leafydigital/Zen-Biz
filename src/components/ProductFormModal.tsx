@@ -1,11 +1,13 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { searchHsnCodes } from "@/lib/hsnReference";
 import { getPlanFeatures, getLimitMessage } from "@/lib/planFeatures";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
+import { generateUniqueBarcode, isCodeTaken } from "@/lib/barcode";
+import { fetchCategoryList, mergeCategories, saveCategoryList } from "@/lib/categories";
 import type { Product, Plan } from "@/types/database";
 
 const OTHER_UNIT = "__other__";
@@ -69,6 +71,50 @@ export function ProductFormModal({
   const { showLoader, hideLoader } = useGlobalLoader();
   const [error, setError] = useState<string | null>(null);
 
+  const [generating, setGenerating] = useState(false);
+  const [savedCats, setSavedCats] = useState<string[]>([]);
+  const [newCat, setNewCat] = useState<string | null>(null); // null = not adding one
+
+  useEffect(() => {
+    fetchCategoryList(supabase as never, businessId).then(setSavedCats);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [businessId]);
+
+  const categoryOptions = useMemo(
+    () => mergeCategories(categories, savedCats, product?.category ? [product.category] : []),
+    [categories, savedCats, product?.category]
+  );
+
+  async function addCategory() {
+    const name = (newCat ?? "").trim();
+    if (!name) return;
+    const match = categoryOptions.find((c) => c.toLowerCase() === name.toLowerCase());
+    if (!match) {
+      const err = await saveCategoryList(supabase as never, businessId, [...categoryOptions, name]);
+      if (err) return setError(err);
+      setSavedCats(mergeCategories(savedCats, [name]));
+    }
+    setCategory(match ?? name);
+    setNewCat(null);
+  }
+
+  async function makeBarcode() {
+    setGenerating(true);
+    try {
+      setItemCode(await generateUniqueBarcode(supabase as never, businessId));
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setGenerating(false);
+    }
+  }
+
+  // New items get a unique 13-digit barcode automatically (still editable).
+  useEffect(() => {
+    if (!product && !itemCode) void makeBarcode();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // Suggest HSN codes from whatever the person is typing into the HSN
   // field itself (by code or by keyword) — falling back to the product
   // name when the HSN field is empty, so a suggestion still appears before
@@ -123,6 +169,14 @@ export function ProductFormModal({
           return;
         }
       }
+    }
+
+    // A barcode number may belong to only one item.
+    const code = itemCode.trim();
+    if (code && (await isCodeTaken(supabase as never, businessId, code, product?.id))) {
+      stopLoading();
+      setError(`The code ${code} is already used by another item. Generate a new one or change it.`);
+      return;
     }
 
     const finalUnit = unitSelect === OTHER_UNIT ? customUnit.trim() : unitSelect;
@@ -243,28 +297,41 @@ export function ProductFormModal({
             <span className="text-sm font-medium text-text">
               Category <span className="text-text-soft">(optional)</span>
             </span>
-            <input
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              placeholder="Type a new category or pick one below"
-              className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
-            />
-            {categories.length > 0 && (
-              <div className="flex flex-wrap gap-1.5">
-                {categories.map((c) => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => setCategory(c)}
-                    className={`rounded-full border px-3 py-1 text-xs font-semibold transition ${
-                      category.trim().toLowerCase() === c.toLowerCase()
-                        ? "border-ink bg-ink text-paper"
-                        : "border-paper-fold bg-white text-text-soft hover:bg-paper"
-                    }`}
-                  >
+            {newCat === null ? (
+              <select
+                value={category}
+                onChange={(e) => (e.target.value === "__new__" ? setNewCat("") : setCategory(e.target.value))}
+                className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+              >
+                <option value="">No category</option>
+                {categoryOptions.map((c) => (
+                  <option key={c} value={c}>
                     {c}
-                  </button>
+                  </option>
                 ))}
+                <option value="__new__">+ Add new category…</option>
+              </select>
+            ) : (
+              <div className="flex gap-2">
+                <input
+                  autoFocus
+                  value={newCat}
+                  onChange={(e) => setNewCat(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      void addCategory();
+                    }
+                  }}
+                  placeholder="New category name"
+                  className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink"
+                />
+                <button type="button" onClick={addCategory} className="rounded-xl bg-ink px-4 text-sm font-semibold text-paper">
+                  Add
+                </button>
+                <button type="button" onClick={() => setNewCat(null)} className="text-sm text-text-soft">
+                  Cancel
+                </button>
               </div>
             )}
           </div>
@@ -348,14 +415,22 @@ export function ProductFormModal({
           <div className="grid gap-4 sm:grid-cols-2">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">
-                Item code / barcode <span className="text-text-soft">(optional)</span>
+                Item code / barcode <span className="text-text-soft">(auto)</span>
               </span>
               <input
                 value={itemCode}
                 onChange={(e) => setItemCode(e.target.value)}
-                placeholder="SKU, or the number under the barcode"
+                placeholder={generating ? "Generating…" : "SKU, or the number under the barcode"}
                 className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
               />
+              <button
+                type="button"
+                onClick={makeBarcode}
+                disabled={generating}
+                className="self-start text-xs font-medium text-ink underline disabled:opacity-50"
+              >
+                {itemCode ? "Generate a new barcode" : "Generate barcode"}
+              </button>
             </label>
             <label className="relative flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">

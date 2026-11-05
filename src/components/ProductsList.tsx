@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Product, Plan } from "@/types/database";
 import { ProductFormModal } from "@/components/ProductFormModal";
 import { LimitReachedModal } from "@/components/LimitReachedModal";
+import { CategoryManagerModal, GearIcon } from "@/components/CategoryManagerModal";
 import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 
 function formatCurrency(n: number) {
@@ -48,6 +49,7 @@ export function ProductsList({
   const supabase = createClient();
   const { showLoader, hideLoader } = useGlobalLoader();
   const [modalOpen, setModalOpen] = useState(false);
+  const [catsOpen, setCatsOpen] = useState(false);
   const [limitModalOpen, setLimitModalOpen] = useState(false);
   const [editing, setEditing] = useState<Product | null>(null);
   const [search, setSearch] = useState("");
@@ -109,12 +111,22 @@ export function ProductsList({
             )}
           </p>
         </div>
-        <button
-          onClick={handleAddClick}
-          className="inline-flex items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink-light"
-        >
-          + Add {itemLabel.toLowerCase()}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setCatsOpen(true)}
+            title="Manage categories"
+            aria-label="Manage categories"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-paper-fold bg-white text-text transition hover:bg-paper"
+          >
+            <GearIcon />
+          </button>
+          <button
+            onClick={handleAddClick}
+            className="inline-flex flex-1 items-center justify-center gap-2 rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink-light"
+          >
+            + Add {itemLabel.toLowerCase()}
+          </button>
+        </div>
       </div>
 
       {products.length > 0 && (
@@ -243,6 +255,7 @@ export function ProductsList({
         </div>
       )}
 
+      {catsOpen && <CategoryManagerModal businessId={businessId} products={products} onClose={() => setCatsOpen(false)} />}
       {modalOpen && (
         <ProductFormModal
           ownerId={ownerId}

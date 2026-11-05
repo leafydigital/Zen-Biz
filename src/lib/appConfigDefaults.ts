@@ -13,11 +13,14 @@ export interface AppConfig {
     openTime: string;
     closeTime: string;
   };
+  /** True once the owner has connected Razorpay and switched plan payments on (console → Payments). */
+  paymentsEnabled: boolean;
   pricing: Record<"professional" | "business", { monthly: number; yearly: number }>;
 }
 
 export const DEFAULT_APP_CONFIG: AppConfig = {
   version: "1.00",
+  paymentsEnabled: false,
   contact: { email: "", whatsapp: "", address: "", message: "", days: [], openTime: "", closeTime: "" },
   pricing: {
     professional: { ...PLAN_PRICING.professional },

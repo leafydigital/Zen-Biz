@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { SECTIONS, type Level, type Perms, type SectionId } from "@/lib/consoleSections";
 import type { ConsoleSession } from "@/lib/adminAuth";
 import { CustomersPanel, RenewalsPanel } from "@/components/AdminCustomers";
+import { PaymentsPanel } from "@/components/AdminPayments";
 import { dueCustomers, type CustomerRow } from "@/lib/customerTypes";
 import { WEEK_DAYS, formatWorkingHours, type AppConfig } from "@/lib/appConfigDefaults";
 import {
@@ -121,6 +122,7 @@ export function AdminConsole({
   const visible = SECTIONS.filter(([id]) => lvl(id) !== "none");
   const [tab, setTab] = useState<Tab>((visible[0]?.[0] as Tab) ?? "account");
   const [pending, start] = useTransition();
+  const [menuOpen, setMenuOpen] = useState(false);
   const [updated, setUpdated] = useState(() => new Date());
   const [query, setQuery] = useState("");
   const [tickets, setTickets] = useState<Ticket[]>(initialTickets);
@@ -254,31 +256,82 @@ export function AdminConsole({
     );
   }
 
+  const menuItems = [
+    ...visible,
+    ...(session.isSuper ? ([["users", "Users & roles"]] as const) : []),
+    ["account", "Password"] as const,
+  ];
+  const currentLabel = menuItems.find(([id]) => id === tab)?.[1] ?? "Menu";
+
+  function pick(id: string) {
+    setTab(id as Tab);
+    setMsg(null);
+    setMenuOpen(false);
+  }
+
+  const menu = (
+    <nav className="flex flex-col gap-1" aria-label="Console menu">
+      {menuItems.map(([id, label]) => (
+        <button
+          key={id}
+          onClick={() => pick(id)}
+          className={`flex items-center justify-between gap-2 rounded-xl px-3.5 py-2.5 text-left text-sm font-semibold transition ${
+            tab === id ? "bg-ink text-paper" : "text-text hover:bg-paper-fold/60"
+          }`}
+        >
+          <span>{label}</span>
+          {id === "renewals" && dueNow > 0 && <span className="rounded-full bg-red-500 px-1.5 text-[0.65rem] text-white">{dueNow}</span>}
+          {id === "issues" && openCount("issue") > 0 && <span className="rounded-full bg-red-500 px-1.5 text-[0.65rem] text-white">{openCount("issue")}</span>}
+          {id === "enquiries" && openCount("info") > 0 && <span className="rounded-full bg-amber-500 px-1.5 text-[0.65rem] text-white">{openCount("info")}</span>}
+        </button>
+      ))}
+    </nav>
+  );
+
   return (
     <div className="min-h-screen bg-paper">
-      <header className="flex items-center justify-between border-b border-paper-fold bg-white px-4 py-3 sm:px-8">
-        <h1 className="font-display text-lg font-semibold text-text">Zen Biz · Owner console <span className="ml-2 text-xs font-normal text-text-soft">{session.username} · {session.role}</span></h1>
+      <header className="flex items-center justify-between gap-3 border-b border-paper-fold bg-white px-4 py-3 sm:px-8">
+        <div className="flex min-w-0 items-center gap-3">
+          <button
+            type="button"
+            onClick={() => setMenuOpen(true)}
+            aria-label="Open menu"
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-paper-fold text-text md:hidden"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+              <path d="M4 7h16M4 12h16M4 17h16" />
+            </svg>
+          </button>
+          <h1 className="truncate font-display text-lg font-semibold text-text">
+            Zen Biz · Owner console
+            <span className="ml-2 hidden text-xs font-normal text-text-soft sm:inline">{session.username} · {session.role}</span>
+            <span className="ml-2 text-xs font-normal text-text-soft md:hidden">· {currentLabel}</span>
+          </h1>
+        </div>
         <form action={adminLogout}>
           <button className="rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700">Sign out</button>
         </form>
       </header>
 
-      <div className="mx-auto flex max-w-5xl flex-col gap-5 p-4 sm:p-8">
-        <nav className="flex flex-wrap gap-2">
-          {[...visible, ...(session.isSuper ? ([["users", "Users & roles"]] as const) : []), ["account", "My account"] as const].map(([id, label]) => (
-            <button
-              key={id}
-              onClick={() => { setTab(id as Tab); setMsg(null); }}
-              className={`rounded-lg px-3.5 py-2 text-sm font-semibold transition ${tab === id ? "bg-ink text-paper" : "bg-white text-text hover:bg-paper-fold/60"}`}
-            >
-              {label}
-              {id === "renewals" && dueNow > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 text-[0.65rem] text-white">{dueNow}</span>}
-              {id === "issues" && openCount("issue") > 0 && <span className="ml-1.5 rounded-full bg-red-500 px-1.5 text-[0.65rem] text-white">{openCount("issue")}</span>}
-              {id === "enquiries" && openCount("info") > 0 && <span className="ml-1.5 rounded-full bg-amber-500 px-1.5 text-[0.65rem] text-white">{openCount("info")}</span>}
-            </button>
-          ))}
-        </nav>
+      {menuOpen && (
+        <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true">
+          <div className="absolute inset-0 bg-ink/40" onClick={() => setMenuOpen(false)} />
+          <div className="absolute inset-y-0 left-0 flex w-72 max-w-[85%] flex-col gap-3 overflow-y-auto bg-white p-4 shadow-card">
+            <div className="flex items-center justify-between">
+              <span className="font-display text-base font-semibold text-text">Menu</span>
+              <button onClick={() => setMenuOpen(false)} aria-label="Close menu" className="rounded-lg px-2 py-1 text-sm text-text-soft hover:bg-paper">Close</button>
+            </div>
+            {menu}
+          </div>
+        </div>
+      )}
 
+      <div className="flex">
+        <aside className="sticky top-0 hidden h-screen w-60 shrink-0 self-start overflow-y-auto border-r border-paper-fold bg-white p-4 md:block">
+          {menu}
+        </aside>
+
+        <div className="mx-auto flex min-w-0 max-w-5xl flex-1 flex-col gap-5 p-4 sm:p-8">
         {(tab === "issues" || tab === "enquiries") && (
         <div className="flex flex-wrap items-center gap-2">
           <button
@@ -433,6 +486,8 @@ export function AdminConsole({
           </fieldset>
         )}
 
+        {tab === "payments" && <PaymentsPanel canEdit={lvl("payments") === "edit"} setMsg={setMsg} />}
+
         {tab === "discounts" && (
           <fieldset disabled={lvl("discounts") !== "edit"} className="flex flex-col gap-4">
             <div className={`${card} grid gap-3 sm:grid-cols-2`}>
@@ -446,8 +501,26 @@ export function AdminConsole({
                 <input inputMode="decimal" value={d.value} onChange={(e) => setD({ ...d, value: e.target.value.replace(/[^0-9.]/g, "") })} className={input} /></label>
               <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Max uses (empty = unlimited)</span>
                 <input inputMode="numeric" value={d.maxUses} onChange={(e) => setD({ ...d, maxUses: e.target.value.replace(/\D/g, "") })} className={input} /></label>
-              <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Valid until (optional)</span>
-                <input type="date" value={d.expiresAt} onChange={(e) => setD({ ...d, expiresAt: e.target.value })} className={input} /></label>
+              <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Expiry date (code stops working automatically after this day)</span>
+                <input type="date" min={new Date().toLocaleDateString("en-CA")} value={d.expiresAt} onChange={(e) => setD({ ...d, expiresAt: e.target.value })} className={input} />
+                <span className="flex flex-wrap items-center gap-1.5">
+                  {[7, 30, 90].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => setD({ ...d, expiresAt: new Date(Date.now() + n * 86_400_000).toLocaleDateString("en-CA") })}
+                      className="rounded-full border border-paper-fold bg-white px-2.5 py-0.5 text-xs font-semibold text-text-soft hover:bg-paper"
+                    >
+                      {n} days
+                    </button>
+                  ))}
+                  {d.expiresAt && (
+                    <button type="button" onClick={() => setD({ ...d, expiresAt: "" })} className="text-xs text-text-soft underline">
+                      No expiry
+                    </button>
+                  )}
+                </span>
+              </label>
               <label className="flex flex-col gap-1"><span className="text-xs font-medium text-text-soft">Note (for you)</span>
                 <input value={d.note} onChange={(e) => setD({ ...d, note: e.target.value })} className={input} /></label>
               <div className="flex items-center gap-4 text-sm text-text sm:col-span-2">
@@ -481,11 +554,16 @@ export function AdminConsole({
                 {discounts.map((x) => (
                   <div key={x.id} className={`${card} flex flex-wrap items-center justify-between gap-3 !p-4`}>
                     <div>
-                      <p className="font-ledger text-base font-semibold tracking-wide text-text">{x.code}</p>
+                      <p className="font-ledger text-base font-semibold tracking-wide text-text">
+                        {x.code}
+                        {x.expires_at && new Date(x.expires_at) < new Date() && (
+                          <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 font-body text-xs font-semibold text-red-700">Expired</span>
+                        )}
+                      </p>
                       <p className="text-xs text-text-soft">
                         {x.kind === "percent" ? `${x.value}% off` : `₹${x.value} off`} · {x.plans?.length ? x.plans.join(", ") : "all plans"} · used {x.used_count}
                         {x.max_uses !== null ? `/${x.max_uses}` : ""}
-                        {x.expires_at ? ` · until ${new Date(x.expires_at).toLocaleDateString("en-IN")}` : ""}
+                        {x.expires_at ? ` · ${new Date(x.expires_at) < new Date() ? "expired" : "until"} ${new Date(x.expires_at).toLocaleDateString("en-IN")}` : ""}
                         {x.note ? ` · ${x.note}` : ""}
                       </p>
                     </div>
@@ -505,6 +583,7 @@ export function AdminConsole({
 
         {tab === "users" && session.isSuper && <UsersPanel users={users} setUsers={setUsers} setMsg={setMsg} />}
         {tab === "account" && <AccountPanel setMsg={setMsg} />}
+        </div>
       </div>
     </div>
   );
@@ -513,6 +592,7 @@ export function AdminConsole({
 type SetMsg = (m: { ok: boolean; text: string } | null) => void;
 
 function AccountPanel({ setMsg }: { setMsg: SetMsg }) {
+  const [current, setCurrent] = useState("");
   const [pw, setPw] = useState("");
   const [pw2, setPw2] = useState("");
   const [busy, start] = useTransition();
@@ -520,18 +600,19 @@ function AccountPanel({ setMsg }: { setMsg: SetMsg }) {
     setMsg(null);
     if (pw !== pw2) return setMsg({ ok: false, text: "The two passwords don't match." });
     start(async () => {
-      const r = await changeMyPassword(pw);
+      const r = await changeMyPassword(current, pw);
       setMsg(r.error ? { ok: false, text: r.error } : { ok: true, text: "Your password was changed." });
-      if (!r.error) { setPw(""); setPw2(""); }
+      if (!r.error) { setCurrent(""); setPw(""); setPw2(""); }
     });
   }
   return (
     <div className={`${card} flex max-w-md flex-col gap-3`}>
       <h2 className="font-semibold text-text">Change my password</h2>
-      <p className="text-xs text-text-soft">You're signed in, so you don't need your old password. Use 8+ characters with a capital letter and a symbol.</p>
+      <p className="text-xs text-text-soft">Type your current password first. The password only changes if it is correct. New password: 8+ characters with a capital letter and a symbol.</p>
+      <EyeInput value={current} onChange={setCurrent} placeholder="Current password" className={input} />
       <EyeInput value={pw} onChange={setPw} placeholder="New password" className={input} />
       <EyeInput value={pw2} onChange={setPw2} placeholder="Repeat new password" className={input} />
-      <button disabled={busy || !pw} onClick={save} className={`${primary} self-start`}>Change password</button>
+      <button disabled={busy || !current || !pw} onClick={save} className={`${primary} self-start`}>Change password</button>
     </div>
   );
 }

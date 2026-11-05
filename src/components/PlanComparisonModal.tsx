@@ -2,6 +2,7 @@
 
 import { useAppConfig } from "@/lib/AppConfigContext";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import type { Plan } from "@/types/database";
 
 interface FeatureRow {
@@ -71,7 +72,7 @@ export function PlanComparisonModal({
   currentPlan: Plan;
   onClose: () => void;
 }) {
-  const { pricing: allPricing } = useAppConfig();
+  const { pricing: allPricing, paymentsEnabled } = useAppConfig();
   const [cycle, setCycle] = useState<"monthly" | "yearly">("monthly");
 
   useEffect(() => {
@@ -111,10 +112,12 @@ export function PlanComparisonModal({
         <p className="mt-1 text-sm text-text-soft">
           You're currently on the {plans.find((p) => p.id === currentPlan)?.label} plan.
         </p>
-        <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">
-          Online upgrades are coming soon. Everything on the Starter plan
-          works fully in the meantime.
-        </p>
+        {!paymentsEnabled && (
+          <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">
+            Online upgrades are coming soon. Everything on the Starter plan
+            works fully in the meantime.
+          </p>
+        )}
 
         <div className="mt-4 inline-flex rounded-full bg-paper p-1 text-sm">
           <button
@@ -166,6 +169,14 @@ export function PlanComparisonModal({
                   <span className="mt-2 rounded-lg border border-paper-fold px-3 py-2 text-center text-sm font-medium text-text-soft">
                     Free forever
                   </span>
+                ) : paymentsEnabled ? (
+                  <Link
+                    href={`/dashboard/settings/upgrade?plan=${p.id}&cycle=${cycle}`}
+                    onClick={onClose}
+                    className="mt-2 rounded-lg bg-ink px-3 py-2 text-center text-sm font-semibold text-paper transition hover:bg-ink-light"
+                  >
+                    Upgrade
+                  </Link>
                 ) : (
                   <button
                     type="button"
