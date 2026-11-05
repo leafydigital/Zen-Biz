@@ -41,7 +41,10 @@ export async function POST(request: Request) {
 
   // Prices the owner set in the console (/app → Plan prices).
   const amountInRupees = (await getAppConfig()).pricing[plan][billingCycle];
-  const amountInPaise = amountInRupees * 100;
+  const amountInPaise = Math.round(amountInRupees * 100);
+  if (!(amountInPaise >= 100)) {
+    return NextResponse.json({ error: "The plan price is below the minimum payment of ₹1." }, { status: 400 });
+  }
 
   const razorpay = new Razorpay({
     key_id: gateway.keyId,
@@ -58,7 +61,10 @@ export async function POST(request: Request) {
     });
   } catch (err) {
     console.error("Zen Biz: Razorpay order creation failed", err);
-    return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 502 });
+    if ((err as { statusCode?: number })?.statusCode === 401) {
+      return NextResponse.json({ error: "Razorpay rejected the saved keys. Check them in the owner console." }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Could not start checkout. Please try again." }, { status: 500 });
   }
 
   const { error: dbError } = await supabase.from("subscription_payments" as never).insert({

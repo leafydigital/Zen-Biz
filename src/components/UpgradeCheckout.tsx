@@ -66,9 +66,29 @@ export function UpgradeCheckout({
         contact: profile.phone || undefined,
       },
       theme: { color: "#2563EB" },
-      handler: function () {
-        setPaid(true);
-        setStarting(false);
+      handler: async function (response: {
+        razorpay_payment_id: string;
+        razorpay_order_id: string;
+        razorpay_signature: string;
+      }) {
+        // Never trust the popup alone: the server checks the signature first.
+        try {
+          const v = await fetch("/api/razorpay/verify-payment", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(response),
+          });
+          if (!v.ok) {
+            const d = await v.json().catch(() => ({}));
+            setError(d.error || "We could not confirm your payment. If money was deducted, contact support.");
+            return;
+          }
+          setPaid(true);
+        } catch {
+          setError("Could not reach the server to confirm your payment. If money was deducted, contact support.");
+        } finally {
+          setStarting(false);
+        }
       },
       modal: {
         ondismiss: function () {

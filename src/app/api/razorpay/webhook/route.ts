@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import crypto from "crypto";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getRazorpayConfig } from "@/lib/razorpayConfig";
+import { activateSubscription } from "@/lib/activateSubscription";
 
 /**
  * Handles Razorpay webhook events. This is the ONLY place a plan upgrade
@@ -56,43 +57,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "No order ID in payload." }, { status: 400 });
     }
 
-    const { data: paymentRow } = (await admin
-      .from("subscription_payments" as never)
-      .select("*")
-      .eq("razorpay_order_id", orderId)
-      .maybeSingle()) as { data: { id: string; owner_id: string; plan: string; billing_cycle: string } | null };
-
-    if (!paymentRow) {
-      console.error(`Zen Biz: webhook for unknown order ${orderId}`);
-      return NextResponse.json({ error: "Unknown order." }, { status: 404 });
-    }
-
     if (eventType === "payment.captured") {
-      await admin
-        .from("subscription_payments" as never)
-        .update({ status: "paid", razorpay_payment_id: paymentId } as never)
-        .eq("id", paymentRow.id);
-
-      const renewsAt = new Date();
-      if (paymentRow.billing_cycle === "yearly") {
-        renewsAt.setFullYear(renewsAt.getFullYear() + 1);
-      } else {
-        renewsAt.setMonth(renewsAt.getMonth() + 1);
+      const r = await activateSubscription(orderId, paymentId);
+      if (!r.found) {
+        console.error(`Zen Biz: webhook for unknown order ${orderId}`);
+        return NextResponse.json({ error: "Unknown order." }, { status: 404 });
       }
-
-      await admin
-        .from("profiles" as never)
-        .update({
-          plan: paymentRow.plan,
-          billing_cycle: paymentRow.billing_cycle,
-          plan_renews_at: renewsAt.toISOString(),
-        } as never)
-        .eq("id", paymentRow.owner_id);
     } else {
       await admin
         .from("subscription_payments" as never)
         .update({ status: "failed", razorpay_payment_id: paymentId } as never)
-        .eq("id", paymentRow.id);
+        .eq("razorpay_order_id", orderId)
+        .neq("status", "paid");
     }
   }
 
