@@ -3,7 +3,6 @@ import { notFound, redirect } from "next/navigation";
 import { getMyAccess } from "@/lib/getMyAccess";
 import { createClient } from "@/lib/supabase/server";
 import { DeleteInvoiceButton } from "@/components/DeleteInvoiceButton";
-import { ConvertToInvoiceButton } from "@/components/ConvertToInvoiceButton";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
 import { ShareInvoiceButtons } from "@/components/ShareInvoiceButtons";
 import { PrintButton } from "@/components/PrintButton";
@@ -11,6 +10,7 @@ import { CURRENCY_SYMBOLS } from "@/types/database";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import type { Invoice, InvoiceItem } from "@/types/database";
+import { formatBillNo } from "@/lib/billingLoyalty";
 
 function formatCurrency(n: number, currency: string = "INR") {
   const symbol = CURRENCY_SYMBOLS[currency] ?? `${currency} `;
@@ -30,24 +30,13 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
 
   if (!record) notFound();
 
-  const [{ data: items }, profile, { count: invoicesThisMonth }] = await Promise.all([
+  const [{ data: items }, profile] = await Promise.all([
     supabase
       .from("invoice_items" as never)
       .select("*")
       .eq("invoice_id", record.id)
       .order("created_at", { ascending: true }) as unknown as Promise<{ data: InvoiceItem[] | null }>,
     getCurrentProfile(),
-    (() => {
-      const monthStart = new Date();
-      monthStart.setDate(1);
-      monthStart.setHours(0, 0, 0, 0);
-      return supabase
-        .from("invoices" as never)
-        .select("id", { count: "exact", head: true })
-        .eq("business_id", record.business_id)
-        .eq("record_type", "invoice")
-        .gte("created_at", monthStart.toISOString());
-    })(),
   ]);
 
   const plan = profile?.plan ?? "starter";
@@ -64,7 +53,14 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
 
       <div className="overflow-hidden rounded-xl2 border border-paper-fold bg-paper-card shadow-card">
         <div className="border-b border-brass/30 bg-brass/10 px-5 py-4 sm:px-6">
-          <p className="text-sm font-semibold text-brass-dark">BILLING RECORD</p>
+          <p className="text-sm font-semibold text-brass-dark">
+            BILLING RECORD
+            {(record as unknown as { bill_no?: number | null }).bill_no ? (
+              <span className="ml-2 rounded-md bg-ink/10 px-2 py-0.5 font-ledger text-xs text-ink">
+                Bill No: {formatBillNo((record as unknown as { bill_no?: number | null }).bill_no)}
+              </span>
+            ) : null}
+          </p>
           <p className="mt-0.5 text-xs text-text-soft">
             Not an official invoice — saved for your own records.
           </p>
@@ -167,13 +163,6 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
               <PrintButton invoiceId={record.id} />
               <DownloadInvoiceButton invoiceId={record.id} />
               {canShare && <ShareInvoiceButtons invoiceId={record.id} />}
-              <ConvertToInvoiceButton
-                recordId={record.id}
-                ownerId={record.owner_id}
-                businessId={record.business_id}
-                plan={plan}
-                invoicesThisMonth={invoicesThisMonth ?? 0}
-              />
               <DeleteInvoiceButton invoiceId={record.id} isBillingRecord />
             </>
           )}

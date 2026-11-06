@@ -134,6 +134,8 @@ export interface Business {
   barcode_settings?: Partial<import("@/lib/barcode").BarcodeSettings> | null;
   /** Items with this many or fewer in stock are shown as low stock. */
   low_stock_level?: number | null;
+  /** Billing (POS) loyalty points rules and UPI id. */
+  billing_settings?: Partial<import("@/lib/billingLoyalty").BillingSettings> | null;
   /** Low-stock limit per unit, e.g. { "pcs": 10, "kg": 2 }. Units not listed use low_stock_level. */
   low_stock_limits?: Record<string, number | null> | null;
   product_categories?: string[] | null;
@@ -234,6 +236,8 @@ export interface Profile {
   barcode_settings?: Partial<import("@/lib/barcode").BarcodeSettings> | null;
   /** Items with this many or fewer in stock are shown as low stock. */
   low_stock_level?: number | null;
+  /** Billing (POS) loyalty points rules and UPI id. */
+  billing_settings?: Partial<import("@/lib/billingLoyalty").BillingSettings> | null;
   /** Low-stock limit per unit, e.g. { "pcs": 10, "kg": 2 }. Units not listed use low_stock_level. */
   low_stock_limits?: Record<string, number | null> | null;
   signature_url: string | null;
