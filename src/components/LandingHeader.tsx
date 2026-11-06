@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Logo } from "@/components/Logo";
+import { MobileMenu } from "@/components/MobileMenu";
 
 export function LandingHeader() {
   return (
@@ -57,7 +58,7 @@ export function LandingHeader() {
           </Link>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2 sm:gap-3">
           <Link
             href="/login"
             className="text-sm font-medium text-text-soft transition hover:text-ink"
@@ -70,6 +71,7 @@ export function LandingHeader() {
           >
             Start free
           </Link>
+          <MobileMenu />
         </div>
       </div>
     </header>
