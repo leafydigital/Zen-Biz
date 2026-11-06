@@ -12,6 +12,7 @@ import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { BillingPOS } from "@/components/BillingPOS";
 import { BillingCustomers, type BillingCustomerRow } from "@/components/BillingCustomers";
 import { formatBillNo, getBillingSettings, type BillingCustomerLite } from "@/lib/billingLoyalty";
+import { getStockLimits } from "@/lib/stockLimits";
 import type { Product } from "@/types/database";
 
 function formatCurrency(n: number, currency: string = "INR") {
@@ -143,6 +144,8 @@ export default async function BillingRecordsPage({ searchParams }: { searchParam
           recent={recent}
           canViewRecords={canRecords}
           customers={billingCustomers}
+          stockLimits={getStockLimits(activeBusiness?.low_stock_level, activeBusiness?.low_stock_limits)}
+          isOwner={activeBusiness?.owner_id === user?.id}
           billingSettings={getBillingSettings(activeBusiness?.billing_settings)}
           itemPerms={{
             add: access.permissions.includes("billing_add_item"),

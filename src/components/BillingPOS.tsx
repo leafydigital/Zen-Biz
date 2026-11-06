@@ -14,6 +14,7 @@ import { CategoryBar, inCategory } from "@/components/CategoryBar";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { BillingSettingsModal } from "@/components/BillingSettingsModal";
 import { UpiQrModal } from "@/components/UpiQrModal";
+import { isLow, type StockLimits } from "@/lib/stockLimits";
 import {
   formatBillNo,
   maxRedeemable,
@@ -113,6 +114,8 @@ export function BillingPOS({
   itemPerms,
   customers: initialCustomers,
   billingSettings: initialSettings,
+  stockLimits,
+  isOwner,
 }: {
   ownerId: string;
   businessId: string;
@@ -124,6 +127,8 @@ export function BillingPOS({
   itemPerms: { add: boolean; edit: boolean; hide: boolean; remove: boolean };
   customers: BillingCustomerLite[];
   billingSettings: BillingSettings;
+  stockLimits: StockLimits;
+  isOwner: boolean;
   plan: Plan;
   productLimit: number | null;
   labels: { itemSingular: string; defaultUnit: string; unitOptions: string[]; stockTrackingDefault: boolean; stockHint: string };
@@ -167,17 +172,19 @@ export function BillingPOS({
   const [held, setHeld] = useState<HeldBill[]>([]);
   const [showHeld, setShowHeld] = useState(false);
   const [heldLoaded, setHeldLoaded] = useState(false);
+  const [stockPopup, setStockPopup] = useState(false);
+  const [alertsOpen, setAlertsOpen] = useState(false);
 
   const categories = useMemo(
     () => Array.from(new Set(products.map((p) => p.category?.trim()).filter(Boolean) as string[])).sort(),
     [products]
   );
 
-  const visible = products.filter(
-    (p) =>
-      inCategory(p, category) &&
-      p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const isOutOfStock = (p: Product) => p.is_active && p.stock_qty !== null && Number(p.stock_qty) <= 0;
+  // Out-of-stock (grey) items are moved to the end. The sort is stable, so everything else keeps its order.
+  const visible = products
+    .filter((p) => inCategory(p, category) && p.name.toLowerCase().includes(search.toLowerCase()))
+    .sort((a, b) => Number(isOutOfStock(a)) - Number(isOutOfStock(b)));
 
   const cartLines = useMemo(
     () =>
@@ -206,6 +213,31 @@ export function BillingPOS({
   }, [cartLines, taxType]);
 
   const itemCount = cartLines.reduce((s, l) => s + l.qty, 0);
+
+  // ---- stock watch (owner popup)
+  const outItems = useMemo(() => products.filter((p) => p.is_active && p.stock_qty !== null && Number(p.stock_qty) <= 0), [products]);
+  const lowItems = useMemo(
+    () => products.filter((p) => p.is_active && isLow(stockLimits, p.stock_qty === null ? null : Number(p.stock_qty), p.unit)),
+    [products, stockLimits]
+  );
+  const outSig = outItems.map((p) => p.id).sort().join(",");
+  useEffect(() => {
+    if (!isOwner || !outSig) return;
+    try {
+      if (sessionStorage.getItem("zb-outpopup-" + businessId) === outSig) return;
+    } catch {
+      /* storage blocked: just show it */
+    }
+    setStockPopup(true);
+  }, [isOwner, outSig, businessId]);
+  function closeStockPopup() {
+    setStockPopup(false);
+    try {
+      sessionStorage.setItem("zb-outpopup-" + businessId, outSig);
+    } catch {
+      /* ignore */
+    }
+  }
 
   // ---- billing customer, points and payment
   const phoneKey = phoneDigits(custPhone);
@@ -236,6 +268,17 @@ export function BillingPOS({
 
   function add(p: Product) {
     if (!p.is_active) return;
+    const stock = p.stock_qty === null ? null : Number(p.stock_qty);
+    if (stock !== null && (cart[p.id] ?? 0) + 1 > stock) {
+      setError(
+        stock <= 0
+          ? p.name + " is out of stock, so it can't be added to a bill."
+          : "Only " + stock + " " + p.unit + " of " + p.name + " in stock."
+      );
+      if (stock <= 0 && isOwner) setStockPopup(true);
+      return;
+    }
+    setError(null);
     setSavedId(null);
     setCart((c) => ({ ...c, [p.id]: (c[p.id] ?? 0) + 1 }));
   }
@@ -249,6 +292,8 @@ export function BillingPOS({
     const p = products.find((x) => x.item_code?.trim().toLowerCase() === code);
     if (!p) return `No item with code "${raw.trim()}"`;
     if (!p.is_active) return `${p.name} is hidden`;
+    const st = p.stock_qty === null ? null : Number(p.stock_qty);
+    if (st !== null && (cart[p.id] ?? 0) + 1 > st) return st <= 0 ? `${p.name} is out of stock` : `Only ${st} ${p.unit} of ${p.name} in stock`;
     add(p);
     return `Added ${p.name}`;
   }
@@ -701,7 +746,13 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
 
   function resumeHeld(h: HeldBill) {
     const usable: Record<string, number> = {};
-    for (const [id, q] of Object.entries(h.cart)) if (products.some((x) => x.id === id && x.is_active)) usable[id] = q;
+    for (const [id, q] of Object.entries(h.cart)) {
+      const prod = products.find((x) => x.id === id && x.is_active);
+      if (!prod) continue;
+      const st = prod.stock_qty === null ? null : Number(prod.stock_qty);
+      const q2 = st === null ? q : Math.min(q, Math.floor(st));
+      if (q2 > 0) usable[id] = q2;
+    }
     if (Object.keys(usable).length === 0) {
       setError("The items on that bill are no longer available.");
       return;
@@ -897,13 +948,25 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          onKeyDown={onSearchEnter}
-          placeholder={canScan ? "Search items or scan barcode…" : "Search items…"}
-          className="min-w-0 flex-1 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink sm:max-w-xs sm:flex-none"
-        />
+        <div className="relative min-w-0 flex-1 sm:max-w-xs sm:flex-none">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={onSearchEnter}
+            placeholder={canScan ? "Search items or scan barcode…" : "Search items…"}
+            className="w-full rounded-xl border border-paper-fold bg-white py-2.5 pl-3.5 pr-9 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
+          />
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-lg leading-none text-text-soft hover:bg-paper-fold hover:text-text"
+            >
+              ×
+            </button>
+          )}
+        </div>
         <button
           type="button"
           onClick={() => (canScan ? setScanOpen(true) : setScanLockedOpen((o) => !o))}
@@ -925,6 +988,19 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
           + Add {labels.itemSingular.toLowerCase()}
         </button>
         )}
+        <button
+          type="button"
+          onClick={() => setAlertsOpen(true)}
+          aria-label={"Stock alerts: " + (outItems.length + lowItems.length) + " items"}
+          className="relative inline-flex items-center gap-2 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-sm font-semibold text-text hover:bg-paper"
+        >
+          Stock alerts
+          {outItems.length + lowItems.length > 0 && (
+            <span className="flex h-5 min-w-[1.25rem] items-center justify-center rounded-full bg-alert px-1.5 text-[0.7rem] font-bold text-white">
+              {outItems.length + lowItems.length}
+            </span>
+          )}
+        </button>
         {(itemPerms.edit || itemPerms.hide || itemPerms.remove) && (
         <button
           type="button"
@@ -948,15 +1024,26 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
         <div className="grid grid-cols-3 gap-2.5 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6">
           {visible.map((p) => {
             const qty = cart[p.id] ?? 0;
+            const stock = p.stock_qty === null ? null : Number(p.stock_qty);
+            const left = stock === null ? null : Math.round((stock - qty) * 1000) / 1000;
+            const out = left !== null && left <= 0;
+            const low = left !== null && !out && isLow(stockLimits, left, p.unit);
+            const tone = out ? "border-gray-300 bg-gray-100 grayscale" : low ? "border-amber-300 bg-amber-50" : "border-paper-fold bg-white";
             return (
               <div
                 key={p.id}
                 role="button"
                 tabIndex={p.is_active ? 0 : -1}
-                aria-disabled={!p.is_active}
+                aria-disabled={!p.is_active || out}
                 onClick={() => !manage && add(p)}
-                className={`relative flex flex-col items-center gap-1.5 rounded-xl border border-paper-fold bg-white p-2 text-center shadow-card transition ${
-                  manage ? "" : p.is_active ? "cursor-pointer active:scale-95 hover:border-ink/30" : "cursor-not-allowed opacity-60"
+                className={`relative flex flex-col items-center gap-1.5 rounded-xl border ${tone} p-2 text-center shadow-card transition ${
+                  manage
+                    ? ""
+                    : !p.is_active
+                      ? "cursor-not-allowed opacity-60"
+                      : out
+                        ? "cursor-not-allowed"
+                        : "cursor-pointer active:scale-95 hover:border-ink/30"
                 }`}
               >
                 {qty > 0 && (
@@ -964,11 +1051,20 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
                     {qty}
                   </span>
                 )}
-                <ProductThumb p={p} size={56} dim={!p.is_active} />
+                <ProductThumb p={p} size={56} dim={!p.is_active || out} />
                 <span className="line-clamp-2 w-full text-xs font-medium leading-tight text-text">{p.name}</span>
                 <span className="font-ledger text-xs font-semibold tabular-nums text-ink">
                   {p.is_active ? money(Number(p.price), currency) : "Hidden"}
                 </span>
+                {p.is_active && left !== null && (
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[0.65rem] font-semibold ${
+                      out ? "bg-gray-800 text-white" : low ? "bg-amber-100 text-amber-800" : "bg-green-100 text-green-800"
+                    }`}
+                  >
+                    {out ? (stock !== null && stock <= 0 ? "Out of stock" : "All " + stock + " in bill") : left + " " + p.unit + " left" + (low ? " · low" : "")}
+                  </span>
+                )}
                 {manage && (
                   <div className="mt-1 flex w-full gap-1 [&>button]:flex-1">
                     {itemPerms.edit && <button type="button" onClick={() => openForm(p)} className="rounded border border-paper-fold py-1 text-[0.65rem] font-semibold text-text hover:bg-paper">
@@ -1257,6 +1353,8 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
           onDec={(id) => { const p = products.find((x) => x.id === id); if (p) remove(p); }}
         />
       )}
+      {stockPopup && isOwner && <StockOutPopup out={outItems} low={lowItems} onClose={closeStockPopup} />}
+      {alertsOpen && <StockOutPopup out={outItems} low={lowItems} onClose={() => setAlertsOpen(false)} title="Stock alerts" />}
       {settingsOpen && (
         <BillingSettingsModal
           businessId={businessId}
@@ -1290,6 +1388,58 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
       {limitOpen && productLimit !== null && (
         <LimitReachedModal kind="products" limit={productLimit} currentPlan={plan} onClose={() => setLimitOpen(false)} />
       )}
+    </div>
+  );
+}
+
+/** Shown to the owner when items are out of stock: refill or order new stock. */
+function StockOutPopup({ out, low, onClose, title }: { out: Product[]; low: Product[]; onClose: () => void; title?: string }) {
+  return (
+    <div className="fixed inset-0 z-40 flex items-end justify-center bg-ink/50 sm:items-center" onClick={onClose} role="dialog" aria-modal="true" aria-label="Stock alert">
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="flex max-h-[85vh] w-full max-w-[440px] flex-col gap-3 overflow-y-auto rounded-t-xl2 bg-paper-card p-6 shadow-card sm:rounded-xl2"
+      >
+        <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-alert">
+          <span aria-hidden="true">⚠️</span> {title ?? (out.length > 0 ? "Out of stock" : "Stock running low")}
+        </h2>
+        {out.length === 0 && low.length === 0 && <p className="text-sm text-text-soft">All items have enough stock.</p>}
+        {out.length > 0 && (
+          <>
+            <p className="text-sm font-semibold text-alert">Out of stock ({out.length})</p>
+            <p className="-mt-2 text-xs text-text-soft">These items can't be billed until you add stock.</p>
+            <ul className="flex flex-col gap-1.5">
+              {out.map((p) => (
+                <li key={p.id} className="flex items-center justify-between rounded-lg bg-alert-bg px-3 py-2 text-sm">
+                  <span className="min-w-0 truncate font-medium text-text">{p.name}</span>
+                  <span className="ml-3 shrink-0 font-semibold text-alert">0 {p.unit}</span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        {low.length > 0 && (
+          <>
+            <p className="mt-1 text-sm font-semibold text-amber-800">Running low ({low.length})</p>
+            <ul className="flex flex-col gap-1.5">
+              {low.map((p) => (
+                <li key={p.id} className="flex items-center justify-between rounded-lg bg-amber-50 px-3 py-2 text-sm">
+                  <span className="min-w-0 truncate text-text">{p.name}</span>
+                  <span className="ml-3 shrink-0 font-semibold text-amber-800">
+                    {p.stock_qty} {p.unit} left
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+        <Link href="/dashboard/stock" className="mt-1 rounded-xl bg-ink px-3 py-2.5 text-center text-sm font-semibold text-paper hover:bg-ink-light">
+          Update stock
+        </Link>
+        <button type="button" onClick={onClose} className="rounded-xl px-3 py-2 text-sm font-semibold text-text-soft hover:bg-paper">
+          Close
+        </button>
+      </div>
     </div>
   );
 }
