@@ -522,6 +522,15 @@ export async function savePaymentSettings(input: { keyId: string; keySecret: str
 
 // ── Payment history ────────────────────────────────────────────────────────
 
+/** Delete one payment-history record. */
+export async function deletePayment(id: string) {
+  const g = await guard("history");
+  if (g) return { error: g };
+  const { error } = await createAdminClient().from("subscription_payments" as never).delete().eq("id", id);
+  revalidatePath("/app");
+  return { error: error?.message ?? null };
+}
+
 /** Every plan checkout, newest first: paid, failed, waiting or not completed, with any discount used. */
 export async function getPaymentHistory(): Promise<{ error: string | null; rows: PaymentRow[] }> {
   const s = await getConsoleSession();
@@ -540,8 +549,8 @@ export async function getPaymentHistory(): Promise<{ error: string | null; rows:
   const ownerIds = Array.from(new Set(list.map((r) => r.owner_id as string)));
   const noOwner = ["00000000-0000-0000-0000-000000000000"];
   const [profiles, businesses, users] = await Promise.all([
-    admin.from("profiles" as never).select("id, business_name").in("id", ownerIds.length ? ownerIds : noOwner),
-    admin.from("businesses" as never).select("owner_id, business_name, created_at").in("owner_id", ownerIds.length ? ownerIds : noOwner).order("created_at", { ascending: true }),
+    admin.from("profiles" as never).select("id, business_name, phone").in("id", ownerIds.length ? ownerIds : noOwner),
+    admin.from("businesses" as never).select("owner_id, business_name, phone, created_at").in("owner_id", ownerIds.length ? ownerIds : noOwner).order("created_at", { ascending: true }),
     Promise.all(ownerIds.map(async (id) => [id, (await admin.auth.admin.getUserById(id)).data.user?.email ?? ""] as const)),
   ]);
   const names = new Map<string, string>();
@@ -549,6 +558,9 @@ export async function getPaymentHistory(): Promise<{ error: string | null; rows:
   // The business name is kept in the businesses table; the owner's first business wins.
   for (const b of (businesses.data ?? []) as any[]) if (b.business_name && !names.has(b.owner_id)) names.set(b.owner_id, b.business_name);
   const emails = new Map(users);
+  const phones = new Map<string, string>();
+  for (const p of (profiles.data ?? []) as any[]) if (p.phone) phones.set(p.id, p.phone);
+  for (const b of (businesses.data ?? []) as any[]) if (b.phone && !phones.has(b.owner_id)) phones.set(b.owner_id, b.phone);
 
   const cutoff = Date.now() - PENDING_MINUTES * 60_000;
   const rows: PaymentRow[] = list.map((r) => ({
@@ -556,6 +568,7 @@ export async function getPaymentHistory(): Promise<{ error: string | null; rows:
     createdAt: r.created_at,
     customer: names.get(r.owner_id) || emails.get(r.owner_id) || "(unknown customer)",
     email: emails.get(r.owner_id) || "",
+    phone: phones.get(r.owner_id) || "",
     plan: r.plan,
     cycle: r.billing_cycle,
     currency: r.currency || "INR",

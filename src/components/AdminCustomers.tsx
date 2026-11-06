@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { saveAlertDays, saveFollowup, setCustomerPlan } from "@/lib/actions/adminActions";
-import { daysLeft, dueCustomers, waNumber, type CustomerRow } from "@/lib/customerTypes";
+import { daysLeft, dueCustomers, type CustomerRow } from "@/lib/customerTypes";
 
 const input = "rounded-xl border border-paper-fold bg-white px-3 py-2 text-sm text-text focus:border-ink focus:outline-none";
 const primary = "rounded-lg bg-ink px-3.5 py-2 text-xs font-semibold text-paper transition hover:bg-ink-light disabled:opacity-60";
@@ -22,26 +22,6 @@ function DaysBadge({ iso, alertDays }: { iso: string | null; alertDays: number }
   if (d < 0) return <span className="rounded bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">Expired {-d} day{-d === 1 ? "" : "s"} ago</span>;
   if (d <= alertDays) return <span className="rounded bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">{d === 0 ? "Expires today" : `${d} day${d === 1 ? "" : "s"} left`}</span>;
   return <span className="rounded bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-700">{d} days left</span>;
-}
-
-function Contact({ r, reminder, alertDays }: { r: CustomerRow; reminder?: boolean; alertDays?: number }) {
-  const d = daysLeft(r.renewsAt);
-  const text = reminder
-    ? `Hello ${r.name}, your Zen Biz ${r.plan} plan ${d !== null && d < 0 ? "expired on" : "expires on"} ${fmtDate(r.renewsAt)}. Please renew to keep all features. Thank you!`
-    : `Hello ${r.name}, this is Zen Biz.`;
-  return (
-    <div className="flex flex-wrap gap-2">
-      {r.phone && (
-        <>
-          <a target="_blank" rel="noreferrer" href={`https://wa.me/${waNumber(r.phone)}?text=${encodeURIComponent(text)}`} className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-emerald-700">WhatsApp</a>
-          <a href={`tel:${r.phone}`} className="rounded-lg bg-sky-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-sky-700">Call</a>
-        </>
-      )}
-      {r.email && (
-        <a href={`mailto:${r.email}?subject=${encodeURIComponent("Your Zen Biz plan")}&body=${encodeURIComponent(text)}`} className="rounded-lg bg-amber-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-amber-700">Email</a>
-      )}
-    </div>
-  );
 }
 
 function Loading({ error }: { error: string | null }) {
@@ -120,7 +100,6 @@ export function CustomersPanel({
                   </ul>
                 )}
               </div>
-              <Contact r={r} reminder={r.plan !== "starter"} />
               {canEditPlan && <PlanEditor r={r} onChanged={onChanged} setMsg={setMsg} />}
             </div>
           )}
@@ -281,7 +260,6 @@ function RenewalRow({ r, alertDays, canEdit, onChanged, setMsg }: { r: CustomerR
         </div>
         <DaysBadge iso={r.renewsAt} alertDays={alertDays} />
       </div>
-      <div className="mt-3"><Contact r={r} reminder /></div>
       {canEdit && (
         <div className="mt-3 flex flex-wrap items-end gap-2 rounded-xl bg-paper p-3">
           <label className="flex flex-col gap-1 text-xs text-text-soft">Remind me on

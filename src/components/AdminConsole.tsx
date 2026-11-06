@@ -504,7 +504,7 @@ export function AdminConsole({
           </fieldset>
         )}
 
-        {tab === "history" && <PaymentHistoryPanel />}
+        {tab === "history" && <PaymentHistoryPanel canEdit={lvl("history") === "edit"} />}
 
         {tab === "payments" && <PaymentsPanel canEdit={lvl("payments") === "edit"} setMsg={setMsg} />}
 

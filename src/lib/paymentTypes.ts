@@ -4,6 +4,7 @@ export type PaymentRow = {
   createdAt: string;
   customer: string;
   email: string;
+  phone: string;
   plan: string;
   cycle: string;
   currency: string;

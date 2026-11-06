@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { getPaymentHistory } from "@/lib/actions/adminActions";
+import { deletePayment, getPaymentHistory } from "@/lib/actions/adminActions";
 import { formatPrice, type Currency } from "@/lib/currency";
 import type { PaymentRow } from "@/lib/paymentTypes";
 
@@ -20,7 +20,7 @@ const STATUS_LABEL: Record<PaymentRow["status"], string> = { paid: "Paid", faile
 const money = (n: number, c: string) => formatPrice(n, (c === "USD" ? "USD" : "INR") as Currency);
 
 /** Owner console → Payment history: every checkout, whether it was paid or failed, and which discount was used. */
-export function PaymentHistoryPanel() {
+export function PaymentHistoryPanel({ canEdit = false }: { canEdit?: boolean }) {
   const [rows, setRows] = useState<PaymentRow[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filter, setFilter] = useState<Filter>("all");
@@ -36,6 +36,13 @@ export function PaymentHistoryPanel() {
       setUpdated(new Date());
     }
   }, []);
+
+  async function remove(id: string) {
+    if (!window.confirm("Delete this payment record permanently?")) return;
+    const r = await deletePayment(id);
+    if (r.error) window.alert(r.error);
+    else setRows((cur) => (cur ? cur.filter((x) => x.id !== id) : cur));
+  }
 
   useEffect(() => {
     void load();
@@ -149,7 +156,8 @@ export function PaymentHistoryPanel() {
                     <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${STATUS_STYLE[r.status]}`}>{STATUS_LABEL[r.status]}</span>
                   </p>
                   <p className="text-xs text-text-soft">
-                    {r.email} · {new Date(r.createdAt).toLocaleString("en-IN")}
+                    {r.email}
+                    {r.phone ? ` · ${r.phone}` : ""} · {new Date(r.createdAt).toLocaleString("en-IN")}
                   </p>
                 </div>
                 <div className="text-right">
@@ -170,6 +178,14 @@ export function PaymentHistoryPanel() {
                 Order {r.orderId}
                 {r.paymentId ? ` · Payment ${r.paymentId}` : ""}
               </p>
+              {canEdit && (
+                <button
+                  onClick={() => void remove(r.id)}
+                  className="mt-2 rounded-lg bg-red-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              )}
             </div>
           ))}
         </div>
