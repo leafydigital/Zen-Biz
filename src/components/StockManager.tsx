@@ -8,6 +8,7 @@ import { useGlobalLoader } from "@/lib/GlobalLoaderContext";
 import { formatMessage, useTranslation } from "@/lib/i18n/I18nContext";
 import { generateUniqueBarcode, printLabelItems, type BarcodeSettings } from "@/lib/barcode";
 import { CategoryBar, inCategory } from "@/components/CategoryBar";
+import { getStockLimits, isLow, needsAttention, unitKey, type StockLimits, type UnitLimits } from "@/lib/stockLimits";
 import type { Product } from "@/types/database";
 
 type Filter = "all" | "low" | "out" | "untracked";
@@ -20,14 +21,14 @@ export function StockManager({
   products,
   itemLabelPlural,
   barcodeSettings,
-  lowStockLevel = 5,
+  limits: initialLimits,
 }: {
   businessId: string;
   businessName: string;
   products: Product[];
   itemLabelPlural: string;
   barcodeSettings: BarcodeSettings;
-  lowStockLevel?: number;
+  limits: StockLimits;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -40,12 +41,14 @@ export function StockManager({
   const [target, setTarget] = useState<Product | null>(null);
   const [labelFor, setLabelFor] = useState<Product | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [limits, setLimits] = useState<StockLimits>(initialLimits);
+  const [limitsOpen, setLimitsOpen] = useState(false);
 
   const q = search.trim().toLowerCase();
   const rows = products.filter((p) => {
     if (!inCategory(p, category)) return false;
     if (q && !p.name.toLowerCase().includes(q) && !(p.item_code ?? "").toLowerCase().includes(q)) return false;
-    if (filter === "low") return p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= lowStockLevel;
+    if (filter === "low") return isLow(limits, p.stock_qty, p.unit);
     if (filter === "out") return p.stock_qty !== null && p.stock_qty <= 0;
     if (filter === "untracked") return p.stock_qty === null;
     return true;
@@ -54,7 +57,7 @@ export function StockManager({
   const tracked = products.filter((p) => p.stock_qty !== null);
   const totalUnits = tracked.reduce((a, p) => a + (p.stock_qty ?? 0), 0);
   const totalValue = tracked.reduce((a, p) => a + Math.max(0, p.stock_qty ?? 0) * p.price, 0);
-  const lowCount = tracked.filter((p) => (p.stock_qty ?? 0) <= lowStockLevel).length;
+  const lowCount = tracked.filter((p) => needsAttention(limits, p.stock_qty, p.unit)).length;
 
   /** Gives the item a barcode number if it has none, then prints `copies` labels. */
   async function printLabels(p: Product, copies: number) {
@@ -89,12 +92,24 @@ export function StockManager({
             {st.subtitle}
           </p>
         </div>
-        <Link
-          href="/dashboard/settings?tab=barcode"
-          className="inline-flex items-center justify-center rounded-xl border border-paper-fold bg-white px-4 py-2.5 text-sm font-semibold text-text hover:bg-paper"
-        >
-          {st.labelDesign}
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <button type="button" onClick={() => setLimitsOpen(true)}
+            aria-label="Stock limit setting"
+            className="inline-flex items-center gap-2 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-sm font-semibold text-text hover:bg-paper"
+          >
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+            </svg>
+            Stock limit
+          </button>
+          <Link
+            href="/dashboard/settings?tab=barcode"
+            className="inline-flex items-center justify-center rounded-xl border border-paper-fold bg-white px-4 py-2.5 text-sm font-semibold text-text hover:bg-paper"
+          >
+            {st.labelDesign}
+          </Link>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
@@ -156,7 +171,7 @@ export function StockManager({
         <ul className="flex flex-col gap-2">
           {rows.map((p) => {
             const out = p.stock_qty !== null && p.stock_qty <= 0;
-            const low = p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= lowStockLevel;
+            const low = isLow(limits, p.stock_qty, p.unit);
             return (
               <li
                 key={p.id}
@@ -167,7 +182,7 @@ export function StockManager({
                   <div className="text-xs text-text-soft">
                     {money(p.price)} / {p.unit}
                     {p.item_code ? (
-                      <span className="ml-2 font-ledger">{p.item_code}</span>
+                      <span className="ml-2">Barcode: <span className="font-ledger">{p.item_code}</span></span>
                     ) : (
                       <span className="ml-2 italic">{st.noBarcode}</span>
                     )}
@@ -206,6 +221,18 @@ export function StockManager({
         </ul>
       )}
 
+      {limitsOpen && (
+        <StockLimitsModal
+          businessId={businessId}
+          usedUnits={Array.from(new Set(products.map((p) => unitKey(p.unit)).filter(Boolean))).sort()}
+          limits={limits}
+          onClose={() => setLimitsOpen(false)}
+          onSaved={(l) => {
+            setLimits(l);
+            router.refresh();
+          }}
+        />
+      )}
       {target && <UpdateStockModal product={target} onClose={() => setTarget(null)} onPrint={printLabels} />}
       {labelFor && (
         <CopiesModal
@@ -274,7 +301,7 @@ function UpdateStockModal({
   const current = product.stock_qty ?? 0;
 
   const [step, setStep] = useState<Step>("qty");
-  const [mode, setMode] = useState<"add" | "reduce" | "set">("add");
+  const [mode, setMode] = useState<"add" | "reduce">("add");
   const [qty, setQty] = useState("");
   // Weight / volume items can be counted in packs (e.g. 5 packs of 250 g) instead of kg.
   const subUnits = packUnits(product.unit);
@@ -291,8 +318,8 @@ function UpdateStockModal({
   const perPack = round3(sizeN * packFactor); // one pack, in the item's own unit (kg)
   const amount = byPack ? round3(n * perPack) : n; // what changes, in the item's own unit
   const valid =
-    Number.isFinite(n) && n >= 0 && (mode === "set" || n > 0) && (!byPack || (sizeN > 0 && Number.isFinite(sizeN)));
-  const newStock = !valid ? current : round3(mode === "add" ? current + amount : mode === "reduce" ? current - amount : amount);
+    Number.isFinite(n) && n >= 0 && n > 0 && (!byPack || (sizeN > 0 && Number.isFinite(sizeN)));
+  const newStock = !valid ? current : round3(mode === "add" ? current + amount : current - amount);
   const packLabel = `${packSize} ${packUnit}`;
   const newPrice = changePrice ? parseFloat(price) : product.price;
 
@@ -338,7 +365,6 @@ function UpdateStockModal({
               [
                 ["add", st.add],
                 ["reduce", st.reduce],
-                ["set", st.setExact],
               ] as const
             ).map(([id, label]) => (
               <button
@@ -421,7 +447,7 @@ function UpdateStockModal({
           )}
           <label className="flex flex-col gap-1.5">
             <span className="text-sm font-medium text-text">
-              {mode === "add" ? st.qtyAdd : mode === "reduce" ? st.qtyReduce : st.qtyNew} (
+              {mode === "add" ? st.qtyAdd : st.qtyReduce} (
               {byPack ? formatMessage(st.packsOf, { size: packLabel }) : product.unit})
             </span>
             <input
@@ -630,5 +656,147 @@ function Buttons({
         {okLabel}
       </button>
     </div>
+  );
+}
+
+/** Edit the low-stock limit for each unit (pieces, kg, grams, litres...). Add your own units, switch a unit on/off, or remove one. */
+function StockLimitsModal({
+  businessId,
+  usedUnits,
+  limits,
+  onClose,
+  onSaved,
+}: {
+  businessId: string;
+  usedUnits: string[];
+  limits: StockLimits;
+  onClose: () => void;
+  onSaved: (l: StockLimits) => void;
+}) {
+  const supabase = createClient();
+  const { showLoader, hideLoader } = useGlobalLoader();
+  type Row = { unit: string; on: boolean; value: string };
+  // Units your items use, plus any custom units saved earlier.
+  const [rows, setRows] = useState<Row[]>(() => {
+    const names = Array.from(new Set([...usedUnits, ...Object.keys(limits.byUnit)])).sort();
+    return names.map((unit) => {
+      const v = limits.byUnit[unit];
+      return { unit, on: v !== null, value: String(v ?? limits.defaultLimit) };
+    });
+  });
+  const [def, setDef] = useState(String(limits.defaultLimit));
+  const [newUnit, setNewUnit] = useState("");
+  const [error, setError] = useState<string | null>(null);
+
+  const patch = (unit: string, p: Partial<Row>) => setRows((r) => r.map((x) => (x.unit === unit ? { ...x, ...p } : x)));
+
+  function addUnit() {
+    const u = unitKey(newUnit);
+    if (!u) return;
+    if (u.length > 20) return setError("A unit can be at most 20 characters.");
+    if (rows.some((r) => r.unit === u)) return setError(`"${u}" is already in the list.`);
+    setRows((r) => [...r, { unit: u, on: true, value: def }]);
+    setNewUnit("");
+    setError(null);
+  }
+
+  async function save() {
+    const d = Number(def);
+    if (def.trim() === "" || !Number.isFinite(d) || d < 0) return setError("Enter 0 or more for the default limit.");
+    const byUnit: UnitLimits = {};
+    for (const r of rows) {
+      if (!r.on) {
+        byUnit[r.unit] = null;
+        continue;
+      }
+      const n = Number(r.value);
+      if (r.value.trim() === "" || !Number.isFinite(n) || n < 0) return setError(`Enter 0 or more for "${r.unit}".`);
+      byUnit[r.unit] = n;
+    }
+    setError(null);
+    showLoader("Saving stock limits…");
+    const { error: err } = await supabase
+      .from("businesses" as never)
+      .update({ low_stock_level: Math.floor(d), low_stock_limits: byUnit } as never)
+      .eq("id", businessId);
+    hideLoader();
+    if (err) {
+      setError(
+        /low_stock/.test(err.message)
+          ? "Stock limit columns are missing. Run supabase/migration_53.sql in the Supabase SQL editor."
+          : err.message
+      );
+      return;
+    }
+    onSaved(getStockLimits(Math.floor(d), byUnit));
+    onClose();
+  }
+
+  return (
+    <Overlay onClose={onClose} title="Stock limit">
+      <p className="text-sm text-text-soft">
+        An item shows as low stock when its quantity is at or below the limit for its unit. Switch a unit off to stop alerts for it, or add your own unit.
+      </p>
+      <div className="flex flex-col gap-2">
+        {rows.length === 0 && <p className="text-sm text-text-soft">No units yet. Add one below.</p>}
+        {rows.map((r) => {
+          const inUse = usedUnits.includes(r.unit);
+          return (
+            <div key={r.unit} className="flex items-center gap-2">
+              <button
+                type="button"
+                role="switch"
+                aria-checked={r.on}
+                aria-label={`${r.unit} alerts ${r.on ? "on" : "off"}`}
+                onClick={() => patch(r.unit, { on: !r.on })}
+                className={`relative h-6 w-11 shrink-0 rounded-full transition ${r.on ? "bg-ink" : "bg-paper-fold"}`}
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${r.on ? "left-[22px]" : "left-0.5"}`} />
+              </button>
+              <span className={`w-20 shrink-0 truncate text-sm font-medium ${r.on ? "text-text" : "text-text-soft"}`}>{r.unit}</span>
+              <input
+                type="number"
+                min="0"
+                step="any"
+                disabled={!r.on}
+                value={r.value}
+                onChange={(e) => patch(r.unit, { value: e.target.value })}
+                className={`${inputCls} disabled:opacity-50`}
+              />
+              {inUse ? (
+                <span className="w-6 shrink-0" />
+              ) : (
+                <button
+                  type="button"
+                  aria-label={`Remove ${r.unit}`}
+                  onClick={() => setRows((x) => x.filter((y) => y.unit !== r.unit))}
+                  className="w-6 shrink-0 text-lg leading-none text-text-soft hover:text-alert"
+                >
+                  ×
+                </button>
+              )}
+            </div>
+          );
+        })}
+        <div className="flex items-center gap-2 border-t border-paper-fold pt-3">
+          <input
+            value={newUnit}
+            onChange={(e) => setNewUnit(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), addUnit())}
+            placeholder="Add a unit (e.g. box, dozen)"
+            className={inputCls}
+          />
+          <button type="button" onClick={addUnit} className="shrink-0 rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-sm font-semibold text-text hover:bg-paper">
+            Add
+          </button>
+        </div>
+        <label className="flex items-center gap-3 pt-1">
+          <span className="w-36 shrink-0 text-sm font-medium text-text-soft">All other units</span>
+          <input type="number" min="0" step="any" value={def} onChange={(e) => setDef(e.target.value)} className={inputCls} />
+        </label>
+      </div>
+      {error && <p className="text-sm text-alert">{error}</p>}
+      <Buttons onCancel={onClose} onOk={save} okLabel="Save" />
+    </Overlay>
   );
 }

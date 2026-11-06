@@ -3,6 +3,7 @@ import { getLabels } from "@/lib/businessLabels";
 import { getActiveBusiness } from "@/lib/getActiveBusiness";
 import { getBarcodeSettings } from "@/lib/barcode";
 import { StockManager } from "@/components/StockManager";
+import { getStockLimits } from "@/lib/stockLimits";
 import type { Product } from "@/types/database";
 
 export default async function StockPage() {
@@ -25,7 +26,7 @@ export default async function StockPage() {
       products={products ?? []}
       itemLabelPlural={labels.itemPlural}
       barcodeSettings={getBarcodeSettings(business?.barcode_settings)}
-      lowStockLevel={business?.low_stock_level ?? 5}
+      limits={getStockLimits(business?.low_stock_level, business?.low_stock_limits)}
     />
   );
 }

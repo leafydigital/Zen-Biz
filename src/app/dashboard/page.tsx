@@ -7,6 +7,7 @@ import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getActiveBusiness, getUserBusinesses } from "@/lib/getActiveBusiness";
 import { getMyAccess } from "@/lib/getMyAccess";
 import { LowStockAlert } from "@/components/LowStockAlert";
+import { getStockLimits } from "@/lib/stockLimits";
 import { AnalyticsSection } from "@/components/analytics/AnalyticsSection";
 
 function formatCurrency(n: number) {
@@ -294,7 +295,7 @@ export default async function DashboardHome() {
       </div>
 
       {getPlanFeatures(profile?.plan ?? "starter").stockLowAlerts && activeBusiness && (
-        <LowStockAlert businessId={activeBusiness.id} level={activeBusiness.low_stock_level ?? undefined} />
+        <LowStockAlert businessId={activeBusiness.id} limits={getStockLimits(activeBusiness.low_stock_level, activeBusiness.low_stock_limits)} />
       )}
 
       <div className="rounded-xl2 border border-paper-fold bg-white p-5 shadow-card sm:p-6">

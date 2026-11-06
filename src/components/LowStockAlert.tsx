@@ -1,22 +1,23 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { needsAttention, type StockLimits } from "@/lib/stockLimits";
 
-/** Stock at or below this count is flagged as low. */
-export const LOW_STOCK_LEVEL = 5;
-
-export async function LowStockAlert({ businessId, level = LOW_STOCK_LEVEL }: { businessId: string; level?: number }) {
+export async function LowStockAlert({ businessId, limits }: { businessId: string; limits: StockLimits }) {
   const supabase = createClient();
-  const { data } = (await supabase
+  const { data: all } = (await supabase
     .from("products" as never)
     .select("id, name, unit, stock_qty")
     .eq("business_id", businessId)
     .eq("is_active", true)
     .not("stock_qty", "is", null)
-    .lte("stock_qty", level)
-    .order("stock_qty", { ascending: true })
-    .limit(8)) as { data: { id: string; name: string; unit: string; stock_qty: number }[] | null };
+    .order("stock_qty", { ascending: true })) as { data: { id: string; name: string; unit: string; stock_qty: number }[] | null };
 
-  if (!data || data.length === 0) return null;
+  // Each item is compared with the limit set for its own unit (pieces, kg, grams...).
+  const data = (all ?? [])
+    .filter((p) => needsAttention(limits, Number(p.stock_qty), p.unit))
+    .slice(0, 8);
+
+  if (data.length === 0) return null;
 
   return (
     <div className="rounded-xl2 border border-amber-200 bg-amber-50 p-5 shadow-card sm:p-6">
@@ -24,8 +25,8 @@ export async function LowStockAlert({ businessId, level = LOW_STOCK_LEVEL }: { b
         <h2 className="flex items-center gap-2 font-display text-lg font-semibold text-amber-900">
           <span aria-hidden="true">⚠️</span> Low stock alert
         </h2>
-        <Link href="/dashboard/products" className="text-xs font-semibold text-amber-800 underline">
-          View products
+        <Link href="/dashboard/stock" className="text-xs font-semibold text-amber-800 underline">
+          View stock
         </Link>
       </div>
       <ul className="grid gap-2 sm:grid-cols-2">
@@ -38,7 +39,7 @@ export async function LowStockAlert({ businessId, level = LOW_STOCK_LEVEL }: { b
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-xs text-amber-800">Items with {level} or fewer in stock are shown here.</p>
+      <p className="mt-3 text-xs text-amber-800">Each item is checked against the stock limit set for its unit. Change limits in Stock.</p>
     </div>
   );
 }

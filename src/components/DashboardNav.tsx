@@ -21,6 +21,21 @@ const ICONS = {
   box: (
     <path d="M12 3.5 20 8v8l-8 4.5L4 16V8l8-4.5ZM4 8l8 4.5M12 12.5 20 8M12 12.5V21" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
   ),
+  stock: (
+    <path d="M12 4 3 8.5 12 13l9-4.5L12 4ZM3 12.5 12 17l9-4.5M3 16.5 12 21l9-4.5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  invoice: (
+    <path d="M6 3.5h12v17l-2-1.5-2 1.5-2-1.5-2 1.5-2-1.5-2 1.5v-17ZM9 8h6M9 11.5h6M9 15h3" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  billing: (
+    <path d="M6 3.5h12a1 1 0 0 1 1 1v15a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-15a1 1 0 0 1 1-1ZM8 7h8v3H8V7ZM8.5 14h.01M12 14h.01M15.5 14h.01M8.5 17.5h.01M12 17.5h.01M15.5 17.5h.01" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  quote: (
+    <path d="M9 4h6v3H9V4ZM8 5.5H6.5A1.5 1.5 0 0 0 5 7v12.5A1.5 1.5 0 0 0 6.5 21h11a1.5 1.5 0 0 0 1.5-1.5V7a1.5 1.5 0 0 0-1.5-1.5H16M8.5 12h7M8.5 16h4.5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  ),
+  supplier: (
+    <path d="M5.8 9.2a3.2 3.2 0 0 0 6.4 0v-1C12.2 5.6 10.8 4 9 4S5.8 5.6 5.8 8.2v1ZM4.8 8.6h8.4M3 20.5c.4-3 2.6-5 6-5 1.5 0 2.6.4 3.5 1.2M13.5 12.5H21v8h-7.5v-8ZM17.25 12.5V15M15.5 18h3.5" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+  ),
   users: (
     <path d="M8 11a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm8 0a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM2 20c.6-3.2 3-5 6-5s5.4 1.8 6 5M14 20c.4-2.2 1.7-3.7 3.5-4.4c2 .3 3.6 1.9 4 4.4" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
   ),
@@ -104,13 +119,13 @@ export function DashboardNav({
   const mainItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard", label: t.nav.overview, icon: "home" },
     { href: "/dashboard/products", label: (ITEM_PLURAL_KEYS[labels.itemPlural as keyof typeof ITEM_PLURAL_KEYS] && t.itemNames[ITEM_PLURAL_KEYS[labels.itemPlural as keyof typeof ITEM_PLURAL_KEYS]]) || labels.itemPlural, icon: "box" },
-    { href: "/dashboard/stock", label: t.nav.stock, icon: "box" },
+    { href: "/dashboard/stock", label: t.nav.stock, icon: "stock" },
     { href: "/dashboard/purchases", label: t.nav.purchases, icon: "cart", locked: !features.purchases },
-    { href: "/dashboard/suppliers", label: t.nav.suppliers, icon: "truck", locked: !features.purchases },
+    { href: "/dashboard/suppliers", label: t.nav.suppliers, icon: "supplier", locked: !features.purchases },
     { href: "/dashboard/customers", label: t.nav.customers, icon: "users" },
-    { href: "/dashboard/invoices", label: t.nav.invoices, icon: "file" },
-    { href: "/dashboard/billing-records", label: t.nav.billingRecords, icon: "file" },
-    { href: "/dashboard/quotations", label: t.nav.quotations, icon: "file" },
+    { href: "/dashboard/invoices", label: t.nav.invoices, icon: "invoice" },
+    { href: "/dashboard/billing-records", label: t.nav.billingRecords, icon: "billing" },
+    { href: "/dashboard/quotations", label: t.nav.quotations, icon: "quote" },
     { href: "/dashboard/delivery-challans", label: t.nav.deliveryChallans, icon: "truck", locked: !features.deliveryChallans },
   ];
   const reportItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
