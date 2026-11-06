@@ -1,0 +1,22 @@
+{
+  "name": "zenbiz-desktop",
+  "version": "1.0.0",
+  "description": "Zen Biz desktop app",
+  "author": "Leafy Digital",
+  "main": "main.js",
+  "private": true,
+  "build": {
+    "appId": "com.leafydigital.zenbiz",
+    "productName": "Zen Biz",
+    "directories": { "output": "dist", "buildResources": "build" },
+    "files": ["main.js", "package.json"],
+    "win": { "target": "nsis", "icon": "build/icon.png", "artifactName": "ZenBiz-Setup.${ext}" },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}

@@ -3,6 +3,9 @@ name: Build Android APK
 on:
   workflow_dispatch: {}
 
+permissions:
+  contents: write
+
 jobs:
   apk:
     runs-on: ubuntu-latest
@@ -66,3 +69,12 @@ jobs:
         with:
           name: zenbiz-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      # Public download link: .../releases/download/downloads/ZenBiz.apk
+      - name: Publish to the downloads release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk ZenBiz.apk
+          gh release view downloads >/dev/null 2>&1 || gh release create downloads --title "Zen Biz downloads" --notes "Latest Android and Windows apps."
+          gh release upload downloads ZenBiz.apk --clobber

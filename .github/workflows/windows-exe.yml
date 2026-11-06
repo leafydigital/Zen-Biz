@@ -1,0 +1,37 @@
+name: Build Windows installer
+
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  exe:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build installer
+        working-directory: electron
+        run: |
+          npm install --no-package-lock --no-save electron@31 electron-builder@24
+          npx electron-builder --win nsis
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: zenbiz-windows
+          path: electron/dist/ZenBiz-Setup.exe
+
+      # Public download link: .../releases/download/downloads/ZenBiz-Setup.exe
+      - name: Publish to the downloads release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view downloads >/dev/null 2>&1 || gh release create downloads --title "Zen Biz downloads" --notes "Latest Android and Windows apps."
+          gh release upload downloads electron/dist/ZenBiz-Setup.exe --clobber

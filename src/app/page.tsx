@@ -10,6 +10,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { LandingHeader } from "@/components/LandingHeader";
 import { LandingFooter } from "@/components/LandingFooter";
+import { DownloadApps } from "@/components/DownloadApps";
 import { DemoShowcase, HeroShowcase } from "@/components/DemoShowcase";
 
 const FEATURES = [
@@ -531,6 +532,8 @@ export default async function HomePage() {
           </p>
         </div>
       </section>
+
+      <DownloadApps />
 
       {/* FAQ */}
       <section id="faq" className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6">
