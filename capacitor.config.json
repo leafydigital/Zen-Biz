@@ -3,7 +3,7 @@
   "appName": "Zen Biz",
   "webDir": "capacitor-web",
   "server": {
-    "url": "https://zen-biz-ka6g.vercel.app/login",
+    "url": "https://zen-biz-ka6g.vercel.app/",
     "androidScheme": "https",
     "cleartext": false,
     "allowNavigation": ["zen-biz-ka6g.vercel.app", "*.supabase.co"]
