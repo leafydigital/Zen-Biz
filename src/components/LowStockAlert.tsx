@@ -4,7 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 /** Stock at or below this count is flagged as low. */
 export const LOW_STOCK_LEVEL = 5;
 
-export async function LowStockAlert({ businessId }: { businessId: string }) {
+export async function LowStockAlert({ businessId, level = LOW_STOCK_LEVEL }: { businessId: string; level?: number }) {
   const supabase = createClient();
   const { data } = (await supabase
     .from("products" as never)
@@ -12,7 +12,7 @@ export async function LowStockAlert({ businessId }: { businessId: string }) {
     .eq("business_id", businessId)
     .eq("is_active", true)
     .not("stock_qty", "is", null)
-    .lte("stock_qty", LOW_STOCK_LEVEL)
+    .lte("stock_qty", level)
     .order("stock_qty", { ascending: true })
     .limit(8)) as { data: { id: string; name: string; unit: string; stock_qty: number }[] | null };
 
@@ -38,7 +38,7 @@ export async function LowStockAlert({ businessId }: { businessId: string }) {
           </li>
         ))}
       </ul>
-      <p className="mt-3 text-xs text-amber-800">Items with {LOW_STOCK_LEVEL} or fewer in stock are shown here.</p>
+      <p className="mt-3 text-xs text-amber-800">Items with {level} or fewer in stock are shown here.</p>
     </div>
   );
 }

@@ -11,7 +11,6 @@ import { CategoryBar, inCategory } from "@/components/CategoryBar";
 import type { Product } from "@/types/database";
 
 type Filter = "all" | "low" | "out" | "untracked";
-const LOW_STOCK = 5;
 const inputCls = "w-full rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-[0.95rem] text-text focus:border-ink";
 const money = (n: number) => `₹${Number.isInteger(n) ? n : n.toFixed(2)}`;
 
@@ -21,12 +20,14 @@ export function StockManager({
   products,
   itemLabelPlural,
   barcodeSettings,
+  lowStockLevel = 5,
 }: {
   businessId: string;
   businessName: string;
   products: Product[];
   itemLabelPlural: string;
   barcodeSettings: BarcodeSettings;
+  lowStockLevel?: number;
 }) {
   const router = useRouter();
   const supabase = createClient();
@@ -44,7 +45,7 @@ export function StockManager({
   const rows = products.filter((p) => {
     if (!inCategory(p, category)) return false;
     if (q && !p.name.toLowerCase().includes(q) && !(p.item_code ?? "").toLowerCase().includes(q)) return false;
-    if (filter === "low") return p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= LOW_STOCK;
+    if (filter === "low") return p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= lowStockLevel;
     if (filter === "out") return p.stock_qty !== null && p.stock_qty <= 0;
     if (filter === "untracked") return p.stock_qty === null;
     return true;
@@ -53,7 +54,7 @@ export function StockManager({
   const tracked = products.filter((p) => p.stock_qty !== null);
   const totalUnits = tracked.reduce((a, p) => a + (p.stock_qty ?? 0), 0);
   const totalValue = tracked.reduce((a, p) => a + Math.max(0, p.stock_qty ?? 0) * p.price, 0);
-  const lowCount = tracked.filter((p) => (p.stock_qty ?? 0) <= LOW_STOCK).length;
+  const lowCount = tracked.filter((p) => (p.stock_qty ?? 0) <= lowStockLevel).length;
 
   /** Gives the item a barcode number if it has none, then prints `copies` labels. */
   async function printLabels(p: Product, copies: number) {
@@ -155,7 +156,7 @@ export function StockManager({
         <ul className="flex flex-col gap-2">
           {rows.map((p) => {
             const out = p.stock_qty !== null && p.stock_qty <= 0;
-            const low = p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= LOW_STOCK;
+            const low = p.stock_qty !== null && p.stock_qty > 0 && p.stock_qty <= lowStockLevel;
             return (
               <li
                 key={p.id}

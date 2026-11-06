@@ -1,6 +1,6 @@
 // Zen Biz desktop app: a window around the live website, so every website
 // update reaches the PC app automatically (no reinstall needed).
-const { app, BrowserWindow, shell, Menu } = require("electron");
+const { app, BrowserWindow, shell, Menu, session } = require("electron");
 
 const SITE = "https://zen-biz-ka6g.vercel.app/";
 const HOST = new URL(SITE).hostname;
@@ -54,5 +54,17 @@ app.on("second-instance", () => {
     win.focus();
   }
 });
-app.whenReady().then(create);
+app.whenReady().then(() => {
+  // Camera (barcode scanning) is allowed for Zen Biz itself; Windows asks once and remembers.
+  const ok = (url) => {
+    try {
+      return new URL(url).hostname === HOST;
+    } catch {
+      return false;
+    }
+  };
+  session.defaultSession.setPermissionRequestHandler((wc, permission, cb) => cb(permission === "media" && ok(wc.getURL())));
+  session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => permission === "media" && ok(origin));
+  create();
+});
 app.on("window-all-closed", () => app.quit());

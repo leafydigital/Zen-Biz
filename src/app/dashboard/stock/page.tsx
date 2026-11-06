@@ -25,6 +25,7 @@ export default async function StockPage() {
       products={products ?? []}
       itemLabelPlural={labels.itemPlural}
       barcodeSettings={getBarcodeSettings(business?.barcode_settings)}
+      lowStockLevel={business?.low_stock_level ?? 5}
     />
   );
 }

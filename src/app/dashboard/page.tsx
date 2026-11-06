@@ -294,7 +294,7 @@ export default async function DashboardHome() {
       </div>
 
       {getPlanFeatures(profile?.plan ?? "starter").stockLowAlerts && activeBusiness && (
-        <LowStockAlert businessId={activeBusiness.id} />
+        <LowStockAlert businessId={activeBusiness.id} level={activeBusiness.low_stock_level ?? undefined} />
       )}
 
       <div className="rounded-xl2 border border-paper-fold bg-white p-5 shadow-card sm:p-6">

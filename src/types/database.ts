@@ -132,6 +132,8 @@ export interface Business {
   log_retention_days?: number | null;
   format_settings?: import("@/lib/formatSettings").FormatSettings | null;
   barcode_settings?: Partial<import("@/lib/barcode").BarcodeSettings> | null;
+  /** Items with this many or fewer in stock are shown as low stock. */
+  low_stock_level?: number | null;
   product_categories?: string[] | null;
   signature_url: string | null;
   invoice_terms: string | null;
@@ -228,6 +230,8 @@ export interface Profile {
   document_design: DocDesignSettings;
   format_settings?: import("@/lib/formatSettings").FormatSettings | null;
   barcode_settings?: Partial<import("@/lib/barcode").BarcodeSettings> | null;
+  /** Items with this many or fewer in stock are shown as low stock. */
+  low_stock_level?: number | null;
   signature_url: string | null;
   // Terms & Conditions stay separate per document type.
   invoice_terms: string | null;
