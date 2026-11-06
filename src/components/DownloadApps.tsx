@@ -12,16 +12,6 @@ const OPTIONS = [
     ),
   },
   {
-    name: "Website",
-    note: "Use it right in your browser, nothing to install",
-    cta: "Open site",
-    href: "/login",
-    download: false,
-    icon: (
-      <path d="M12 21a9 9 0 1 0 0-18 9 9 0 0 0 0 18ZM3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9S14.5 18.4 12 21c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3Z" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
-    ),
-  },
-  {
     name: "Windows",
     note: "Install on your PC like normal software (.exe)",
     cta: "Download .exe",
@@ -35,12 +25,12 @@ const OPTIONS = [
 
 export function DownloadApps() {
   return (
-    <section id="download" className="mx-auto w-full max-w-4xl px-4 py-16 sm:px-6">
+    <section id="download" className="mx-auto w-full max-w-3xl px-4 py-16 sm:px-6">
       <div className="mb-10 text-center">
         <h2 className="font-display text-2xl font-semibold text-text sm:text-3xl">Get Zen Biz on your device</h2>
         <p className="mt-2 text-sm text-text-soft">Same account everywhere. Updates reach every device automatically.</p>
       </div>
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2">
         {OPTIONS.map((o) => (
           <div key={o.name} className="flex flex-col items-center rounded-2xl border border-paper-fold bg-paper-card p-6 text-center">
             <svg viewBox="0 0 24 24" className="h-10 w-10 text-ink" fill="none" stroke="currentColor" aria-hidden="true">

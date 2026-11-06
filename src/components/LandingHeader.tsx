@@ -49,6 +49,12 @@ export function LandingHeader() {
           >
             FAQ
           </Link>
+          <Link
+            href="#download"
+            className="text-sm font-medium text-text-soft transition hover:text-ink"
+          >
+            Download
+          </Link>
         </nav>
 
         <div className="flex items-center gap-3">
