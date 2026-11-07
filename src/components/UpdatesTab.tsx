@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 const BUILD = process.env.NEXT_PUBLIC_BUILD_ID;
+import { isNativeShell } from "@/lib/nativeShell";
 import { appVersionLabel } from "@/lib/appVersion";
 import { APK_URL, EXE_URL, openApkDownload } from "@/lib/openApk";
 
@@ -46,8 +47,11 @@ export function UpdatesTab() {
       server = null;
     }
 
-    // 1) Screens, features and fixes (website content: shared by browser, Android app and PC app)
-    if (!server) {
+    // 1) Screens, features and fixes (website content). Not shown inside the Android / Windows
+    // app: there they arrive by themselves, and only app updates (logo, permissions) are listed.
+    if (isNativeShell()) {
+      /* skip */
+    } else if (!server) {
       out.push({ key: "web", title: "App content & features", current: appVersionLabel(), state: "unknown", detail: "Could not check. Connect to the internet and try again." });
     } else if (BUILD && server.build && server.build !== BUILD) {
       out.push({

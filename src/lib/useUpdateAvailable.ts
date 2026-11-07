@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 
+import { isNativeShell } from "@/lib/nativeShell";
+
 const BUILD = process.env.NEXT_PUBLIC_BUILD_ID;
 
 /**
@@ -20,7 +22,7 @@ export function useUpdateAvailable(): boolean {
         const r = await fetch("/api/version", { cache: "no-store" });
         if (!r.ok) return;
         const j = (await r.json()) as { build: string | null; apk: { versionCode: number } | null };
-        let any = !!(BUILD && j.build && j.build !== BUILD);
+        let any = !!(BUILD && j.build && j.build !== BUILD && !isNativeShell());
 
         const cap = (window as any).Capacitor;
         if (!any && cap?.isNativePlatform?.() && j.apk) {

@@ -3,6 +3,11 @@ name: Build Windows installer
 on:
   push:
     branches: [main]
+    # Only when the PC app itself changes (logo, window, installer). Website changes
+    # reach it by themselves, with no update needed.
+    paths:
+      - "electron/**"
+      - ".github/workflows/windows-exe.yml"
   workflow_dispatch: {}
 
 concurrency:

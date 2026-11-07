@@ -3,6 +3,13 @@ name: Build Android APK
 on:
   push:
     branches: [main]
+    # Only when the app shell changes (logo, splash, permissions, app settings), so the
+    # Android app shows "Update" only for those. Website changes reach it by themselves.
+    paths:
+      - "assets/**"
+      - "capacitor.config.json"
+      - "capacitor-web/**"
+      - ".github/workflows/android-apk.yml"
   workflow_dispatch: {}
 
 concurrency:

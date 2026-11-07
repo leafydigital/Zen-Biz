@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 
 const BUILD = process.env.NEXT_PUBLIC_BUILD_ID;
 import { openApkDownload } from "@/lib/openApk";
+import { isNativeShell } from "@/lib/nativeShell";
 
 type Apk = { versionCode: number; versionName?: string };
 
@@ -30,7 +31,9 @@ export function UpdateNotice() {
         if (!r.ok) return;
         const j = (await r.json()) as { build: string | null; apk: Apk | null };
         if (stop) return;
-        if (BUILD && j.build && j.build !== BUILD) setWeb(true);
+        // Inside the Android / Windows app only the app itself matters (logo, permissions);
+        // website changes reach it automatically.
+        if (BUILD && j.build && j.build !== BUILD && !isNativeShell()) setWeb(true);
         const cap = (window as any).Capacitor;
         if (cap?.isNativePlatform?.() && j.apk) {
           const app = cap.Plugins?.App ?? cap.registerPlugin?.("App");
