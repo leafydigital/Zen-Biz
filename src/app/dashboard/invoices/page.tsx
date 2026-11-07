@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ICON_BTN, EditIcon } from "@/components/ActionIcons";
 import { createClient } from "@/lib/supabase/server";
 import { InvoiceStatusSelect } from "@/components/InvoiceStatusSelect";
 import { DownloadInvoiceButton } from "@/components/DownloadInvoiceButton";
@@ -72,19 +73,23 @@ export default async function InvoicesPage() {
                     </p>
                   </span>
                 </Link>
-                <div className="flex flex-wrap items-center gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:justify-end">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">
                     {formatCurrency(Number(inv.total), inv.currency)}
                   </span>
                   <InvoiceStatusSelect invoiceId={inv.id} status={inv.status} paymentMethod={inv.payment_method} />
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
                   <Link
                     href={`/dashboard/invoices/${inv.id}/edit`}
-                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-sky-600 hover:bg-sky-700"
+                    title="Edit"
+                    aria-label="Edit"
+                    className={`${ICON_BTN} bg-sky-600 hover:bg-sky-700`}
                   >
-                    Edit
+                    <EditIcon />
                   </Link>
                   <DownloadInvoiceButton invoiceId={inv.id} />
                   <DeleteInvoiceButton invoiceId={inv.id} />
+                  </div>
                 </div>
               </li>
             ))}

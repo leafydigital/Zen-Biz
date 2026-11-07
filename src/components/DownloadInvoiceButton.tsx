@@ -1,5 +1,7 @@
 "use client";
 
+import { ICON_BTN, DownloadIcon, Spinner } from "@/components/ActionIcons";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
@@ -83,11 +85,14 @@ export function DownloadInvoiceButton({ invoiceId }: { invoiceId: string }) {
 
   return (
     <button
+      type="button"
       onClick={handleDownload}
       disabled={loading}
-      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-rose-600 hover:bg-rose-700"
+      title="Download PDF"
+      aria-label="Download PDF"
+      className={`${ICON_BTN} bg-rose-600 hover:bg-rose-700`}
     >
-      {loading ? "Preparing…" : "Download PDF"}
+      {loading ? <Spinner /> : <DownloadIcon />}
     </button>
   );
 }

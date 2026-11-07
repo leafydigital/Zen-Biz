@@ -1,5 +1,7 @@
 "use client";
 
+import { ICON_BTN, TrashIcon } from "@/components/ActionIcons";
+
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
@@ -42,9 +44,11 @@ export function DeleteInvoiceButton({
     return (
       <button
         onClick={() => setConfirming(true)}
-        className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-red-600 hover:bg-red-700"
+        title="Delete"
+        aria-label="Delete"
+        className={`${ICON_BTN} bg-red-600 hover:bg-red-700`}
       >
-        Delete
+        <TrashIcon />
       </button>
     );
   }

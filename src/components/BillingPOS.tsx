@@ -826,7 +826,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
             placeholder="Customer name (optional)"
             className="min-w-0 flex-1 rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm text-text placeholder:text-text-soft/60 sm:max-w-[14rem]"
           />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:ml-auto sm:w-auto sm:flex-nowrap">
             <button
               type="button"
               onClick={() => setSettingsOpen(true)}
@@ -843,7 +843,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
               type="button"
               onClick={() => setShowHeld((v) => !v)}
               aria-expanded={showHeld}
-              className="rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper"
+              className="min-w-0 flex-1 whitespace-nowrap rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper sm:flex-none"
             >
               Pay later{held.length > 0 ? ` (${held.length})` : ""} {showHeld ? "▴" : "▾"}
             </button>
@@ -851,14 +851,14 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
               type="button"
               onClick={() => setShowPrev((v) => !v)}
               aria-expanded={showPrev}
-              className="rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper"
+              className="min-w-0 flex-1 whitespace-nowrap rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper sm:flex-none"
             >
               Previous bills{recent.length > 0 ? ` (${recent.length})` : ""} {showPrev ? "▴" : "▾"}
             </button>
             <button
               type="button"
               onClick={newBill}
-              className="rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper hover:bg-ink-light"
+              className="min-w-0 flex-1 whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper hover:bg-ink-light sm:flex-none"
             >
               + New bill
             </button>
@@ -948,19 +948,21 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
       )}
 
       <div className="flex flex-wrap items-center gap-2">
-        <div className="relative min-w-0 flex-1 sm:max-w-xs sm:flex-none">
+        <div className="relative min-w-0 basis-full sm:basis-auto sm:max-w-xs sm:flex-none">
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             onKeyDown={onSearchEnter}
             placeholder={canScan ? "Search items or scan barcode…" : "Search items…"}
+            aria-label="Search items"
+            type="search"
             className="w-full rounded-xl border border-paper-fold bg-white py-2.5 pl-3.5 pr-9 text-[0.95rem] text-text placeholder:text-text-soft/60 focus:border-ink"
           />
           {search && (
             <button
               type="button"
               onClick={() => setSearch("")}
-              aria-label="Clear search"
+              aria-label="Clear search" title="Clear search"
               className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-lg leading-none text-text-soft hover:bg-paper-fold hover:text-text"
             >
               ×
@@ -970,7 +972,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
         <button
           type="button"
           onClick={() => (canScan ? setScanOpen(true) : setScanLockedOpen((o) => !o))}
-          className="rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-sm font-semibold text-text hover:bg-paper"
+          className="whitespace-nowrap rounded-xl border border-paper-fold bg-white px-3.5 py-2.5 text-sm font-semibold text-text hover:bg-paper"
         >
           {canScan ? "Scan barcode" : "Scan barcode 🔒"}
         </button>
@@ -1085,8 +1087,9 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
       )}
         </div>
         {/* Bill panel: stays frozen on the right while you scroll items; only the list of selected items scrolls inside it. */}
-        <aside className="flex flex-col gap-3 rounded-xl2 border border-paper-fold bg-paper-card p-4 shadow-card md:sticky md:top-2 md:max-h-[calc(100vh-1rem)]">
-          <div className="text-right">
+        <aside className={`flex min-h-0 flex-col gap-3 rounded-xl2 border border-paper-fold bg-paper-card p-4 shadow-card max-md:sticky max-md:bottom-0 max-md:z-20 max-md:max-h-[72dvh] max-md:rounded-b-none max-md:p-3 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.14)] md:sticky md:top-2 md:max-h-[calc(100vh-1rem)] ${cartLines.length === 0 ? "max-md:hidden" : ""}`}>
+          {/* Total stays pinned at the top of the bill; items + payment scroll; buttons stay pinned at the bottom. */}
+          <div className="shrink-0 text-right">
             <p className="text-[0.7rem] uppercase tracking-wide text-text-soft">{itemCount} item{itemCount === 1 ? "" : "s"}</p>
             {pointsDiscount > 0 && (
               <p className="font-ledger text-xs tabular-nums text-text-soft line-through">{money(totals.total, currency)}</p>
@@ -1101,10 +1104,11 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
             {earned > 0 && <p className="text-xs font-semibold text-success">+{earned} pts on this bill</p>}
           </div>
 
+          <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain pr-0.5">
           {cartLines.length === 0 ? (
             <p className="rounded-lg border border-dashed border-paper-fold py-6 text-center text-sm text-text-soft">Tap an item to start a bill.</p>
           ) : (
-            <ul className="max-h-60 min-h-[4rem] flex-1 divide-y divide-paper-fold overflow-y-auto overscroll-contain md:max-h-none">
+            <ul className="divide-y divide-paper-fold">
               {cartLines.map(({ product, qty }) => {
                 const row = totals.rows.find((r) => r.product.id === product.id);
                 const line = row ? row.result.taxableAmount + row.result.taxAmount : Number(product.price) * qty;
@@ -1274,6 +1278,11 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
                 )}
               </div>
 
+            </>
+          )}
+          </div>
+          {cartLines.length > 0 && (
+              <div className="flex shrink-0 flex-col gap-2 border-t border-paper-fold pt-2.5">
               <div className="flex flex-wrap items-center gap-2">
                 <select
                   value={paper}
@@ -1322,7 +1331,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
                   Save &amp; print
                 </button>
               </div>
-            </>
+              </div>
           )}
         </aside>
       </div>

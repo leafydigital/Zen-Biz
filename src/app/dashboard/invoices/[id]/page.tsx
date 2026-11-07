@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ICON_BTN, EditIcon } from "@/components/ActionIcons";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { InvoiceStatusSelect } from "@/components/InvoiceStatusSelect";
@@ -91,12 +92,11 @@ export default async function ViewInvoicePage({ params }: { params: { id: string
             {canShare && <ShareInvoiceButtons invoiceId={invoice.id} />}
             <Link
               href={`/dashboard/invoices/${invoice.id}/edit`}
-              className="inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-sky-600 hover:bg-sky-700"
+              title="Edit"
+ aria-label="Edit"
+ className={`${ICON_BTN} bg-sky-600 hover:bg-sky-700`}
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-              Edit
+<EditIcon />
             </Link>
             <DeleteInvoiceButton invoiceId={invoice.id} />
           </div>

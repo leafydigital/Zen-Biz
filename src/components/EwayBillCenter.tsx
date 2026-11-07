@@ -56,9 +56,14 @@ export function EwayBillCenter({ invoices, business, allowed, kind }: { invoices
           </p>
         </div>
       </div>
-      <div className="rounded-xl2 border border-paper-fold bg-paper-card p-4 shadow-card">
-        <h2 className="font-display text-base font-semibold text-text">{isE ? "How to make an e-invoice (free)" : "How to make an e-way bill (free)"}</h2>
-        <ol className="mt-2 list-decimal space-y-1 pl-5 text-sm text-text-soft">
+      <details className="group rounded-xl2 border border-paper-fold bg-paper-card p-4 shadow-card">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-3 [&::-webkit-details-marker]:hidden">
+          <h2 className="font-display text-base font-semibold text-text">{isE ? "How to make an e-invoice (free)" : "How to make an e-way bill (free)"}</h2>
+          <svg className="h-5 w-5 shrink-0 text-text-soft transition-transform duration-200 group-open:rotate-180" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+            <path d="m6 9 6 6 6-6" />
+          </svg>
+        </summary>
+        <ol className="mt-3 list-decimal space-y-1 pl-5 text-sm text-text-soft">
           <li>Tap an invoice below.</li>
           {isE ? (
             <>
@@ -79,7 +84,7 @@ export function EwayBillCenter({ invoices, business, allowed, kind }: { invoices
         <a href={isE ? "https://einvoice1.gst.gov.in" : "https://ewaybillgst.gov.in"} target="_blank" rel="noreferrer" className="mt-3 inline-block rounded-xl border border-paper-fold bg-white px-4 py-2 text-sm font-semibold text-text hover:bg-paper">
           {isE ? "Open GST e-invoice website" : "Open GST e-way bill website"}
         </a>
-      </div>
+      </details>
 
       {!allowed && (
         <p className="rounded-xl bg-brass/10 px-4 py-3 text-sm text-brass-dark">

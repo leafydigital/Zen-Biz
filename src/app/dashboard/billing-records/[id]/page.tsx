@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ICON_BTN, EditIcon } from "@/components/ActionIcons";
 import { notFound, redirect } from "next/navigation";
 import { getMyAccess } from "@/lib/getMyAccess";
 import { createClient } from "@/lib/supabase/server";
@@ -156,9 +157,11 @@ export default async function BillingRecordDetailPage({ params }: { params: { id
             <>
               <Link
                 href={`/dashboard/invoices/${record.id}/edit?type=billing`}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-sky-600 hover:bg-sky-700"
+                title="Edit"
+ aria-label="Edit"
+ className={`${ICON_BTN} bg-sky-600 hover:bg-sky-700`}
               >
-                Edit
+                <EditIcon />
               </Link>
               <PrintButton invoiceId={record.id} />
               <DownloadInvoiceButton invoiceId={record.id} />
