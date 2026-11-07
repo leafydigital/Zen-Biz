@@ -61,6 +61,31 @@ jobs:
           open(p, "w").write(s.replace("</manifest>", perms, 1))
           PY
 
+      # A higher build number every time, and (if the secret exists) the SAME signing key
+      # every time: Android only installs an update over the old app when both match.
+      - name: Version and signing
+        env:
+          KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+          if [ -n "$KS_B64" ]; then
+            echo "$KS_B64" | base64 -d > android/zenbiz.keystore
+            {
+              echo 'android {'
+              echo '    signingConfigs { zen {'
+              echo '        storeFile file("../zenbiz.keystore")'
+              echo "        storePassword \"$KS_PASS\""
+              echo '        keyAlias "zenbiz"'
+              echo "        keyPassword \"$KS_PASS\""
+              echo '    } }'
+              echo '    buildTypes { debug { signingConfig signingConfigs.zen } }'
+              echo '}'
+            } >> android/app/build.gradle
+          else
+            echo "::warning::ANDROID_KEYSTORE_B64 secret not set: the APK is signed with a random key, so it cannot update over an older install."
+          fi
+
       - name: Generate icon and splash
         run: npx capacitor-assets generate --android
 
@@ -83,4 +108,5 @@ jobs:
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk ZenBiz.apk
           gh release view downloads >/dev/null 2>&1 || gh release create downloads --title "Zen Biz downloads" --notes "Latest Android and Windows apps."
-          gh release upload downloads ZenBiz.apk --clobber
+          echo '{"versionCode": ${{ github.run_number }}, "versionName": "1.0.${{ github.run_number }}"}' > apk-version.json
+          gh release upload downloads ZenBiz.apk apk-version.json --clobber

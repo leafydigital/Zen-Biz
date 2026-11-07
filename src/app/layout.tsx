@@ -4,6 +4,7 @@ import { I18nProvider } from "@/lib/i18n/I18nContext";
 import { GlobalLoaderProvider } from "@/lib/GlobalLoaderContext";
 import { NativeAppBridge } from "@/components/NativeAppBridge";
 import { OfflineSupport } from "@/components/OfflineSupport";
+import { UpdateNotice } from "@/components/UpdateNotice";
 import { SITE_DESCRIPTION, SITE_NAME, SITE_TITLE, SITE_URL } from "@/lib/siteConfig";
 import "./globals.css";
 
@@ -142,6 +143,7 @@ export default function RootLayout({
       <body className="font-body antialiased">
         <NativeAppBridge />
         <OfflineSupport />
+        <UpdateNotice />
         <GlobalLoaderProvider>
           <I18nProvider>{children}</I18nProvider>
         </GlobalLoaderProvider>

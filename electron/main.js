@@ -1,6 +1,6 @@
 // Zen Biz desktop app: a window around the live website, so every website
 // update reaches the PC app automatically (no reinstall needed).
-const { app, BrowserWindow, shell, Menu, session } = require("electron");
+const { app, BrowserWindow, shell, Menu, session, dialog } = require("electron");
 
 const SITE = "https://zen-biz-ka6g.vercel.app/";
 const HOST = new URL(SITE).hostname;
@@ -98,4 +98,45 @@ app.whenReady().then(() => {
   session.defaultSession.setPermissionCheckHandler((_wc, permission, origin) => permission === "media" && ok(origin));
   create();
 });
+// Program updates: when a newer Zen Biz is published, ask once, then download and
+// restart into it. No uninstall / reinstall. (Website changes need no update at all.)
+function setupUpdater() {
+  if (!app.isPackaged) return;
+  let autoUpdater;
+  try {
+    ({ autoUpdater } = require("electron-updater"));
+  } catch {
+    return;
+  }
+  autoUpdater.autoDownload = false;
+  autoUpdater.on("update-available", async (info) => {
+    const r = await dialog.showMessageBox(win, {
+      type: "info",
+      title: "Zen Biz update",
+      message: "A new version of Zen Biz is available (" + info.version + ").",
+      detail: "Click Update now. The app downloads it and restarts. Nothing to uninstall.",
+      buttons: ["Update now", "Later"],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (r.response === 0) autoUpdater.downloadUpdate().catch(() => {});
+  });
+  autoUpdater.on("update-downloaded", async () => {
+    const r = await dialog.showMessageBox(win, {
+      type: "info",
+      title: "Zen Biz update",
+      message: "Update ready.",
+      detail: "Zen Biz will close and open again with the new version.",
+      buttons: ["Restart now", "Later"],
+      defaultId: 0,
+      cancelId: 1,
+    });
+    if (r.response === 0) autoUpdater.quitAndInstall();
+  });
+  autoUpdater.on("error", () => {});
+  const check = () => autoUpdater.checkForUpdates().catch(() => {});
+  setTimeout(check, 8000);
+  setInterval(check, 6 * 60 * 60 * 1000);
+}
+app.whenReady().then(setupUpdater);
 app.on("window-all-closed", () => app.quit());

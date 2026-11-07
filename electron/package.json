@@ -8,15 +8,34 @@
   "build": {
     "appId": "com.leafydigital.zenbiz",
     "productName": "Zen Biz",
-    "directories": { "output": "dist", "buildResources": "build" },
-    "files": ["main.js", "package.json"],
-    "win": { "target": "nsis", "icon": "build/icon.png", "artifactName": "ZenBiz-Setup.${ext}" },
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "main.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.png",
+      "artifactName": "ZenBiz-Setup.${ext}"
+    },
     "nsis": {
       "oneClick": false,
       "perMachine": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
-    }
+    },
+    "publish": [
+      {
+        "provider": "generic",
+        "url": "https://github.com/leafydigital/Zen-Biz/releases/download/downloads/"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.3.9"
   }
 }
