@@ -75,6 +75,7 @@ jobs:
               echo 'android {'
               echo '    signingConfigs { zen {'
               echo '        storeFile file("../zenbiz.keystore")'
+              echo '        storeType "pkcs12"'
               echo "        storePassword \"$KS_PASS\""
               echo '        keyAlias "zenbiz"'
               echo "        keyPassword \"$KS_PASS\""

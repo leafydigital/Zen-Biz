@@ -60,14 +60,6 @@ async function saveSetting(key: string, value: unknown) {
   return { error: null };
 }
 
-export async function saveVersion(version: string) {
-  const g = await guard("settings");
-  if (g) return { error: g };
-  const v = version.trim();
-  if (!v || v.length > 20) return { error: "Enter a version (up to 20 characters)." };
-  return saveSetting("version", v);
-}
-
 export async function saveContact(c: {
   email: string;
   whatsapp: string;

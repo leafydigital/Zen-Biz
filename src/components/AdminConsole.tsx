@@ -23,7 +23,6 @@ import {
   getCustomers,
   saveContact,
   savePricing,
-  saveVersion,
   toggleDiscount,
   updateTicketStatus,
 } from "@/lib/actions/adminActions";
@@ -163,7 +162,6 @@ export function AdminConsole({
   }, [tab, refreshTickets]);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  const [version, setVersion] = useState(config.version);
   const [contact, setContact] = useState(config.contact);
   const [pricing, setPricing] = useState(config.pricing);
   const [pricingUsd, setPricingUsd] = useState(config.pricingUsd);
@@ -372,7 +370,6 @@ export function AdminConsole({
               ["Pro users", stats.professional, "bg-sky-50 text-sky-700 border-sky-200"],
               ["Open problems", openCount("issue"), "bg-red-50 text-red-700 border-red-200"],
               ["Open enquiries", openCount("info"), "bg-amber-50 text-amber-700 border-amber-200"],
-              ["App version", config.version, "bg-indigo-50 text-indigo-700 border-indigo-200"],
               ["Active discounts", discounts.filter((x) => x.active).length, "bg-rose-50 text-rose-700 border-rose-200"],
             ].map(([l, v, c]) => {
               const label = String(l);
@@ -381,7 +378,6 @@ export function AdminConsole({
                 "Pro users": ["customers", "professional"],
                 "Open problems": ["issues"],
                 "Open enquiries": ["enquiries"],
-                "App version": ["settings"],
                 "Active discounts": ["discounts"],
               };
               const [target, plan] = route[label];
@@ -416,12 +412,6 @@ export function AdminConsole({
 
         {tab === "settings" && (
           <fieldset disabled={lvl("settings") !== "edit"} className="grid gap-4 lg:grid-cols-2">
-            <div className={`${card} flex flex-col gap-3`}>
-              <h2 className="font-semibold text-text">App version</h2>
-              <p className="text-xs text-text-soft">Shown at the bottom of the menu inside the app.</p>
-              <input value={version} onChange={(e) => setVersion(e.target.value)} className={input} />
-              <button disabled={pending} onClick={() => run(() => saveVersion(version), "Version saved.")} className={primary}>Save version</button>
-            </div>
             <div className={`${card} flex flex-col gap-3`}>
               <h2 className="font-semibold text-text">Contact us details</h2>
               <p className="text-xs text-text-soft">Shown on the Contact Us page inside the app.</p>

@@ -5,9 +5,9 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { clearLoginVerification } from "@/lib/actions/otpActions";
-import { useAppConfig } from "@/lib/AppConfigContext";
 import { getLabels, ITEM_PLURAL_KEYS } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
+import { appVersionLabel } from "@/lib/appVersion";
 import { Logo } from "@/components/Logo";
 import { useUpdateAvailable } from "@/lib/useUpdateAvailable";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
@@ -90,7 +90,6 @@ export function DashboardNav({
 }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const config = useAppConfig();
   // Billing records are made/edited on the invoice form with ?type=billing;
   // they belong to the Billing Records menu item, not Invoices.
   const isBillingForm = pathname.startsWith("/dashboard/invoices/") && searchParams.get("type") === "billing";
@@ -245,7 +244,7 @@ export function DashboardNav({
           </div>
         )}
 
-        <p className="mt-3 px-2 text-xs text-blue-200/60">{t.nav.version} {config.version}</p>
+        <p className="mt-3 px-2 text-xs text-blue-200/60">{t.nav.version} {appVersionLabel()}</p>
       </nav>
 
       {/* Phone / app: 3-line button (top-left) opens a left-side menu with every page */}
@@ -317,7 +316,7 @@ export function DashboardNav({
                 👑 Upgrade to Pro
               </button>
             )}
-            <p className="mt-3 px-2 text-xs text-blue-200/70">{t.nav.version} {config.version}</p>
+            <p className="mt-3 px-2 text-xs text-blue-200/70">{t.nav.version} {appVersionLabel()}</p>
           </nav>
         </div>
       )}

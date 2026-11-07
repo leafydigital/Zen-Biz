@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 const BUILD = process.env.NEXT_PUBLIC_BUILD_ID;
+import { appVersionLabel } from "@/lib/appVersion";
 import { APK_URL, EXE_URL, openApkDownload } from "@/lib/openApk";
 
 type Desktop = {
@@ -47,11 +48,12 @@ export function UpdatesTab() {
 
     // 1) Screens, features and fixes (website content: shared by browser, Android app and PC app)
     if (!server) {
-      out.push({ key: "web", title: "App content & features", state: "unknown", detail: "Could not check. Connect to the internet and try again." });
+      out.push({ key: "web", title: "App content & features", current: appVersionLabel(), state: "unknown", detail: "Could not check. Connect to the internet and try again." });
     } else if (BUILD && server.build && server.build !== BUILD) {
       out.push({
         key: "web",
         title: "App content & features",
+        current: appVersionLabel(),
         state: "available",
         detail: "A newer version is ready.",
         action: {
@@ -68,7 +70,7 @@ export function UpdatesTab() {
         },
       });
     } else {
-      out.push({ key: "web", title: "App content & features", state: "uptodate", detail: "You have the latest version." });
+      out.push({ key: "web", title: "App content & features", current: appVersionLabel(), state: "uptodate", detail: "You have the latest version." });
     }
 
     // 2) Android app
