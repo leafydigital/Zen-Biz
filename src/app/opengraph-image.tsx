@@ -1,11 +1,14 @@
 import { ImageResponse } from "next/og";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 export const alt = "Zen Biz — billing, GST invoice and barcode stock software";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
 /** Share card shown when the site is linked on WhatsApp, Facebook, LinkedIn, X and similar. */
-export default function OpengraphImage() {
+export default async function OpengraphImage() {
+  const logo = "data:image/png;base64," + (await readFile(path.join(process.cwd(), "public", "logo.png"))).toString("base64");
   return new ImageResponse(
     (
       <div
@@ -21,22 +24,8 @@ export default function OpengraphImage() {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
-          <div
-            style={{
-              width: 64,
-              height: 64,
-              borderRadius: 16,
-              background: "#2563EB",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: 40,
-              fontWeight: 700,
-              color: "#fff",
-            }}
-          >
-            Z
-          </div>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={logo} width={72} height={72} style={{ borderRadius: 18 }} alt="" />
           <div style={{ fontSize: 44, fontWeight: 700 }}>Zen Biz</div>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>

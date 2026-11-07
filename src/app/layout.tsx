@@ -117,7 +117,7 @@ export default function RootLayout({
         "@id": `${SITE_URL}/#organization`,
         name: SITE_NAME,
         url: SITE_URL,
-        logo: `${SITE_URL}/apple-icon`,
+        logo: `${SITE_URL}/icon-512.png`,
       },
       {
         "@type": "WebSite",
