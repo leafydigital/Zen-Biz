@@ -9,7 +9,7 @@ export async function middleware(request: NextRequest) {
 
   const path = request.nextUrl.pathname;
   const isPublic = PUBLIC_PATHS.some(
-    (p) => path === p || path.startsWith("/auth/") || path === "/api/razorpay/webhook"
+    (p) => path === p || path.startsWith("/auth/") || path === "/api/razorpay/webhook" || path === "/api/version"
   );
 
   // Not signed in and trying to reach a protected page -> send to login.

@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 const BUILD = process.env.NEXT_PUBLIC_BUILD_ID;
-import { openApkDownload } from "@/lib/openApk";
+import { APK_URL, EXE_URL, openApkDownload } from "@/lib/openApk";
 
 type Desktop = {
   getVersion: () => Promise<string>;
@@ -19,6 +19,7 @@ type Row = {
   state: "checking" | "uptodate" | "available" | "unknown";
   detail?: string;
   action?: { label: string; run: () => void };
+  link?: { label: string; href: string };
 };
 
 /** Settings → Updates: is a newer Zen Biz available for the website, the Android app and the PC app? */
@@ -85,6 +86,7 @@ export function UpdatesTab() {
             current: cur,
             state: "available",
             detail: `New version ${server.apk.versionName ?? server.apk.versionCode} is ready. Download it, open it and tap Install. No uninstall needed.`,
+            link: { label: "Download doesn't start? Open the direct link", href: APK_URL },
             action: {
               label: "Download update",
               run: () => openApkDownload(),
@@ -99,6 +101,16 @@ export function UpdatesTab() {
     }
 
     // 3) Windows app
+    if (!desktop && navigator.userAgent.includes("Electron")) {
+      out.push({
+        key: "exe-old",
+        title: "Windows app",
+        state: "available",
+        detail: "This PC app was installed before automatic updates existed, so it cannot update itself. Download and run the latest installer once (it installs over this app, your data stays). After that, updates are one click.",
+        link: { label: "Direct link", href: EXE_URL },
+        action: { label: "Download installer", run: () => window.open(EXE_URL, "_blank") },
+      });
+    }
     if (desktop) {
       try {
         const version = await desktop.getVersion();
@@ -165,6 +177,11 @@ export function UpdatesTab() {
               </p>
               {r.current && <p className="mt-0.5 text-xs text-text-soft">Installed version: {r.current}</p>}
               {r.detail && <p className="mt-1 text-sm text-text-soft">{r.detail}</p>}
+              {r.link && (
+                <a href={r.link.href} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-semibold text-ink underline">
+                  {r.link.label}
+                </a>
+              )}
             </div>
             {r.action && (
               <button

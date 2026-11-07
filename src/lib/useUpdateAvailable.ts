@@ -29,6 +29,7 @@ export function useUpdateAvailable(): boolean {
           if (info && Number(info.build) < j.apk.versionCode) any = true;
         }
         const desktop = (window as any).zenbizDesktop;
+        if (!any && !desktop && navigator.userAgent.includes("Electron")) any = true; // old PC app without an updater
         if (!any && desktop?.checkUpdate) {
           const res = await desktop.checkUpdate();
           if (res?.status === "available") any = true;

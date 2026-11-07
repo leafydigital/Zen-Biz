@@ -12,7 +12,6 @@ import { PlanBillingTab } from "@/components/PlanBillingTab";
 import { BusinessManagementTab } from "@/components/BusinessManagementTab";
 import { ActivityLogTab } from "@/components/ActivityLogTab";
 import { TeamManagementTab } from "@/components/TeamManagementTab";
-import { UpdatesTab } from "@/components/UpdatesTab";
 import { FormatSettingsForm } from "@/components/FormatSettingsForm";
 import { BarcodeSettingsForm } from "@/components/BarcodeSettingsForm";
 import { ChangePasswordForm } from "@/components/ChangePasswordForm";
@@ -21,7 +20,7 @@ import { useTranslation } from "@/lib/i18n/I18nContext";
 import type { BusinessRoleRow } from "@/lib/getBusinessRoles";
 import type { BusinessMemberWithEmail } from "@/lib/getActiveBusiness";
 
-type Tab = "general" | "businesses" | "team" | "appearance" | "terms" | "bank" | "format" | "barcode" | "plan" | "security" | "updates" | "log";
+type Tab = "general" | "businesses" | "team" | "appearance" | "terms" | "bank" | "format" | "barcode" | "plan" | "security" | "log";
 
 export function SettingsTabs({
   profile,
@@ -58,7 +57,6 @@ export function SettingsTabs({
     { id: "barcode", label: t.settings.barcode },
     { id: "plan", label: t.settings.planBilling },
     { id: "security", label: t.settings.security },
-    { id: "updates", label: "Updates" },
     { id: "log", label: t.settings.activityLog },
   ];
   // Owner/admin see every tab. Others see only the settings sections their
@@ -75,8 +73,8 @@ export function SettingsTabs({
   const levelFor = (id: Tab): SettingsLevel =>
     isFullAccess ? "edit" : sectionTab[id] ? settingsLevel(permissions, sectionTab[id]) : null;
   const VISIBLE: Tab[] = isFullAccess
-    ? ["general", "businesses", "team", "appearance", "terms", "bank", "format", "barcode", "plan", "security", "updates"]
-    : [...(["general", "appearance", "terms", "bank", "format", "barcode"] as Tab[]).filter((id) => levelFor(id)), "security", "updates"];
+    ? ["general", "businesses", "team", "appearance", "terms", "bank", "format", "barcode", "plan", "security"]
+    : [...(["general", "appearance", "terms", "bank", "format", "barcode"] as Tab[]).filter((id) => levelFor(id)), "security"];
   // Activity log: owner, or someone the owner ticked it for in Team.
   if (canViewLog) VISIBLE.push("log");
   const VISIBLE_TABS = TABS.filter((x) => VISIBLE.includes(x.id));
@@ -218,7 +216,6 @@ export function SettingsTabs({
         {tab === "plan" && <PlanBillingTab profile={profile} />}
         </fieldset>
         {tab === "security" && <ChangePasswordForm />}
-        {tab === "updates" && <UpdatesTab />}
         {tab === "log" && canViewLog && (
           <ActivityLogTab
             isOwner={business.owner_id === currentUserId}

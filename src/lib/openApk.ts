@@ -14,3 +14,5 @@ export function openApkDownload() {
     window.open(APK_URL, "_system");
   }
 }
+
+export const EXE_URL = "https://github.com/leafydigital/Zen-Biz/releases/download/downloads/ZenBiz-Setup.exe";
