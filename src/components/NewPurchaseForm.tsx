@@ -905,21 +905,6 @@ export function NewPurchaseForm({
       </aside>
     </form>
 
-    <div className="h-16 lg:hidden" aria-hidden="true" />
-    <div className="fixed inset-x-0 bottom-[60px] z-10 flex items-center justify-between gap-3 border-t border-paper-fold bg-white/95 px-4 py-2.5 shadow-card md:bottom-0 md:left-56 lg:hidden">
-      <div className="min-w-0 text-xs text-text-soft">
-        <p>
-          Subtotal <span className="font-ledger tabular-nums text-text">{formatCurrency(subtotal, currency)}</span>
-          {totalTax > 0 && (
-            <>
-              {" · "}Tax <span className="font-ledger tabular-nums text-text">{formatCurrency(totalTax, currency)}</span>
-            </>
-          )}
-        </p>
-        <p>Grand Total</p>
-      </div>
-      <p className="font-ledger text-xl font-bold tabular-nums text-ink">{formatCurrency(grandTotal, currency)}</p>
-    </div>
     </>
   );
 }

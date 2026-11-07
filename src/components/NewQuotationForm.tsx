@@ -95,8 +95,8 @@ export function NewQuotationForm({
   const gstApplies = taxType === "gst";
   const taxApplies = taxType === "gst" || taxType === "tax";
   const itemsGridCols = taxApplies
-    ? "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
-    : "lg:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
+    ? "2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]"
+    : "2xl:grid-cols-[minmax(0,1.3fr)_minmax(0,4rem)_minmax(0,4rem)_minmax(0,4.5rem)_minmax(0,3.5rem)_minmax(0,5rem)_20px]";
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [vehicleNumber, setVehicleNumber] = useState("");
   const [transportName, setTransportName] = useState("");
@@ -415,7 +415,7 @@ export function NewQuotationForm({
             <h2 className="font-display text-lg font-semibold text-text">{DocName} Details</h2>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 sm:grid-cols-2 2xl:grid-cols-4">
             <label className="flex flex-col gap-1.5">
               <span className="text-sm font-medium text-text">{DocName} number</span>
               <input
@@ -533,7 +533,7 @@ export function NewQuotationForm({
             </div>
           )}
 
-          <div className={`mb-1.5 hidden gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft lg:grid ${itemsGridCols}`}>
+          <div className={`mb-1.5 hidden gap-2 px-1 text-[0.68rem] font-medium uppercase tracking-wide text-text-soft 2xl:grid ${itemsGridCols}`}>
             <span>Item</span>
             <span>Qty</span>
             <span>Unit</span>
@@ -548,9 +548,9 @@ export function NewQuotationForm({
             {lineResults.map(({ line, result }) => (
               <div
                 key={line.id}
-                className={`grid grid-cols-1 gap-2 rounded-xl border border-paper-fold bg-paper/40 p-3 lg:items-center lg:gap-2 ${itemsGridCols}`}
+                className={`relative grid grid-cols-2 gap-2 rounded-xl border border-paper-fold bg-paper/40 p-3 sm:grid-cols-4 2xl:items-center 2xl:gap-2 ${itemsGridCols}`}
               >
-                <div className="flex min-w-0 flex-col gap-1.5">
+                <div className="col-span-full flex min-w-0 flex-col gap-1.5 pr-9 2xl:col-span-1 2xl:pr-0">
                   <select
                     value={line.productId ?? ""}
                     onChange={(e) => selectProduct(line.id, e.target.value)}
@@ -627,7 +627,7 @@ export function NewQuotationForm({
                 />
 
                 {taxApplies && (
-                  <div className="flex min-w-0 gap-1">
+                  <div className="col-span-2 flex min-w-0 gap-1 sm:col-span-1 2xl:col-span-1">
                     <select
                       aria-label={gstApplies ? "GST percent" : "Tax percent"}
                       value={
@@ -666,7 +666,7 @@ export function NewQuotationForm({
                   </div>
                 )}
 
-                <div className="hidden text-right lg:block">
+                <div className="hidden text-right 2xl:block">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">
                     {formatCurrency(result.taxableAmount, currency)}
                   </span>
@@ -675,7 +675,7 @@ export function NewQuotationForm({
                 <button
                   type="button"
                   onClick={() => removeLine(line.id)}
-                  className="justify-self-end text-text-soft transition hover:text-alert lg:justify-self-center"
+                  className="absolute right-2.5 top-2.5 text-text-soft transition hover:text-alert 2xl:static 2xl:justify-self-center"
                   aria-label="Remove line"
                 >
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -683,7 +683,7 @@ export function NewQuotationForm({
                   </svg>
                 </button>
 
-                <div className="col-span-full flex items-center justify-between border-t border-paper-fold pt-2 text-sm lg:hidden">
+                <div className="col-span-full flex items-center justify-between border-t border-paper-fold pt-2 text-sm 2xl:hidden">
                   <span className="text-text-soft">Amount</span>
                   <span className="font-ledger font-semibold tabular-nums text-text">
                     {formatCurrency(result.taxableAmount, currency)}
@@ -862,21 +862,6 @@ export function NewQuotationForm({
       </aside>
     </form>
 
-    <div className="h-16 lg:hidden" aria-hidden="true" />
-    <div className="fixed inset-x-0 bottom-[60px] z-10 flex items-center justify-between gap-3 border-t border-paper-fold bg-white/95 px-4 py-2.5 shadow-card md:bottom-0 md:left-56 lg:hidden">
-      <div className="min-w-0 text-xs text-text-soft">
-        <p>
-          Subtotal <span className="font-ledger tabular-nums text-text">{formatCurrency(subtotal, currency)}</span>
-          {totalTax > 0 && (
-            <>
-              {" · "}Tax <span className="font-ledger tabular-nums text-text">{formatCurrency(totalTax, currency)}</span>
-            </>
-          )}
-        </p>
-        <p>Grand Total</p>
-      </div>
-      <p className="font-ledger text-xl font-bold tabular-nums text-ink">{formatCurrency(grandTotal, currency)}</p>
-    </div>
     {addCustomerOpen && (
       <CustomerFormModal
         ownerId={ownerId}
