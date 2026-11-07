@@ -9,6 +9,7 @@ import { useAppConfig } from "@/lib/AppConfigContext";
 import { getLabels, ITEM_PLURAL_KEYS } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { Logo } from "@/components/Logo";
+import { useUpdateAvailable } from "@/lib/useUpdateAvailable";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import { useTranslation } from "@/lib/i18n/I18nContext";
 import { hasPermission, isBillingOnly, permissionForPath } from "@/lib/permissions";
@@ -60,6 +61,9 @@ const ICONS = {
   scale: (
     <path d="M12 3v18M12 3l-5 4M12 3l5 4M4 10h6M14 10h6M4 10l1.5 5a2.5 2.5 0 0 0 5 0L12 10M14 10l1.5 5a2.5 2.5 0 0 0 5 0L22 10" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" />
   ),
+  refresh: (
+    <path d="M20 12a8 8 0 1 1-2.6-5.9M20 4v4.5h-4.5" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" />
+  ),
   message: (
     <path d="M4 5.5h16a1 1 0 0 1 1 1V16a1 1 0 0 1-1 1H9l-4.5 4V17H4a1 1 0 0 1-1-1V6.5a1 1 0 0 1 1-1Z" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
   ),
@@ -96,6 +100,7 @@ export function DashboardNav({
   const features = getPlanFeatures(resolvedPlan);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const updateAvailable = useUpdateAvailable();
   const router = useRouter();
 
   // While the phone menu is open the page behind it must not scroll —
@@ -157,7 +162,7 @@ export function DashboardNav({
     return pathname.startsWith(href);
   }
 
-  function NavLink({ item, onNavigate }: { item: (typeof items)[number]; onNavigate?: () => void }) {
+  function NavLink({ item, onNavigate }: { item: (typeof items)[number] & { dot?: boolean }; onNavigate?: () => void }) {
     const active = isActive(item.href);
     return (
       <Link
@@ -171,6 +176,7 @@ export function DashboardNav({
       >
         <Icon name={item.icon} />
         <span className="flex-1">{item.label}</span>
+        {item.dot && <span className="h-2.5 w-2.5 shrink-0 rounded-full bg-red-500 ring-2 ring-white/70" aria-label="Update available" />}
         {item.locked && (
           <span className="rounded-full bg-white/90 px-2 py-0.5 text-[0.62rem] font-semibold uppercase tracking-wide text-brass-dark">
             {t.nav.pro}
@@ -216,6 +222,7 @@ export function DashboardNav({
         </div>
 
         <div className="mt-2 flex flex-col gap-1 border-t border-white/10 pt-2">
+          {!billingOnly && <NavLink item={{ href: "/dashboard/updates", label: "Updates", icon: "refresh", dot: updateAvailable }} />}
           <NavLink item={{ href: "/dashboard/contact-us", label: t.nav.contactUs, icon: "message" }} />
         </div>
 
@@ -250,6 +257,7 @@ export function DashboardNav({
         style={{ top: "calc(env(safe-area-inset-top) + 0.625rem)" }}
       >
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" /></svg>
+        {updateAvailable && <span className="absolute right-1 top-1 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-white" aria-hidden="true" />}
       </button>
 
       {menuOpen && (
@@ -287,6 +295,7 @@ export function DashboardNav({
               <NavLink key={item.href} item={item} onNavigate={() => setMenuOpen(false)} />
             ))}
             <div className="mt-2 border-t border-white/10 pt-2">
+              {!billingOnly && <NavLink item={{ href: "/dashboard/updates", label: "Updates", icon: "refresh", dot: updateAvailable }} onNavigate={() => setMenuOpen(false)} />}
               <NavLink item={{ href: "/dashboard/contact-us", label: t.nav.contactUs, icon: "message" }} onNavigate={() => setMenuOpen(false)} />
               <NavLink item={{ href: "/about-app", label: t.nav.aboutApp, icon: "file" }} onNavigate={() => setMenuOpen(false)} />
               <button
