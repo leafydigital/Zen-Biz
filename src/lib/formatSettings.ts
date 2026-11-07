@@ -9,7 +9,7 @@ export interface NumberFormat {
   start: number;
 }
 
-export type NumberKind = "invoice" | "quotation" | "purchase" | "challan" | "customer";
+export type NumberKind = "invoice" | "quotation" | "proforma" | "purchase" | "challan" | "customer";
 
 export interface FormatSettings {
   /** Titles offered in the invoice's "Document title" dropdown. */
@@ -23,6 +23,7 @@ export interface FormatSettings {
 export const DEFAULT_NUMBERING: Record<NumberKind, NumberFormat> = {
   invoice: { prefix: "INV-", digits: 4, start: 1 },
   quotation: { prefix: "QUO-", digits: 4, start: 1 },
+  proforma: { prefix: "PI-", digits: 4, start: 1 },
   purchase: { prefix: "PUR-", digits: 4, start: 1 },
   challan: { prefix: "DC-", digits: 4, start: 1 },
   customer: { prefix: "CUST-", digits: 4, start: 1 },
@@ -31,6 +32,7 @@ export const DEFAULT_NUMBERING: Record<NumberKind, NumberFormat> = {
 export const NUMBER_KIND_LABELS: Record<NumberKind, string> = {
   invoice: "Invoice number",
   quotation: "Quotation number",
+  proforma: "Proforma invoice number",
   purchase: "Purchase number",
   challan: "Delivery challan number",
   customer: "Customer ID",

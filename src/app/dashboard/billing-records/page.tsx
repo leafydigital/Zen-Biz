@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { CURRENCY_SYMBOLS } from "@/types/database";
@@ -321,9 +322,11 @@ export default async function BillingRecordsPage({ searchParams }: { searchParam
                   ) : null}
                   <Link
                     href={`/dashboard/billing-records/${r.id}`}
-                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700"
+                    title="View"
+ aria-label="View"
+ className={`${ICON_BTN} bg-violet-600 hover:bg-violet-700`}
                   >
-                    View
+<ViewIcon />
                   </Link>
                   <DeleteInvoiceButton invoiceId={r.id} isBillingRecord />
                 </div>

@@ -13,7 +13,7 @@ export const PERMISSIONS = [
   { key: "billing_edit_item", label: "Billing: edit item", paths: [] as string[] },
   { key: "billing_hide_item", label: "Billing: hide / show item", paths: [] as string[] },
   { key: "billing_remove_item", label: "Billing: remove item", paths: [] as string[] },
-  { key: "quotations", label: "Quotations", paths: ["/dashboard/quotations"] },
+  { key: "quotations", label: "Quotations & Proforma invoices", paths: ["/dashboard/quotations", "/dashboard/proforma"] },
   { key: "delivery_challans", label: "Delivery challans", paths: ["/dashboard/delivery-challans"] },
   { key: "purchases", label: "Purchases & suppliers", paths: ["/dashboard/purchases", "/dashboard/suppliers"] },
   { key: "reports", label: "GST & Profit/Loss reports", paths: ["/dashboard/reports", "/dashboard/profit-loss"] },

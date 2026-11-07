@@ -9,7 +9,7 @@ import type { AnalyticsPreferences } from "@/types/database";
  * are visible, chart type per chart, selected date range). Scoped to the
  * user via RLS (profiles.id = auth.uid()) the same way every other
  * profile update in the app already works — no extra plan check needed
- * here since a Starter user can never reach this UI in the first place
+ * here since a Basic user can never reach this UI in the first place
  * (the whole Analytics section is gated before this action is ever
  * callable), but the underlying data read for the charts themselves is
  * still independently plan-gated server-side, not just hidden in the UI.

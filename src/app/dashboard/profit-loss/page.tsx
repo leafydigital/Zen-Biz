@@ -12,9 +12,9 @@ export default async function ProfitLossPage() {
   if (!getPlanFeatures(profile?.plan ?? "starter").profitAndLoss) {
     return (
       <LockedFeature
-        title="Profit & Loss report is a Business plan feature"
-        description="See sales, purchases, and gross profit side by side, broken down by month — available on the Business plan."
-        requiredPlan="business"
+        title="Profit & Loss report is a Pro plan feature"
+        description="See sales, purchases, and gross profit side by side, broken down by month — available on the Pro plan."
+        requiredPlan="professional"
       />
     );
   }

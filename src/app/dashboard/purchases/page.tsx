@@ -1,4 +1,5 @@
 import { DocShareActions } from "@/components/DocShareActions";
+import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -22,8 +23,8 @@ export default async function PurchasesPage() {
   if (!getPlanFeatures(profile?.plan ?? "starter").purchases) {
     return (
       <LockedFeature
-        title="Purchases is a Professional plan feature"
-        description="Track stock and goods you buy in from suppliers — available on the Professional plan and above."
+        title="Purchases is a Pro plan feature"
+        description="Track stock and goods you buy in from suppliers — available on the Pro plan."
         requiredPlan="professional"
       />
     );
@@ -86,15 +87,17 @@ export default async function PurchasesPage() {
                     </p>
                   </div>
                 </Link>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:justify-end">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">
                     {formatCurrency(Number(p.total), p.currency)}
                   </span>
                   <PurchaseStatusSelect purchaseId={p.id} status={p.status} paymentMethod={p.payment_method} />
-                  <Link href={`/dashboard/purchases/${p.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700">View</Link>
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
+                  <Link href={`/dashboard/purchases/${p.id}`} title="View" aria-label="View" className={`${ICON_BTN} bg-violet-600 hover:bg-violet-700`}><ViewIcon /></Link>
                   <DownloadPurchaseButton purchaseId={p.id} />
           <DocShareActions kind="purchase" id={p.id} />
                   <DeleteRecordButton table="purchases" id={p.id} label="purchase" />
+                  </div>
                 </div>
               </li>
             ))}

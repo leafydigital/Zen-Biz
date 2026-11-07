@@ -315,7 +315,7 @@ export interface Invoice {
   delivery_address: string | null;
   vehicle_number: string | null;
   transport_name: string | null;
-  /** E-way bill details (Professional and Business plans). */
+  /** E-way bill details (Pro plan). */
   eway_bill_number?: string | null;
   eway_bill_date?: string | null;
   eway_valid_until?: string | null;
@@ -366,6 +366,8 @@ export interface Quotation {
   business_id: string;
   customer_id: string | null;
   quotation_number: string;
+  /** "proforma" for proforma invoices (stored with quotations). Missing = quotation. */
+  doc_kind?: "quotation" | "proforma";
   quotation_date: string;
   valid_until: string | null;
   status: QuotationStatus;

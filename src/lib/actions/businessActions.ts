@@ -37,7 +37,7 @@ export async function switchActiveBusiness(businessId: string) {
  * Creates a new business owned by the current user, after checking the
  * plan's business limit — the actual enforcement point, not just a UI
  * disable. The limit is per subscriber (profiles.plan), since a
- * Professional-plan person can have up to 2 businesses regardless of how
+ * Pro-plan person can have up to 5 businesses regardless of how
  * many people are members of each.
  */
 export async function createBusiness(input: {
@@ -58,13 +58,11 @@ export async function createBusiness(input: {
   const limit = getPlanFeatures(profile?.plan ?? "starter").limits.businesses;
 
   if (limit !== null && businesses.length >= limit) {
-    const nextPlan = profile?.plan === "professional" ? "Business" : "Professional";
-    const nextLimit = profile?.plan === "professional" ? 5 : 2;
     return {
       error:
         profile?.plan === "starter"
-          ? "You've reached the 1-business limit on Starter. Upgrade to Professional to manage up to 2 businesses."
-          : `${profile?.plan === "professional" ? "Professional" : "Your plan"} allows up to ${limit} businesses. Upgrade to ${nextPlan} to manage up to ${nextLimit} businesses.`,
+          ? "You've reached the 1-business limit on Basic. Upgrade to Pro to manage up to 5 businesses."
+          : `Pro allows up to ${limit} businesses. You've reached the limit.`,
       business: null,
     };
   }
@@ -166,8 +164,8 @@ export async function addBusinessMember(businessId: string, email: string) {
   if (userLimit !== null && (memberCount ?? 0) >= userLimit) {
     const message =
       profile?.plan === "starter"
-        ? "Starter includes 1 user. Upgrade to Professional to add another user."
-        : `Your plan includes up to ${userLimit} users. Upgrade to a higher plan to add more.`;
+        ? "Basic includes 1 user. Upgrade to Pro to add another user."
+        : `Your plan includes up to ${userLimit} users. You've reached the limit.`;
     return { error: message };
   }
 

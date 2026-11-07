@@ -46,7 +46,7 @@ export function PlanBillingTab({ profile }: { profile: Profile }) {
         {features.invoiceWatermark && (
           <p className="mt-3 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">
             Your invoices carry a "Generated with Zen Biz" watermark on the
-            Starter plan. Upgrade to remove it.
+            Basic plan. Upgrade to remove it.
           </p>
         )}
 

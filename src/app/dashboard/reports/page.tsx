@@ -12,9 +12,9 @@ export default async function GstReportPage() {
   if (!getPlanFeatures(profile?.plan ?? "starter").gstReport) {
     return (
       <LockedFeature
-        title="Monthly GST Report is a Business plan feature"
-        description="See sales GST collected, purchase GST paid, and net GST payable, broken down by month — available on the Business plan."
-        requiredPlan="business"
+        title="Monthly GST Report is a Pro plan feature"
+        description="See sales GST collected, purchase GST paid, and net GST payable, broken down by month — available on the Pro plan."
+        requiredPlan="professional"
       />
     );
   }

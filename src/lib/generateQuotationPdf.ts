@@ -25,17 +25,18 @@ export async function generateQuotationPdf({
   /** Returns the PDF as a Blob instead of downloading it. */
   preview?: boolean;
 }) {
+  const proforma = quotation.doc_kind === "proforma";
   return await generateSaleDocumentPdf({
     preview,
-    docLabel: "QUOTATION",
-    titleText: profile.format_settings?.titles?.quotation,
+    docLabel: proforma ? "PROFORMA INVOICE" : "QUOTATION",
+    titleText: proforma ? undefined : profile.format_settings?.titles?.quotation,
     docNumber: quotation.quotation_number,
     docDate: quotation.quotation_date,
     dueDate: quotation.valid_until,
     status: quotation.status,
     taxType: quotation.tax_type,
     placeOfSupply: quotation.place_of_supply_state,
-    partyLabel: "Quote for",
+    partyLabel: proforma ? "Bill to" : "Quote for",
     party: customer
       ? { name: customer.name, phone: customer.phone, address: customer.address, gstin: customer.gstin }
       : { name: "Not specified" },
@@ -54,7 +55,7 @@ export async function generateQuotationPdf({
     total: Number(quotation.total),
     notes: quotation.notes,
     profile,
-    filenamePrefix: "Quotation",
+    filenamePrefix: proforma ? "Proforma-Invoice" : "Quotation",
     design: designOverride ?? profile.document_design ?? DEFAULT_DOCUMENT_DESIGN,
     terms: profile.quotation_terms,
     signatureUrl: profile.signature_url,

@@ -9,7 +9,7 @@ export function AnalyticsUpgradeCard() {
       </div>
       <h3 className="font-display text-lg font-semibold text-text">Unlock Business Analytics</h3>
       <p className="mx-auto mt-1.5 max-w-sm text-sm text-text-soft">
-        Upgrade to Professional to view Profit & Loss, Expenses, Sales and more.
+        Upgrade to Pro to view Profit & Loss, Expenses, Sales and more.
       </p>
       <a
         href="/dashboard/settings?tab=plan"

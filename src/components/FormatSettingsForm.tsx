@@ -16,7 +16,7 @@ import {
 } from "@/lib/formatSettings";
 import type { Business } from "@/types/database";
 
-const KINDS: NumberKind[] = ["invoice", "quotation", "purchase", "challan", "customer"];
+const KINDS: NumberKind[] = ["invoice", "quotation", "proforma", "purchase", "challan", "customer"];
 
 export function FormatSettingsForm({ business }: { business: Business }) {
   const router = useRouter();

@@ -213,8 +213,8 @@ export function TeamManagementTab({
       {atLimit && (
         <p className="rounded-lg bg-brass/10 px-3.5 py-2.5 text-sm text-brass-dark">
           {plan === "starter"
-            ? "Starter includes 1 user. Upgrade to Professional to add another user."
-            : `Your plan includes up to ${limit} users. Upgrade to a higher plan to add more.`}
+            ? "Basic includes 1 user. Upgrade to Pro to add another user."
+            : `Your plan includes up to ${limit} users. You've reached the limit.`}
         </p>
       )}
 

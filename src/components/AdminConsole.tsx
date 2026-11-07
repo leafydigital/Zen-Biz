@@ -368,9 +368,8 @@ export function AdminConsole({
         {tab === "overview" && (
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             {[
-              ["Starter users", stats.starter, "bg-slate-50 text-slate-700 border-slate-200"],
-              ["Professional users", stats.professional, "bg-sky-50 text-sky-700 border-sky-200"],
-              ["Business users", stats.business, "bg-violet-50 text-violet-700 border-violet-200"],
+              ["Basic users", stats.starter, "bg-slate-50 text-slate-700 border-slate-200"],
+              ["Pro users", stats.professional, "bg-sky-50 text-sky-700 border-sky-200"],
               ["Open problems", openCount("issue"), "bg-red-50 text-red-700 border-red-200"],
               ["Open enquiries", openCount("info"), "bg-amber-50 text-amber-700 border-amber-200"],
               ["App version", config.version, "bg-indigo-50 text-indigo-700 border-indigo-200"],
@@ -378,9 +377,8 @@ export function AdminConsole({
             ].map(([l, v, c]) => {
               const label = String(l);
               const route: Record<string, [Tab, string?]> = {
-                "Starter users": ["customers", "starter"],
-                "Professional users": ["customers", "professional"],
-                "Business users": ["customers", "business"],
+                "Basic users": ["customers", "starter"],
+                "Pro users": ["customers", "professional"],
                 "Open problems": ["issues"],
                 "Open enquiries": ["enquiries"],
                 "App version": ["settings"],
@@ -477,9 +475,9 @@ export function AdminConsole({
               <div key={title} className="flex flex-col gap-3">
                 <h2 className="font-semibold text-text">{title}</h2>
                 <div className="grid gap-4 sm:grid-cols-2">
-                  {(["professional", "business"] as const).map((p) => (
+                  {(["professional"] as const).map((p) => (
                     <div key={p} className="flex flex-col gap-2 rounded-xl border border-paper-fold p-4">
-                      <p className="text-sm font-semibold capitalize text-text">{p}</p>
+                      <p className="text-sm font-semibold text-text">Pro (all features · 5 businesses · 10 users)</p>
                       {(["monthly", "yearly"] as const).map((c) => (
                         <label key={c} className="flex flex-col gap-1">
                           <span className="text-xs font-medium capitalize text-text-soft">{c}</span>
@@ -561,13 +559,13 @@ export function AdminConsole({
                 <input value={d.note} onChange={(e) => setD({ ...d, note: e.target.value })} className={input} /></label>
               <div className="flex items-center gap-4 text-sm text-text sm:col-span-2">
                 <span className="text-xs font-medium text-text-soft">Applies to:</span>
-                {["professional", "business"].map((p) => (
-                  <label key={p} className="flex items-center gap-1.5 capitalize">
+                {["professional"].map((p) => (
+                  <label key={p} className="flex items-center gap-1.5">
                     <input type="checkbox" className="h-4 w-4 accent-ink" checked={d.plans.includes(p)} onChange={(e) => setD({ ...d, plans: e.target.checked ? [...d.plans, p] : d.plans.filter((x) => x !== p) })} />
-                    {p}
+                    Pro
                   </label>
                 ))}
-                <span className="text-xs text-text-soft">(none ticked = both)</span>
+                <span className="text-xs text-text-soft">(none ticked = all plans)</span>
               </div>
               <button
                 disabled={pending}

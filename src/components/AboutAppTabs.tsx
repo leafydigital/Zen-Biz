@@ -38,7 +38,7 @@ const STEPS: [string, string][] = [
   ["Make an invoice or quotation", "Tap + New Invoice, choose the customer, add items, and save."],
   ["Share it", "Open the invoice and tap WhatsApp, Email, Print or Download."],
   ["Track your money", "Mark invoices as paid, and open Reports to see GST and profit-and-loss."],
-  ["Add your team (Professional plan)", "In Settings, invite staff and tick the pages each person may view or edit."],
+  ["Add your team (Pro plan)", "In Settings, invite staff and tick the pages each person may view or edit."],
 ];
 
 const lim = (n: number | null) => (n === null ? "Unlimited" : String(n));
@@ -49,9 +49,8 @@ export function AboutAppTabs({ pricing, currency, starter, professional, busines
   const card = "rounded-xl border border-paper-fold bg-white p-4 shadow-card";
 
   const plans = [
-    { name: "Starter", price: "Free", note: "For getting going", lim: starter, tone: "border-slate-200", extra: ["Invoices with a Zen Biz footer", "Quotations"] },
-    { name: "Professional", price: `${formatPrice(pricing.professional.monthly, currency)}/month`, note: `or ${formatPrice(pricing.professional.yearly, currency)}/year`, lim: professional, tone: "border-sky-300", extra: ["GST billing & reports", "Purchases & delivery challans", "Profit & Loss", "WhatsApp sharing", "Team users & roles", "Low-stock alerts"] },
-    { name: "Business", price: `${formatPrice(pricing.business.monthly, currency)}/month`, note: `or ${formatPrice(pricing.business.yearly, currency)}/year`, lim: business, tone: "border-violet-300", extra: ["Everything in Professional", "Higher limits", "Barcode scanning"] },
+    { name: "Basic", price: "Free", note: "For getting going", lim: starter, tone: "border-slate-200", extra: ["Invoices with a Zen Biz footer", "Quotations & Proforma invoices"] },
+    { name: "Pro", price: `${formatPrice(pricing.professional.monthly, currency)}/month`, note: `or ${formatPrice(pricing.professional.yearly, currency)}/year`, lim: professional, tone: "border-sky-300", extra: ["Everything unlocked", "GST billing & all reports", "Purchases & delivery challans", "WhatsApp sharing", "Team users & roles", "Low-stock alerts & barcode scanning"] },
   ];
 
   return (
@@ -113,7 +112,7 @@ export function AboutAppTabs({ pricing, currency, starter, professional, busines
                 <p className="font-display text-lg font-semibold text-text">{p.name}</p>
                 <p className="font-ledger text-lg font-semibold text-text">{p.price}</p>
               </div>
-              <p className="text-xs text-text-soft">{p.name === "Starter" ? p.note : p.note}</p>
+              <p className="text-xs text-text-soft">{p.name === "Basic" ? p.note : p.note}</p>
               <ul className="mt-3 flex flex-col gap-1 text-sm text-text">
                 <li>• Invoices per month: {lim(p.lim.invoicesPerMonth)}</li>
                 <li>• Customers: {lim(p.lim.customers)}</li>

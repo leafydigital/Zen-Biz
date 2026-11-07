@@ -126,6 +126,7 @@ export function DashboardNav({
     { href: "/dashboard/invoices", label: t.nav.invoices, icon: "invoice" },
     { href: "/dashboard/billing-records", label: t.nav.billingRecords, icon: "billing" },
     { href: "/dashboard/quotations", label: t.nav.quotations, icon: "quote" },
+    { href: "/dashboard/proforma", label: "Proforma", icon: "file" },
     { href: "/dashboard/delivery-challans", label: t.nav.deliveryChallans, icon: "truck", locked: !features.deliveryChallans },
   ];
   const reportItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [

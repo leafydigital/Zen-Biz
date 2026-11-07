@@ -775,7 +775,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
   }
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4 max-md:-mb-8">
       {/* Top bar: customer, phone, previous bills, new bill */}
       <div className="flex flex-col gap-2 rounded-xl2 border border-paper-fold bg-paper-card p-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -843,7 +843,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
               type="button"
               onClick={() => setShowHeld((v) => !v)}
               aria-expanded={showHeld}
-              className="min-w-0 flex-1 whitespace-nowrap rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper sm:flex-none"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper"
             >
               Pay later{held.length > 0 ? ` (${held.length})` : ""} {showHeld ? "▴" : "▾"}
             </button>
@@ -851,14 +851,14 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
               type="button"
               onClick={() => setShowPrev((v) => !v)}
               aria-expanded={showPrev}
-              className="min-w-0 flex-1 whitespace-nowrap rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper sm:flex-none"
+              className="shrink-0 whitespace-nowrap rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm font-semibold text-text hover:bg-paper"
             >
               Previous bills{recent.length > 0 ? ` (${recent.length})` : ""} {showPrev ? "▴" : "▾"}
             </button>
             <button
               type="button"
               onClick={newBill}
-              className="min-w-0 flex-1 whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper hover:bg-ink-light sm:flex-none"
+              className="min-w-[8rem] flex-1 whitespace-nowrap rounded-lg bg-ink px-3 py-2 text-sm font-semibold text-paper hover:bg-ink-light sm:flex-none"
             >
               + New bill
             </button>
@@ -978,7 +978,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
         </button>
         {scanLockedOpen && !canScan && (
           <p className="basis-full rounded-lg bg-brass/15 px-3 py-2 text-xs text-brass-dark">
-            Barcode scanning is available on the Professional and Business plans. Upgrade to scan items with your phone camera or a barcode scanner.
+            Barcode scanning is available on the Pro plan. Upgrade to scan items with your phone camera or a barcode scanner.
           </p>
         )}
         {itemPerms.add && (
@@ -1087,7 +1087,7 @@ ${d.pointsBalance !== undefined ? `<div>Points balance: ${d.pointsBalance}</div>
       )}
         </div>
         {/* Bill panel: stays frozen on the right while you scroll items; only the list of selected items scrolls inside it. */}
-        <aside className={`flex min-h-0 flex-col gap-3 rounded-xl2 border border-paper-fold bg-paper-card p-4 shadow-card max-md:sticky max-md:bottom-0 max-md:z-20 max-md:max-h-[72dvh] max-md:rounded-b-none max-md:p-3 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.14)] md:sticky md:top-2 md:max-h-[calc(100vh-1rem)] ${cartLines.length === 0 ? "max-md:hidden" : ""}`}>
+        <aside className={`flex min-h-0 flex-col gap-3 rounded-xl2 border border-paper-fold bg-paper-card p-4 shadow-card max-md:sticky max-md:bottom-0 max-md:z-20 max-md:max-h-[50dvh] max-md:rounded-b-none max-md:p-3 max-md:shadow-[0_-8px_20px_rgba(0,0,0,0.14)] md:sticky md:top-2 md:max-h-[calc(100vh-1rem)] ${cartLines.length === 0 ? "max-md:hidden" : ""}`}>
           {/* Total stays pinned at the top of the bill; items + payment scroll; buttons stay pinned at the bottom. */}
           <div className="shrink-0 text-right">
             <p className="text-[0.7rem] uppercase tracking-wide text-text-soft">{itemCount} item{itemCount === 1 ? "" : "s"}</p>

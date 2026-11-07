@@ -18,7 +18,7 @@ const DEMOS: Demo[] = [
     id: "scan",
     chip: "Scan barcodes with your phone",
     title: "How barcode scanning works",
-    note: "Camera scanning is on the Professional and Business plans.",
+    note: "Camera scanning is on the Pro plan.",
     steps: BARCODE_STEPS,
     art: [<StepOne key="a" />, <StepTwo key="b" />, <StepThree key="c" />],
   },
@@ -26,7 +26,7 @@ const DEMOS: Demo[] = [
     id: "gst",
     chip: "GST invoices",
     title: "How GST invoices work",
-    note: "GST billing and the GST report are on the Business plan.",
+    note: "GST billing and the GST report are on the Pro plan.",
     steps: [
       { title: "1. Add your GST number and HSN codes", body: "Enter your GSTIN once in Settings and put an HSN code and tax rate on each item." },
       { title: "2. Bill as usual", body: "Choose the customer and items. CGST and SGST (or IGST for another state) are worked out for you." },

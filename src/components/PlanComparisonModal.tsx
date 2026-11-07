@@ -9,33 +9,32 @@ import type { Plan } from "@/types/database";
 interface FeatureRow {
   label: string;
   starter: boolean | string;
-  professional: boolean | string;
-  business: boolean | string;
+  pro: boolean | string;
 }
 
 const FEATURES: FeatureRow[] = [
-  { label: "Invoices", starter: "50/month", professional: "Unlimited", business: "Unlimited" },
-  { label: "Customers", starter: "75", professional: "Unlimited", business: "Unlimited" },
-  { label: "Products & services", starter: "75", professional: "Unlimited", business: "Unlimited" },
-  { label: "Businesses", starter: "1", professional: "2", business: "Up to 5" },
-  { label: "Users", starter: "1", professional: "4", business: "5+" },
-  { label: "No watermark on invoices", starter: false, professional: true, business: true },
-  { label: "Quotations, convert to Invoice", starter: true, professional: true, business: true },
-  { label: "A4 / A5 / Thermal paper sizes", starter: true, professional: true, business: true },
-  { label: "Terms & Conditions, signature, bank details", starter: true, professional: true, business: true },
-  { label: "Purchases & Suppliers", starter: false, professional: true, business: true },
-  { label: "E-way bill details on invoices", starter: false, professional: true, business: true },
-  { label: "Delivery Challan", starter: false, professional: true, business: true },
-  { label: "Share via WhatsApp / email", starter: false, professional: true, business: true },
-  { label: "Expense tracking", starter: false, professional: true, business: true },
-  { label: "Invoice tracking (Sent/Viewed/Overdue)", starter: false, professional: true, business: true },
-  { label: "POS print support", starter: true, professional: true, business: true },
-  { label: "Colourful & custom invoice styles, size adjustments", starter: false, professional: true, business: true },
-  { label: "GST billing & GST report", starter: false, professional: false, business: true },
-  { label: "Profit & Loss report", starter: false, professional: false, business: true },
-  { label: "Multiple users & roles", starter: false, professional: true, business: true },
-  { label: "Low stock alerts", starter: false, professional: true, business: true },
-  { label: "Barcode scanning", starter: false, professional: true, business: true },
+  { label: "Invoices", starter: "50/month", pro: "Unlimited" },
+  { label: "Customers", starter: "75", pro: "Unlimited" },
+  { label: "Products & services", starter: "75", pro: "Unlimited" },
+  { label: "Businesses", starter: "1", pro: "Up to 5" },
+  { label: "Users", starter: "1", pro: "Up to 10" },
+  { label: "No watermark on invoices", starter: false, pro: true },
+  { label: "Quotations, Proforma, convert to Invoice", starter: true, pro: true },
+  { label: "A4 / A5 / Thermal paper sizes", starter: true, pro: true },
+  { label: "Terms & Conditions, signature, bank details", starter: true, pro: true },
+  { label: "Purchases & Suppliers", starter: false, pro: true },
+  { label: "E-way bill & e-invoice", starter: false, pro: true },
+  { label: "Delivery Challan", starter: false, pro: true },
+  { label: "Share via WhatsApp / email", starter: false, pro: true },
+  { label: "Expense tracking", starter: false, pro: true },
+  { label: "Invoice tracking (Sent/Viewed/Overdue)", starter: false, pro: true },
+  { label: "POS print support", starter: true, pro: true },
+  { label: "Colourful & custom invoice styles, size adjustments", starter: false, pro: true },
+  { label: "GST billing & GST report", starter: false, pro: true },
+  { label: "Profit & Loss and all reports", starter: false, pro: true },
+  { label: "Multiple users & roles", starter: false, pro: true },
+  { label: "Low stock alerts", starter: false, pro: true },
+  { label: "Barcode scanning", starter: false, pro: true },
 ];
 
 function Check() {
@@ -86,9 +85,8 @@ export function PlanComparisonModal({
   }, [onClose]);
 
   const plans: { id: Plan; label: string; blurb: string }[] = [
-    { id: "starter", label: "Starter", blurb: "Freelancers & small shops" },
-    { id: "professional", label: "Professional", blurb: "Growing small businesses" },
-    { id: "business", label: "Business", blurb: "Established SMEs" },
+    { id: "starter", label: "Basic", blurb: "Freelancers & small shops" },
+    { id: "professional", label: "Pro", blurb: "Everything, for growing businesses" },
   ];
 
   return (
@@ -112,11 +110,11 @@ export function PlanComparisonModal({
 
         <h2 className="font-display text-2xl font-semibold text-text">Choose your plan</h2>
         <p className="mt-1 text-sm text-text-soft">
-          You're currently on the {plans.find((p) => p.id === currentPlan)?.label} plan.
+          You're currently on the {plans.find((p) => p.id === (currentPlan === "business" ? "professional" : currentPlan))?.label} plan.
         </p>
         {!paymentsEnabled && (
           <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">
-            Online upgrades are coming soon. Everything on the Starter plan
+            Online upgrades are coming soon. Everything on the Basic plan
             works fully in the meantime.
           </p>
         )}
@@ -140,10 +138,10 @@ export function PlanComparisonModal({
           </button>
         </div>
 
-        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2">
           {plans.map((p) => {
-            const isCurrent = p.id === currentPlan;
-            const pricing = p.id === "starter" ? null : allPricing[p.id as "professional" | "business"];
+            const isCurrent = p.id === (currentPlan === "business" ? "professional" : currentPlan);
+            const pricing = p.id === "starter" ? null : allPricing.professional;
             return (
               <div
                 key={p.id}
@@ -195,19 +193,17 @@ export function PlanComparisonModal({
         </div>
 
         <div className="mt-6 overflow-hidden rounded-xl border border-paper-fold">
-          <div className="grid grid-cols-[1fr_78px_78px_78px] bg-paper text-xs font-semibold uppercase tracking-wide text-text-soft">
+          <div className="grid grid-cols-[1fr_84px_84px] bg-paper text-xs font-semibold uppercase tracking-wide text-text-soft">
             <div className="px-4 py-3">Feature</div>
-            <div className="px-1 py-3 text-center">Starter</div>
-            <div className="px-1 py-3 text-center">Pro</div>
-            <div className="px-1 py-3 text-center text-brass-dark">Business</div>
+            <div className="px-1 py-3 text-center">Basic</div>
+            <div className="px-1 py-3 text-center text-brass-dark">Pro</div>
           </div>
           <div className="divide-y divide-paper-fold">
             {FEATURES.map((f) => (
-              <div key={f.label} className="grid grid-cols-[1fr_78px_78px_78px] items-center">
+              <div key={f.label} className="grid grid-cols-[1fr_84px_84px] items-center">
                 <div className="px-4 py-2.5 text-sm text-text">{f.label}</div>
                 <FeatureCell value={f.starter} />
-                <FeatureCell value={f.professional} />
-                <FeatureCell value={f.business} />
+                <FeatureCell value={f.pro} />
               </div>
             ))}
           </div>

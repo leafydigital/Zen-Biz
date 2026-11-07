@@ -16,8 +16,8 @@ export default async function SuppliersPage() {
   if (!getPlanFeatures(profile?.plan ?? "starter").purchases) {
     return (
       <LockedFeature
-        title="Suppliers is a Professional plan feature"
-        description="Keep a list of everyone you buy stock or goods from — available on the Professional plan and above."
+        title="Suppliers is a Pro plan feature"
+        description="Keep a list of everyone you buy stock or goods from — available on the Pro plan."
         requiredPlan="professional"
       />
     );

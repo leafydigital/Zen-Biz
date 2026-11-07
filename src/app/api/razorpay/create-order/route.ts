@@ -9,7 +9,7 @@ import { getVisitorCurrency } from "@/lib/visitorLocation";
 import type { BillingCycle, PayablePlan } from "@/types/database";
 
 /**
- * Creates a Razorpay order for upgrading to Professional or Business, and
+ * Creates a Razorpay order for upgrading to Pro, and
  * records a matching 'created' row in subscription_payments so the webhook
  * has something to update once payment completes. Requires
  * RAZORPAY_KEY_ID / RAZORPAY_KEY_SECRET to be set — if they're missing,

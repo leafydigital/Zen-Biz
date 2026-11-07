@@ -54,8 +54,9 @@ export default async function OwnerConsolePage() {
       discounts={(discountsRes.data ?? []) as any[]}
       stats={{
         starter: plans[0].count ?? 0,
-        professional: plans[1].count ?? 0,
-        business: plans[2].count ?? 0,
+        // Pro = the old Professional + Business plans combined.
+        professional: (plans[1].count ?? 0) + (plans[2].count ?? 0),
+        business: 0,
         businesses: businesses ?? 0,
       }}
     />

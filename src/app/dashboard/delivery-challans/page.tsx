@@ -1,4 +1,5 @@
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
+import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ChallanStatusSelect } from "@/components/ChallanStatusSelect";
@@ -16,8 +17,8 @@ export default async function DeliveryChallansPage() {
   if (!getPlanFeatures(profile?.plan ?? "starter").deliveryChallans) {
     return (
       <LockedFeature
-        title="Delivery Challan is a Professional plan feature"
-        description="Create a dispatch note for goods sent out, ahead of or without an invoice — available on the Professional plan and above."
+        title="Delivery Challan is a Pro plan feature"
+        description="Create a dispatch note for goods sent out, ahead of or without an invoice — available on the Pro plan."
         requiredPlan="professional"
       />
     );
@@ -81,12 +82,14 @@ export default async function DeliveryChallansPage() {
                     </p>
                   </div>
                 </Link>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:justify-end">
                   <ChallanStatusSelect challanId={c.id} status={c.status} />
-                  <Link href={`/dashboard/delivery-challans/${c.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700">View</Link>
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
+                  <Link href={`/dashboard/delivery-challans/${c.id}`} title="View" aria-label="View" className={`${ICON_BTN} bg-violet-600 hover:bg-violet-700`}><ViewIcon /></Link>
                   <DocShareActions kind="challan" id={c.id} />
                   <DownloadChallanButton challanId={c.id} />
                   <DeleteRecordButton table="delivery_challans" id={c.id} label="delivery challan" />
+                  </div>
                 </div>
               </li>
             ))}

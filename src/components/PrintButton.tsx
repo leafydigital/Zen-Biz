@@ -1,5 +1,7 @@
 "use client";
 
+import { ICON_BTN, PrintIcon, Spinner } from "@/components/ActionIcons";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
@@ -73,9 +75,11 @@ export function PrintButton({ invoiceId }: { invoiceId: string }) {
       type="button"
       onClick={handlePrint}
       disabled={busy}
-      className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-indigo-600 hover:bg-indigo-700"
+      title="Print"
+      aria-label="Print"
+      className={`${ICON_BTN} bg-indigo-600 hover:bg-indigo-700`}
     >
-      {busy ? "Preparing…" : "Print"}
+      {busy ? <Spinner /> : <PrintIcon />}
     </button>
   );
 }

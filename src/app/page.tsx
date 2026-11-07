@@ -145,11 +145,11 @@ const FEATURES = [
 const FAQ = [
   {
     q: "Is Zen Biz really free to use?",
-    a: "Yes. The Starter plan is free forever and includes products, customers, invoices, and quotations — no card required. It's capped at 75 customers, 75 products, and 50 invoices a month; Starter invoices also carry a small Zen Biz watermark. Both the limits and the watermark are removed on the Professional plan and above.",
+    a: "Yes. The Basic plan is free forever and includes products, customers, invoices, and quotations — no card required. It's capped at 75 customers, 75 products, and 50 invoices a month; Starter invoices also carry a small Zen Biz watermark. Both the limits and the watermark are removed on the Professional plan and above.",
   },
   {
     q: "How does barcode scanning work in Zen Biz?",
-    a: "Every item gets its own unique barcode number automatically. Print the labels, stick them on your products, then open Billing and tap Scan barcode. Your phone camera reads the barcode and adds the item to the bill with its price; scanning it again adds one more. USB and Bluetooth barcode scanners work too. Camera scanning is on the Professional and Business plans.",
+    a: "Every item gets its own unique barcode number automatically. Print the labels, stick them on your products, then open Billing and tap Scan barcode. Your phone camera reads the barcode and adds the item to the bill with its price; scanning it again adds one more. USB and Bluetooth barcode scanners work too. Camera scanning is on the Pro plan.",
   },
   {
     q: "Can I print barcode labels for my products?",
@@ -161,7 +161,7 @@ const FAQ = [
   },
   {
     q: "Does Zen Biz support GST invoices, e-way bills and e-invoices?",
-    a: "Yes. GST billing and the GST report are part of the Business plan. On Professional and Business you can add e-way bill details to invoices, and Zen Biz prepares the file for the government GST portal so you can generate an e-way bill or an e-invoice (IRN) free of charge, then save the number back on the invoice so it prints.",
+    a: "Yes. GST billing and the GST report are part of the Pro plan. On Pro you can add e-way bill details to invoices, and Zen Biz prepares the file for the government GST portal so you can generate an e-way bill or an e-invoice (IRN) free of charge, then save the number back on the invoice so it prints.",
   },
   {
     q: "Can I use Zen Biz for any type of business?",
@@ -189,7 +189,7 @@ const FAQ = [
   },
   {
     q: "Do I need a credit card to sign up?",
-    a: "No. You can create a free Zen Biz account with just an email and password or your Google account — no payment details needed to start on the Starter plan.",
+    a: "No. You can create a free Zen Biz account with just an email and password or your Google account — no payment details needed to start on the Basic plan.",
   },
 ];
 
@@ -376,7 +376,7 @@ export default async function HomePage() {
           </div>
           <BarcodeScanDemo />
           <p className="mt-6 text-center text-sm text-text-soft">
-            Camera scanning is on the Professional and Business plans. Barcode labels, USB and Bluetooth scanners follow the same steps.
+            Camera scanning is on the Pro plan. Barcode labels, USB and Bluetooth scanners follow the same steps.
           </p>
         </div>
       </section>
@@ -426,10 +426,10 @@ export default async function HomePage() {
             </p>
           </div>
 
-          <div className="grid gap-6 sm:grid-cols-3">
+          <div className="mx-auto grid max-w-3xl gap-6 sm:grid-cols-2">
             <div className="rounded-xl2 border border-paper-fold bg-white p-7 shadow-card">
               <p className="text-sm font-semibold uppercase tracking-wide text-text-soft">
-                Starter
+                Basic
               </p>
               <p className="mt-2 font-display text-3xl font-bold text-text">{rupees(0)}</p>
               <p className="mt-1 text-xs text-text-soft">Freelancers & small shops</p>
@@ -459,15 +459,15 @@ export default async function HomePage() {
 
             <div className="rounded-xl2 border-2 border-brass bg-white p-7 shadow-card">
               <p className="text-sm font-semibold uppercase tracking-wide text-brass-dark">
-                Professional
+                Pro
               </p>
               <p className="mt-2 font-display text-3xl font-bold text-text">
                 {rupees(appConfig.pricing.professional.monthly)}<span className="text-base font-normal text-text-soft">/mo</span>
               </p>
-              <p className="mt-1 text-xs text-text-soft">Growing small businesses</p>
+              <p className="mt-1 text-xs text-text-soft">Everything, for growing businesses</p>
               <ul className="mt-5 flex flex-col gap-2.5 text-sm text-text-soft">
                 {[
-                  "Everything in Starter, no watermark",
+                  "Everything in Basic, no watermark",
                   "Unlimited invoices",
                   "Unlimited customers & products",
                   "Purchases & Suppliers",
@@ -480,7 +480,9 @@ export default async function HomePage() {
                   "Barcode scanning with phone camera",
                   "E-way bill & e-invoice help",
                   "Colourful styles & 20 document templates",
-                  "2 businesses, 4 users",
+                  "GST billing & GST report",
+                  "Profit & Loss and all reports",
+                  "Up to 5 businesses, 10 users",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2">
                     <span className="mt-0.5 text-success">✓</span>
@@ -491,36 +493,6 @@ export default async function HomePage() {
               <Link
                 href="/signup"
                 className="mt-6 block rounded-xl bg-ink px-4 py-2.5 text-center text-sm font-semibold text-paper transition hover:bg-ink-light"
-              >
-                Start free, upgrade anytime
-              </Link>
-            </div>
-
-            <div className="rounded-xl2 border border-paper-fold bg-white p-7 shadow-card">
-              <p className="text-sm font-semibold uppercase tracking-wide text-text-soft">
-                Business
-              </p>
-              <p className="mt-2 font-display text-3xl font-bold text-text">
-                {rupees(appConfig.pricing.business.monthly)}<span className="text-base font-normal text-text-soft">/mo</span>
-              </p>
-              <p className="mt-1 text-xs text-text-soft">Established SMEs</p>
-              <ul className="mt-5 flex flex-col gap-2.5 text-sm text-text-soft">
-                {[
-                  "Everything in Professional",
-                  "GST billing & GST report",
-                  "Profit & Loss report",
-                  "Colourful styles & 20 templates",
-                  "Up to 5 businesses, 5+ users",
-                ].map((item) => (
-                  <li key={item} className="flex items-start gap-2">
-                    <span className="mt-0.5 text-success">✓</span>
-                    {item}
-                  </li>
-                ))}
-              </ul>
-              <Link
-                href="/signup"
-                className="mt-6 block rounded-xl border border-ink px-4 py-2.5 text-center text-sm font-semibold text-ink transition hover:bg-ink/5"
               >
                 Start free, upgrade anytime
               </Link>

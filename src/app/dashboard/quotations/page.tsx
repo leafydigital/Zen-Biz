@@ -1,4 +1,5 @@
 import { DocShareActions } from "@/components/DocShareActions";
+import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -16,11 +17,12 @@ export default async function QuotationsPage() {
   const supabase = createClient();
   const activeBusiness = await getActiveBusiness();
 
-  const { data: quotations } = (await supabase
-    .from("quotations" as never)
-    .select("*, customers(name)")
-    .eq("business_id", activeBusiness?.id ?? "")
-    .order("created_at", { ascending: false })) as { data: any[] | null };
+  const base = () =>
+    supabase.from("quotations" as never).select("*, customers(name)").eq("business_id", activeBusiness?.id ?? "");
+  let res = (await base().eq("doc_kind", "quotation").order("created_at", { ascending: false })) as { data: any[] | null; error: unknown };
+  // Before the proforma migration is applied there is no doc_kind column: show everything.
+  if (res.error) res = (await base().order("created_at", { ascending: false })) as { data: any[] | null; error: unknown };
+  const quotations = res.data;
 
   return (
     <div className="flex flex-col gap-5">
@@ -70,15 +72,17 @@ export default async function QuotationsPage() {
                     </p>
                   </div>
                 </Link>
-                <div className="flex flex-wrap items-center gap-3">
+                <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 sm:flex-nowrap sm:justify-end">
                   <span className="font-ledger text-sm font-semibold tabular-nums text-text">
                     {formatCurrency(Number(q.total), q.currency)}
                   </span>
                   <QuotationStatusSelect quotationId={q.id} status={q.status} />
-                  <Link href={`/dashboard/quotations/${q.id}`} className="rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition bg-violet-600 hover:bg-violet-700">View</Link>
+                  <div className="flex w-full items-center gap-2 sm:w-auto">
+                  <Link href={`/dashboard/quotations/${q.id}`} title="View" aria-label="View" className={`${ICON_BTN} bg-violet-600 hover:bg-violet-700`}><ViewIcon /></Link>
                   <DownloadQuotationButton quotationId={q.id} />
           <DocShareActions kind="quotation" id={q.id} />
                   <DeleteRecordButton table="quotations" id={q.id} label="quotation" />
+                  </div>
                 </div>
               </li>
             ))}

@@ -18,7 +18,7 @@ export default function UpgradePage() {
       <div className="max-w-md rounded-2xl border border-paper-fold bg-paper-card p-6 shadow-card">
         <p className="text-sm text-text-soft">
           Online upgrades aren't available yet — we're setting up payments
-          and will turn this on soon. Everything on the Starter plan works
+          and will turn this on soon. Everything on the Basic plan works
           fully in the meantime.
         </p>
       </div>

@@ -1,5 +1,7 @@
 "use client";
 
+import { ICON_BTN, PrintIcon, MailIcon, WhatsAppIcon, Spinner } from "@/components/ActionIcons";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateQuotationPdf } from "@/lib/generateQuotationPdf";
@@ -65,10 +67,10 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase" |
       number = (d as Purchase).purchase_number;
     }
     if (!blob) return null;
-    const label = isC ? "Delivery challan" : isQ ? "Quotation" : "Purchase";
+    const label = isC ? "Delivery challan" : isQ ? (d.doc_kind === "proforma" ? "Proforma invoice" : "Quotation") : "Purchase";
     return {
       blob,
-      filename: `${isC ? "Challan" : label}-${number}.pdf`,
+      filename: `${isC ? "Challan" : label.replace(/ /g, "-")}-${number}.pdf`,
       label,
       number,
       totalText: isC ? "" : `${CURRENCY_SYMBOLS[d.currency ?? "INR"] ?? ""}${Number(d.total).toLocaleString("en-IN")}`,
@@ -143,15 +145,15 @@ export function DocShareActions({ kind, id }: { kind: "quotation" | "purchase" |
     setDraft(null);
   }
 
-  const B = "rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60";
+  const B = ICON_BTN;
   const field = "rounded-lg border border-paper-fold bg-white px-3 py-2 text-sm text-text focus:border-ink focus:outline-none";
 
   return (
     <>
       {done && <span className="rounded-lg bg-green-50 px-2.5 py-1.5 text-xs font-medium text-green-700">{done}</span>}
-      <button type="button" onClick={() => run("print")} disabled={busy !== null} className={`${B} bg-indigo-600 hover:bg-indigo-700`}>{busy === "print" ? "Preparing…" : "Print"}</button>
-      <button type="button" onClick={() => run("whatsapp")} disabled={busy !== null} className={`${B} bg-emerald-600 hover:bg-emerald-700`}>{busy === "whatsapp" ? "Preparing…" : "WhatsApp"}</button>
-      <button type="button" onClick={() => run("email")} disabled={busy !== null} className={`${B} bg-amber-600 hover:bg-amber-700`}>{busy === "email" ? "Preparing…" : "Email"}</button>
+      <button type="button" onClick={() => run("print")} disabled={busy !== null} title="Print" aria-label="Print" className={`${B} bg-indigo-600 hover:bg-indigo-700`}>{busy === "print" ? <Spinner /> : <PrintIcon />}</button>
+      <button type="button" onClick={() => run("whatsapp")} disabled={busy !== null} title="Share on WhatsApp" aria-label="Share on WhatsApp" className={`${B} bg-emerald-600 hover:bg-emerald-700`}>{busy === "whatsapp" ? <Spinner /> : <WhatsAppIcon />}</button>
+      <button type="button" onClick={() => run("email")} disabled={busy !== null} title="Send by email" aria-label="Send by email" className={`${B} bg-amber-600 hover:bg-amber-700`}>{busy === "email" ? <Spinner /> : <MailIcon />}</button>
 
       {draft && (
         <div className="fixed inset-0 z-30 flex items-center justify-center bg-ink/40 p-4" onClick={() => !sending && setDraft(null)}>

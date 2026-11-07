@@ -14,6 +14,8 @@ const PLAN_STYLE: Record<string, string> = {
   professional: "bg-sky-100 text-sky-700",
   business: "bg-violet-100 text-violet-700",
 };
+/** Pro is the merged Professional + Business plan; old "business" accounts show as Pro. */
+const planName = (p: string) => (p === "starter" ? "Basic" : "Pro");
 const fmtDate = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "—");
 
 function DaysBadge({ iso, alertDays }: { iso: string | null; alertDays: number }) {
@@ -44,7 +46,7 @@ export function CustomersPanel({
   const list = useMemo(() => {
     const s = q.trim().toLowerCase();
     return (rows ?? []).filter((r) => {
-      if (plan !== "all" && r.plan !== plan) return false;
+      if (plan !== "all" && (r.plan === "business" ? "professional" : r.plan) !== plan) return false;
       const d = daysLeft(r.renewsAt);
       if (status === "expired" && !(r.plan !== "starter" && d !== null && d < 0)) return false;
       if (status === "expiring" && !(r.plan !== "starter" && d !== null && d >= 0 && d <= alertDays)) return false;
@@ -61,7 +63,7 @@ export function CustomersPanel({
       <div className="flex flex-wrap gap-2">
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search name, email or phone" className={`${input} min-w-[220px] flex-1`} />
         <select value={plan} onChange={(e) => setPlan(e.target.value)} className={input}>
-          <option value="all">All plans</option><option value="starter">Starter</option><option value="professional">Professional</option><option value="business">Business</option>
+          <option value="all">All plans</option><option value="starter">Basic</option><option value="professional">Pro</option>
         </select>
         <select value={status} onChange={(e) => setStatus(e.target.value)} className={input}>
           <option value="all">Any status</option><option value="active">Paid · active</option><option value="expiring">Paid · expiring soon</option><option value="expired">Paid · expired</option>
@@ -78,7 +80,7 @@ export function CustomersPanel({
               <p className="truncate text-xs text-text-soft">{r.email}{r.phone ? ` · ${r.phone}` : ""}</p>
             </div>
             <div className="flex items-center gap-2">
-              <span className={`rounded px-2 py-0.5 text-xs font-semibold capitalize ${PLAN_STYLE[r.plan]}`}>{r.plan}</span>
+              <span className={`rounded px-2 py-0.5 text-xs font-semibold capitalize ${PLAN_STYLE[r.plan]}`}>{planName(r.plan)}</span>
               {r.plan !== "starter" && <DaysBadge iso={r.renewsAt} alertDays={alertDays} />}
             </div>
           </button>
@@ -88,7 +90,7 @@ export function CustomersPanel({
               <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
                 <p><span className="text-text-soft">Email: </span>{r.email || "—"}</p>
                 <p><span className="text-text-soft">Phone: </span>{r.phone || "—"}</p>
-                <p><span className="text-text-soft">Plan: </span><span className="capitalize">{r.plan}</span>{r.cycle ? ` (${r.cycle})` : ""}</p>
+                <p><span className="text-text-soft">Plan: </span><span className="capitalize">{planName(r.plan)}</span>{r.cycle ? ` (${r.cycle})` : ""}</p>
                 <p><span className="text-text-soft">Expiry: </span>{r.plan === "starter" ? "Free plan" : fmtDate(r.renewsAt)}</p>
                 <p><span className="text-text-soft">Joined: </span>{fmtDate(r.joined)}</p>
               </div>
@@ -110,7 +112,7 @@ export function CustomersPanel({
 }
 
 function PlanEditor({ r, onChanged, setMsg }: { r: CustomerRow; onChanged: () => void; setMsg: SetMsg }) {
-  const [plan, setPlan] = useState<string>(r.plan);
+  const [plan, setPlan] = useState<string>(r.plan === "business" ? "professional" : r.plan);
   const [cycle, setCycle] = useState<string>(r.cycle ?? "monthly");
   const [date, setDate] = useState(r.renewsAt ? r.renewsAt.slice(0, 10) : "");
   const [busy, start] = useTransition();
@@ -126,7 +128,7 @@ function PlanEditor({ r, onChanged, setMsg }: { r: CustomerRow; onChanged: () =>
     <div className="flex flex-wrap items-end gap-2 rounded-xl bg-paper p-3">
       <label className="flex flex-col gap-1 text-xs text-text-soft">Plan
         <select value={plan} onChange={(e) => setPlan(e.target.value)} className={input}>
-          <option value="starter">Starter (free)</option><option value="professional">Professional</option><option value="business">Business</option>
+          <option value="starter">Basic (free)</option><option value="professional">Pro</option>
         </select>
       </label>
       {plan !== "starter" && (
@@ -254,7 +256,7 @@ function RenewalRow({ r, alertDays, canEdit, onChanged, setMsg }: { r: CustomerR
           <p className="font-semibold text-text">{r.name}</p>
           <p className="text-xs text-text-soft">{r.email}{r.phone ? ` · ${r.phone}` : ""}</p>
           <p className="mt-1 text-xs text-text-soft">
-            <span className={`mr-1.5 rounded px-2 py-0.5 font-semibold capitalize ${PLAN_STYLE[r.plan]}`}>{r.plan}</span>
+            <span className={`mr-1.5 rounded px-2 py-0.5 font-semibold capitalize ${PLAN_STYLE[r.plan]}`}>{planName(r.plan)}</span>
             {r.cycle ?? ""} · ends {fmtDate(r.renewsAt)}
           </p>
         </div>

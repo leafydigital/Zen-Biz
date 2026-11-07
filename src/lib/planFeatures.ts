@@ -75,35 +75,9 @@ const STARTER_FEATURES: PlanFeatures = {
   },
 };
 
-const PROFESSIONAL_FEATURES: PlanFeatures = {
-  quotations: true,
-  convertQuotationToInvoice: true,
-  purchases: true,
-  deliveryChallans: true,
-  profitAndLoss: true,
-  gstBilling: false,
-  gstReport: false,
-  colourfulStyles: true,
-  invoiceWatermark: false,
-  shareViaWhatsapp: true,
-  expenseTracking: true,
-  invoiceTrackingStatuses: true,
-  multipleUsers: true,
-  stockLowAlerts: true,
-  customerOutstandingReport: false,
-  posPrintSupport: true,
-  barcodeScanning: true,
-  ewayBill: true,
-  limits: {
-    invoicesPerMonth: null,
-    customers: null,
-    products: null,
-    businesses: 2,
-    users: 4,
-  },
-};
-
-const BUSINESS_FEATURES: PlanFeatures = {
+/** The single paid tier ("Pro"): everything, 5 businesses, 10 users. The old
+ * Professional and Business plans were merged into this. */
+const PRO_FEATURES: PlanFeatures = {
   quotations: true,
   convertQuotationToInvoice: true,
   purchases: true,
@@ -127,25 +101,25 @@ const BUSINESS_FEATURES: PlanFeatures = {
     customers: null,
     products: null,
     businesses: 5,
-    users: 5,
+    users: 10,
   },
 };
 
 export function getPlanFeatures(plan: Plan): PlanFeatures {
   switch (plan) {
+    // "business" is a legacy value from before the merge: it is the same as Pro.
     case "professional":
-      return PROFESSIONAL_FEATURES;
     case "business":
-      return BUSINESS_FEATURES;
+      return PRO_FEATURES;
     default:
       return STARTER_FEATURES;
   }
 }
 
 export const PLAN_LABELS: Record<Plan, string> = {
-  starter: "Starter",
-  professional: "Professional",
-  business: "Business",
+  starter: "Basic",
+  professional: "Pro",
+  business: "Pro",
 };
 
 /** Monthly and yearly prices in INR (whole rupees). */

@@ -1,5 +1,7 @@
 "use client";
 
+import { ICON_BTN, MailIcon, WhatsAppIcon, Spinner } from "@/components/ActionIcons";
+
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { generateInvoicePdf } from "@/lib/generateInvoicePdf";
@@ -225,25 +227,21 @@ export function ShareInvoiceButtons({ invoiceId }: { invoiceId: string }) {
         type="button"
         onClick={() => prepareAndShare("whatsapp")}
         disabled={loading !== null}
-        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-emerald-600 hover:bg-emerald-700"
+        title="Share on WhatsApp"
+        aria-label="Share on WhatsApp"
+        className={`${ICON_BTN} bg-emerald-600 hover:bg-emerald-700`}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
-          <path d="M17.5 14.4c-.3-.1-1.7-.8-1.9-.9-.3-.1-.4-.1-.6.1-.2.3-.7.9-.8 1-.1.2-.3.2-.6.1-.3-.1-1.2-.4-2.3-1.4-.9-.8-1.4-1.7-1.6-2-.2-.3 0-.5.1-.6l.4-.5c.1-.1.2-.3.2-.4.1-.2 0-.3 0-.4L9.7 7c-.2-.4-.4-.4-.6-.4h-.5c-.2 0-.5.1-.7.3-.2.3-.9.9-.9 2.1 0 1.2.9 2.4 1 2.6.1.2 1.8 2.8 4.4 3.9.6.3 1.1.4 1.5.6.6.2 1.2.2 1.6.1.5-.1 1.7-.7 1.9-1.4.2-.6.2-1.2.2-1.3-.1-.1-.3-.2-.6-.3Z" />
-          <path d="M12 2C6.5 2 2 6.5 2 12c0 1.9.5 3.6 1.5 5.1L2 22l5.1-1.3C8.5 21.5 10.2 22 12 22c5.5 0 10-4.5 10-10S17.5 2 12 2Zm0 18.2c-1.7 0-3.2-.5-4.5-1.3l-.3-.2-3 .8.8-2.9-.2-.3C4 15 3.5 13.6 3.5 12c0-4.7 3.8-8.5 8.5-8.5s8.5 3.8 8.5 8.5-3.8 8.5-8.5 8.5Z" />
-        </svg>
-        {loading === "whatsapp" ? "Preparing…" : "WhatsApp"}
+        {loading === "whatsapp" ? <Spinner /> : <WhatsAppIcon />}
       </button>
       <button
         type="button"
         onClick={() => prepareAndShare("email")}
         disabled={loading !== null}
-        className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-white shadow-sm transition disabled:opacity-60 bg-amber-600 hover:bg-amber-700"
+        title="Send by email"
+        aria-label="Send by email"
+        className={`${ICON_BTN} bg-amber-600 hover:bg-amber-700`}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-          <path d="M4 6h16v12H4z" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="m4 7 8 6 8-6" strokeLinecap="round" strokeLinejoin="round" />
-        </svg>
-        {loading === "email" ? "Preparing…" : "Email"}
+        {loading === "email" ? <Spinner /> : <MailIcon />}
       </button>
     </>
   );

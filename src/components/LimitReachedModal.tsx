@@ -8,7 +8,7 @@ import { PlanComparisonModal } from "@/components/PlanComparisonModal";
 import type { Plan } from "@/types/database";
 
 /**
- * Shown when a Starter-plan usage limit (customers, products, or invoices
+ * Shown when a Basic-plan usage limit (customers, products, or invoices
  * this month) is hit at the moment of creation. Blocks the action — the
  * caller should not proceed with the insert while this is open.
  */
@@ -60,7 +60,7 @@ export function LimitReachedModal({
             onClick={() => setShowComparison(true)}
             className="rounded-xl bg-ink px-4 py-2.5 text-sm font-semibold text-paper transition hover:bg-ink-light"
           >
-            Upgrade to Professional
+            Upgrade to Pro
           </button>
           <button
             type="button"

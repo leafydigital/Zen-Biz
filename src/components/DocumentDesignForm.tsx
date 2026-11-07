@@ -98,7 +98,7 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
   async function handleSave() {
     const usesSizes = Object.keys(design.sizes ?? {}).length > 0;
     if ((normalizeStyle(design.style) !== "simple" || usesSizes || Boolean(design.thermalTemplate)) && !features.colourfulStyles) {
-      setError("Colourful, Templates, Custom styles, receipt styles and size adjustments are on the Professional and Business plans. Use Simple, or upgrade to save these.");
+      setError("Colourful, Templates, Custom styles, receipt styles and size adjustments are on the Pro plan. Use Simple, or upgrade to save these.");
       return;
     }
     setSaving(true);
@@ -230,7 +230,7 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
         </div>
         {style !== "simple" && paidLocked && (
           <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">
-            You can preview this style, but saving it needs the Professional or Business plan. Your documents keep using Simple until then.
+            You can preview this style, but saving it needs the Pro plan. Your documents keep using Simple until then.
           </p>
         )}
       </div>
@@ -304,7 +304,7 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
               );
             })}
           </div>
-          {paidLocked && <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">Receipt styles are on the Professional and Business plans.</p>}
+          {paidLocked && <p className="mt-2 rounded-lg bg-brass/10 px-3 py-2 text-xs text-brass-dark">Receipt styles are on the Pro plan.</p>}
         </div>
       )}
 
@@ -417,7 +417,7 @@ export function DocumentDesignForm({ business, plan }: { business: Business; pla
         })}
         {paidLocked && (
           <p className="text-xs text-text-soft">
-            You can try the sliders and see the preview. Saving size changes needs the Professional or Business plan.
+            You can try the sliders and see the preview. Saving size changes needs the Pro plan.
           </p>
         )}
       </div>

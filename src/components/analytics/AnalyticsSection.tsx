@@ -20,10 +20,10 @@ import type { AnalyticsPreferences, Plan } from "@/types/database";
 
 /**
  * The whole Analytics/Overview section for the dashboard. Plan-gated at
- * this single entry point — a Starter plan never reaches the data
+ * this single entry point — a Basic plan never reaches the data
  * queries at all (the upgrade card is returned before any of
  * analyticsData.ts's functions are called), so this is a real access
- * boundary, not just a hidden UI section a Starter user's browser still
+ * boundary, not just a hidden UI section a Basic user's browser still
  * happens to receive the data for.
  */
 export async function AnalyticsSection({

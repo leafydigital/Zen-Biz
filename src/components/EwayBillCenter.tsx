@@ -88,7 +88,7 @@ export function EwayBillCenter({ invoices, business, allowed, kind }: { invoices
 
       {!allowed && (
         <p className="rounded-xl bg-brass/10 px-4 py-3 text-sm text-brass-dark">
-          E-way bill tools are available on the Professional and Business plans. Upgrade from Settings → Plan &amp; Billing.
+          E-way bill tools are available on the Pro plan. Upgrade from Settings → Plan &amp; Billing.
         </p>
       )}
 

@@ -111,8 +111,8 @@ async function planUserLimitError(ownerId: string, businessId: string, plan: Pla
   const limit = getPlanFeatures(plan).limits.users;
   if (limit !== null && (count ?? 0) >= limit) {
     return plan === "starter"
-      ? "Starter includes 1 user. Upgrade to Professional to add another user."
-      : `Your plan includes up to ${limit} users per business. Upgrade to a higher plan to add more.`;
+      ? "Basic includes 1 user. Upgrade to Pro to add another user."
+      : `Your plan includes up to ${limit} users per business. You've reached the limit.`;
   }
   return null;
 }

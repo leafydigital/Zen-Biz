@@ -73,10 +73,8 @@ export function BusinessManagementTab({
       {atLimit && (
         <p className="rounded-lg bg-brass/10 px-3.5 py-2.5 text-sm text-brass-dark">
           {plan === "starter"
-            ? "You've reached the 1-business limit on Starter. Upgrade to Professional to manage up to 2 businesses."
-            : plan === "professional"
-              ? "Professional allows up to 2 businesses. Upgrade to Business to manage up to 5 businesses."
-              : "You've reached your plan's business limit."}
+            ? "You've reached the 1-business limit on Basic. Upgrade to Pro to manage up to 5 businesses."
+            : "Pro allows up to 5 businesses. You've reached the limit."}
         </p>
       )}
 

@@ -58,6 +58,7 @@ export function NewQuotationForm({
   customers,
   products,
   suggestedQuotationNumber,
+  kind = "quotation",
 }: {
   ownerId: string;
   businessId: string;
@@ -65,7 +66,13 @@ export function NewQuotationForm({
   customers: Customer[];
   products: Product[];
   suggestedQuotationNumber: string;
+  /** "proforma" saves a proforma invoice (same table, doc_kind = proforma). */
+  kind?: "quotation" | "proforma";
 }) {
+  const isProforma = kind === "proforma";
+  const docName = isProforma ? "proforma invoice" : "quotation";
+  const DocName = isProforma ? "Proforma invoice" : "Quotation";
+  const listPath = isProforma ? "/dashboard/proforma" : "/dashboard/quotations";
   const router = useRouter();
   const supabase = createClient();
 
@@ -168,12 +175,12 @@ export function NewQuotationForm({
       return;
     }
     if (!quotationNumber.trim()) {
-      setError("Give this quotation a number.");
+      setError(`Give this ${docName} a number.`);
       return;
     }
 
     setSaving(true);
-    showLoader("Saving quotation…");
+    showLoader(`Saving ${docName}…`);
 
     function stopLoading() {
       setSaving(false);
@@ -187,6 +194,7 @@ export function NewQuotationForm({
         business_id: businessId,
         customer_id: customerId || null,
         quotation_number: quotationNumber.trim(),
+        ...(isProforma ? { doc_kind: "proforma" } : {}),
         quotation_date: quotationDate,
         valid_until: validUntil || null,
         status: "draft",
@@ -217,7 +225,7 @@ export function NewQuotationForm({
     if (qErr || !quotation) {
       stopLoading();
       console.error("Zen Biz: failed to save quotation", qErr);
-      setError(qErr?.message ?? "Could not save the quotation.");
+      setError(qErr?.message ?? `Could not save the ${docName}.`);
       return;
     }
 
@@ -280,7 +288,7 @@ export function NewQuotationForm({
       });
     }
 
-    router.push("/dashboard/quotations");
+    router.push(listPath);
     router.refresh();
   }
 
@@ -404,12 +412,12 @@ export function NewQuotationForm({
                 <path d="M9 13h6M9 17h6" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </span>
-            <h2 className="font-display text-lg font-semibold text-text">Quotation Details</h2>
+            <h2 className="font-display text-lg font-semibold text-text">{DocName} Details</h2>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <label className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium text-text">Quotation number</span>
+              <span className="text-sm font-medium text-text">{DocName} number</span>
               <input
                 required
                 value={quotationNumber}
@@ -847,7 +855,7 @@ export function NewQuotationForm({
               onClick={(e) => handleSubmit(e, false)}
               className="rounded-xl border border-paper-fold px-4 py-3 text-sm font-semibold text-text transition hover:bg-paper disabled:opacity-60"
             >
-              {saving ? "Saving…" : "Save quotation"}
+              {saving ? "Saving…" : `Save ${docName}`}
             </button>
           </div>
         </div>

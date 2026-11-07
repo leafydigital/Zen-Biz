@@ -20,7 +20,7 @@ export default async function NewInvoicePage({
   const businessId = activeBusiness?.id ?? "";
 
   // Start of the current calendar month, in the server's local time — the
-  // 50-invoice Starter limit resets on the 1st, not on a rolling 30-day
+  // 50-invoice Basic limit resets on the 1st, not on a rolling 30-day
   // window. Only official invoices count toward it, so this count
   // deliberately excludes billing_record rows.
   const monthStart = new Date();

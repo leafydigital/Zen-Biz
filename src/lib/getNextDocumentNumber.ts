@@ -4,6 +4,7 @@ import { getNumberFormat, nextNumberFrom, resolvePrefix, type FormatSettings, ty
 const TABLES: Record<Exclude<NumberKind, "customer">, { table: string; column: string }> = {
   invoice: { table: "invoices", column: "invoice_number" },
   quotation: { table: "quotations", column: "quotation_number" },
+  proforma: { table: "quotations", column: "quotation_number" },
   purchase: { table: "purchases", column: "purchase_number" },
   challan: { table: "delivery_challans", column: "challan_number" },
 };
@@ -31,6 +32,7 @@ export async function getNextDocumentNumber(
     .order("created_at", { ascending: false })
     .limit(500);
   if (kind === "invoice") query = query.eq("record_type", "invoice");
+  // Proformas live in the quotations table; the prefix keeps the two number series apart.
 
   const { data } = await query;
   const existing = ((data ?? []) as unknown as Record<string, string>[]).map((r) => String(r[column] ?? ""));

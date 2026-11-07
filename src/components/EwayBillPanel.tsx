@@ -104,7 +104,7 @@ export function EwayBillPanel({
             </button>
           </div>
         ) : (
-          <p className="rounded-lg bg-brass/10 px-3 py-1.5 text-xs text-brass-dark">Available on the Professional and Business plans.</p>
+          <p className="rounded-lg bg-brass/10 px-3 py-1.5 text-xs text-brass-dark">Available on the Pro plan.</p>
         )}
       </div>
 

@@ -1133,7 +1133,7 @@ export function NewInvoiceForm({
               </div>
             ) : (
               <p className="rounded-xl bg-brass/10 px-3.5 py-2.5 text-xs text-brass-dark sm:col-span-2">
-                E-way bill details on invoices are available on the Professional and Business plans.
+                E-way bill details on invoices are available on the Pro plan.
               </p>
             )}
             <label className="flex flex-col gap-1.5 sm:col-span-2">
