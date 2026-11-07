@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 
 const BUILD = process.env.NEXT_PUBLIC_BUILD_ID;
-const APK_URL = "https://github.com/leafydigital/Zen-Biz/releases/download/downloads/ZenBiz.apk";
+import { openApkDownload } from "@/lib/openApk";
 
 type Apk = { versionCode: number; versionName?: string };
 
@@ -59,14 +59,7 @@ export function UpdateNotice() {
   async function update() {
     setBusy(true);
     if (apk) {
-      try {
-        const cap = (window as any).Capacitor;
-        const browser = cap.Plugins?.Browser ?? cap.registerPlugin?.("Browser");
-        if (browser?.open) await browser.open({ url: APK_URL });
-        else window.open(APK_URL, "_system");
-      } catch {
-        window.open(APK_URL, "_system");
-      }
+      openApkDownload();
       setBusy(false);
       return;
     }
@@ -85,7 +78,7 @@ export function UpdateNotice() {
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold">Update available</p>
           <p className="text-xs opacity-80">
-            {apk ? "A new version of the Zen Biz app is ready. Download it and tap Install (no uninstall needed)." : "A new version of Zen Biz is ready."}
+            {apk ? "A new version of the Zen Biz app is ready. Download it, open the file and tap Install (no uninstall needed). If asked, allow your browser to install apps." : "A new version of Zen Biz is ready."}
           </p>
         </div>
         <button type="button" onClick={() => setHidden(true)} className="rounded-lg px-2.5 py-2 text-xs font-semibold opacity-80 hover:opacity-100">

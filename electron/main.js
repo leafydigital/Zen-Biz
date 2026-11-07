@@ -1,6 +1,7 @@
 // Zen Biz desktop app: a window around the live website, so every website
 // update reaches the PC app automatically (no reinstall needed).
-const { app, BrowserWindow, shell, Menu, session, dialog } = require("electron");
+const { app, BrowserWindow, shell, Menu, session, dialog, ipcMain } = require("electron");
+const path = require("path");
 
 const SITE = "https://zen-biz-ka6g.vercel.app/";
 const HOST = new URL(SITE).hostname;
@@ -18,7 +19,7 @@ function create() {
     title: "Zen Biz",
     autoHideMenuBar: true,
     backgroundColor: "#ffffff",
-    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: { contextIsolation: true, nodeIntegration: false, sandbox: true, preload: path.join(__dirname, "preload.js") },
   });
   Menu.setApplicationMenu(null);
   win.webContents.on("did-finish-load", addBackButton);
@@ -100,6 +101,37 @@ app.whenReady().then(() => {
 });
 // Program updates: when a newer Zen Biz is published, ask once, then download and
 // restart into it. No uninstall / reinstall. (Website changes need no update at all.)
+let updater = null;
+let uiCheck = false; // a check started from Settings → Updates (it shows its own result, no dialog)
+
+ipcMain.handle("zb:version", () => app.getVersion());
+ipcMain.handle("zb:check", async () => {
+  if (!updater) return { status: "dev" };
+  uiCheck = true;
+  try {
+    const r = await updater.checkForUpdates();
+    const v = r && r.updateInfo && r.updateInfo.version;
+    const available = r && typeof r.isUpdateAvailable === "boolean" ? r.isUpdateAvailable : !!v && v !== app.getVersion();
+    return available ? { status: "available", version: v } : { status: "uptodate", version: v };
+  } catch {
+    return { status: "error" };
+  } finally {
+    setTimeout(() => (uiCheck = false), 2000);
+  }
+});
+ipcMain.handle("zb:download", async () => {
+  if (!updater) return false;
+  try {
+    await updater.downloadUpdate();
+    return true;
+  } catch {
+    return false;
+  }
+});
+ipcMain.handle("zb:install", () => {
+  if (updater) updater.quitAndInstall();
+});
+
 function setupUpdater() {
   if (!app.isPackaged) return;
   let autoUpdater;
@@ -108,8 +140,10 @@ function setupUpdater() {
   } catch {
     return;
   }
+  updater = autoUpdater;
   autoUpdater.autoDownload = false;
   autoUpdater.on("update-available", async (info) => {
+    if (uiCheck) return;
     const r = await dialog.showMessageBox(win, {
       type: "info",
       title: "Zen Biz update",
@@ -122,6 +156,7 @@ function setupUpdater() {
     if (r.response === 0) autoUpdater.downloadUpdate().catch(() => {});
   });
   autoUpdater.on("update-downloaded", async () => {
+    if (uiCheck) return;
     const r = await dialog.showMessageBox(win, {
       type: "info",
       title: "Zen Biz update",
