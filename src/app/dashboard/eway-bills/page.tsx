@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { getActiveBusiness } from "@/lib/getActiveBusiness";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
 import { getPlanFeatures } from "@/lib/planFeatures";
@@ -8,12 +10,14 @@ import type { Invoice } from "@/types/database";
 export default async function EwayBillsPage() {
   const supabase = createClient();
   const [business, profile] = await Promise.all([getActiveBusiness(), getCurrentProfile()]);
+  const period = getPeriod();
 
   const { data } = (await supabase
     .from("invoices" as never)
     .select("*, customers(*)")
     .eq("business_id", business?.id ?? "")
     .eq("record_type", "invoice")
+    .gte("invoice_date", periodFrom(period)).lte("invoice_date", periodTo(period))
     .order("invoice_date", { ascending: false })
     .limit(300)) as { data: (Invoice & { customers: any })[] | null };
 

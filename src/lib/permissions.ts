@@ -16,7 +16,7 @@ export const PERMISSIONS = [
   { key: "quotations", label: "Quotations & Proforma invoices", paths: ["/dashboard/quotations", "/dashboard/proforma"] },
   { key: "delivery_challans", label: "Delivery challans", paths: ["/dashboard/delivery-challans"] },
   { key: "purchases", label: "Purchases & suppliers", paths: ["/dashboard/purchases", "/dashboard/suppliers"] },
-  { key: "reports", label: "GST & Profit/Loss reports", paths: ["/dashboard/reports", "/dashboard/profit-loss"] },
+  { key: "reports", label: "Reports, Profit/Loss and Income & Expenses", paths: ["/dashboard/reports", "/dashboard/profit-loss", "/dashboard/income-expenses"] },
   { key: "analytics", label: "Dashboard analytics (charts)", paths: [] as string[] },
   { key: "activity_log", label: "Activity log (can see)", paths: [] as string[] },
   { key: "activity_log_delete", label: "Activity log (can delete entries)", paths: [] as string[] },

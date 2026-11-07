@@ -1,4 +1,6 @@
 import { redirect } from "next/navigation";
+import { PeriodSwitcher } from "@/components/PeriodSwitcher";
+import { getPeriod } from "@/lib/getPeriod";
 import { headers } from "next/headers";
 import { getMyAccess } from "@/lib/getMyAccess";
 import { firstAllowedPath, hasPermission, isBillingOnly, permissionForPath } from "@/lib/permissions";
@@ -105,6 +107,7 @@ export default async function DashboardLayout({
     (!!needed && !hasPermission(access.permissions, needed)) || (billingOnly && !onBillingPath);
 
   // A team member with a single business has nothing to switch to.
+  const period = getPeriod();
   const showSwitcher = businesses.length > 1 || resolvedBusiness.owner_id === user.id;
 
   return (
@@ -118,6 +121,7 @@ export default async function DashboardLayout({
           mobileExtras={
             <>
               <PlanBadge plan={profile.plan} />
+              <PeriodSwitcher value={period.value} />
               {showSwitcher && <BusinessSwitcher inline activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />}
             </>
           }
@@ -131,6 +135,7 @@ export default async function DashboardLayout({
 
             <div className="ml-auto flex shrink-0 items-center gap-3">
               <PlanBadge plan={profile.plan} className="hidden sm:inline-flex" />
+              <PeriodSwitcher value={period.value} className="hidden md:flex" />
               <div className={showSwitcher ? "hidden md:block" : "hidden"}>
                 <BusinessSwitcher activeBusiness={resolvedBusiness} businesses={businesses.length > 0 ? businesses : [{ ...resolvedBusiness, role: "owner" as const }]} />
               </div>

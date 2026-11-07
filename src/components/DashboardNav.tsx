@@ -132,6 +132,7 @@ export function DashboardNav({
   const reportItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard/reports", label: t.nav.gstReport, icon: "chart", locked: !features.gstReport },
     { href: "/dashboard/profit-loss", label: t.nav.profitLoss, icon: "scale", locked: !features.profitAndLoss },
+    { href: "/dashboard/income-expenses", label: "Income & Expenses", icon: "cart", locked: !features.expenseTracking },
   ];
   const settingsItems: { href: string; label: string; icon: keyof typeof ICONS; locked?: boolean }[] = [
     { href: "/dashboard/settings", label: t.nav.settings, icon: "settings" },

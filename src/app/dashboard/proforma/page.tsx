@@ -1,4 +1,6 @@
 import { DocShareActions } from "@/components/DocShareActions";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
@@ -16,12 +18,14 @@ function formatCurrency(n: number, currency: string = "INR") {
 export default async function ProformaPage() {
   const supabase = createClient();
   const activeBusiness = await getActiveBusiness();
+  const period = getPeriod();
 
   const res = (await supabase
     .from("quotations" as never)
     .select("*, customers(name)")
     .eq("business_id", activeBusiness?.id ?? "")
     .eq("doc_kind", "proforma")
+    .gte("quotation_date", periodFrom(period)).lte("quotation_date", periodTo(period))
     .order("created_at", { ascending: false })) as { data: any[] | null; error: { message: string } | null };
   const quotations = res.data;
   const needsMigration = !!res.error;

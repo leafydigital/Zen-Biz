@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { LockedFeature } from "@/components/LockedFeature";
 import { getPlanFeatures } from "@/lib/planFeatures";
 import { getCurrentProfile } from "@/lib/getCurrentProfile";
@@ -21,6 +23,7 @@ export default async function GstReportPage() {
 
   const activeBusiness = await getActiveBusiness();
   const businessId = activeBusiness?.id ?? "";
+  const period = getPeriod();
 
   const [{ data: invoices }, { data: purchases }] = await Promise.all([
     supabase
@@ -28,11 +31,13 @@ export default async function GstReportPage() {
       .select("invoice_date, gst_amount, subtotal")
       .eq("business_id", businessId)
       .eq("record_type", "invoice")
+      .gte("invoice_date", periodFrom(period)).lte("invoice_date", periodTo(period))
       .neq("status", "cancelled"),
     supabase
       .from("purchases" as never)
       .select("purchase_date, gst_amount, subtotal")
       .eq("business_id", businessId)
+      .gte("purchase_date", periodFrom(period)).lte("purchase_date", periodTo(period))
       .neq("status", "cancelled"),
   ]);
 

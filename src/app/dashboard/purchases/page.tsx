@@ -1,4 +1,6 @@
 import { DocShareActions } from "@/components/DocShareActions";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
@@ -31,11 +33,13 @@ export default async function PurchasesPage() {
   }
 
   const activeBusiness = await getActiveBusiness();
+  const period = getPeriod();
 
   const { data: purchases } = (await supabase
     .from("purchases" as never)
     .select("*, suppliers(name)")
     .eq("business_id", activeBusiness?.id ?? "")
+    .gte("purchase_date", periodFrom(period)).lte("purchase_date", periodTo(period))
     .order("created_at", { ascending: false })) as { data: any[] | null };
 
   return (

@@ -1,4 +1,6 @@
 import { DocShareActions } from "@/components/DocShareActions";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
 import Link from "next/link";
@@ -16,9 +18,11 @@ function formatCurrency(n: number, currency: string = "INR") {
 export default async function QuotationsPage() {
   const supabase = createClient();
   const activeBusiness = await getActiveBusiness();
+  const period = getPeriod();
 
   const base = () =>
-    supabase.from("quotations" as never).select("*, customers(name)").eq("business_id", activeBusiness?.id ?? "");
+    supabase.from("quotations" as never).select("*, customers(name)").eq("business_id", activeBusiness?.id ?? "")
+      .gte("quotation_date", periodFrom(period)).lte("quotation_date", periodTo(period));
   let res = (await base().eq("doc_kind", "quotation").order("created_at", { ascending: false })) as { data: any[] | null; error: unknown };
   // Before the proforma migration is applied there is no doc_kind column: show everything.
   if (res.error) res = (await base().order("created_at", { ascending: false })) as { data: any[] | null; error: unknown };

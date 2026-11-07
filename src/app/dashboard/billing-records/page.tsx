@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
@@ -250,6 +252,7 @@ export default async function BillingRecordsPage({ searchParams }: { searchParam
     );
   }
 
+  const period = getPeriod();
   const recCols = "id, total, currency, invoice_date, converted_invoice_id, notes, customers(name)";
   const recQ = (cols: string) =>
     supabase
@@ -257,6 +260,7 @@ export default async function BillingRecordsPage({ searchParams }: { searchParam
       .select(cols)
       .eq("business_id", activeBusiness?.id ?? "")
       .eq("record_type", "billing_record")
+      .gte("invoice_date", periodFrom(period)).lte("invoice_date", periodTo(period))
       .order("created_at", { ascending: false }) as unknown as PromiseLike<{ data: any[] | null; error: unknown }>;
   let recRes = await recQ(recCols + ", bill_no");
   if (recRes.error) recRes = await recQ(recCols);

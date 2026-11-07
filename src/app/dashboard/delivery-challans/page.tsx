@@ -1,4 +1,6 @@
 import { DeleteRecordButton } from "@/components/DeleteRecordButton";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { ICON_BTN, ViewIcon } from "@/components/ActionIcons";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
@@ -25,11 +27,13 @@ export default async function DeliveryChallansPage() {
   }
 
   const activeBusiness = await getActiveBusiness();
+  const period = getPeriod();
 
   const { data: challans } = (await supabase
     .from("delivery_challans" as never)
     .select("*, customers(name)")
     .eq("business_id", activeBusiness?.id ?? "")
+    .gte("challan_date", periodFrom(period)).lte("challan_date", periodTo(period))
     .order("created_at", { ascending: false })) as { data: any[] | null };
 
   return (

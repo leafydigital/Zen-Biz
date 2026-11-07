@@ -6,7 +6,7 @@ import { sendInvoiceEmail } from "@/lib/actions/emailActions";
 
 export type ReportEntry = {
   date: string; // YYYY-MM-DD
-  side: "sale" | "purchase";
+  side: "sale" | "purchase" | "income" | "expense";
   gst: number;
   subtotal: number;
   total: number;
@@ -95,6 +95,7 @@ export function ReportClient({
   const rows = useMemo(() => {
     const map = new Map<string, { a: number; b: number; c: number; d: number }>();
     for (const e of entries) {
+      if (kind === "gst" && (e.side === "income" || e.side === "expense")) continue;
       const d = e.date.slice(0, 10);
       if (from && d < from) continue;
       if (to && d > to) continue;
@@ -109,6 +110,8 @@ export function ReportClient({
           r.d += e.gst;
         }
       } else if (e.side === "sale") r.a += e.total;
+      else if (e.side === "income") r.b += e.total; // other income
+      else if (e.side === "expense") r.d += e.total; // salary, petrol, rent...
       else r.c += e.total;
       map.set(key, r);
     }
@@ -121,25 +124,25 @@ export function ReportClient({
   const head =
     kind === "gst"
       ? ["Month", "Sales (ex-GST)", "Sales GST", "Purchases (ex-GST)", "Purchase GST", "Net GST payable"]
-      : ["Month", "Sales", "Purchases", "Gross profit"];
+      : ["Month", "Sales", "Other income", "Purchases", "Expenses", "Net profit"];
 
   const body: string[][] = rows.map((r) =>
     kind === "gst"
       ? [r.label, money(r.a, true), money(r.b, true), money(r.c, true), money(r.d, true), money(r.b - r.d, true)]
-      : [r.label, money(r.a, true), money(r.c, true), money(r.a - r.c, true)]
+      : [r.label, money(r.a, true), money(r.b, true), money(r.c, true), money(r.d, true), money(r.a + r.b - r.c - r.d, true)]
   );
 
   const tot = rows.reduce((t, r) => ({ a: t.a + r.a, b: t.b + r.b, c: t.c + r.c, d: t.d + r.d }), { a: 0, b: 0, c: 0, d: 0 });
   const totalRow =
     kind === "gst"
       ? ["Total", money(tot.a, true), money(tot.b, true), money(tot.c, true), money(tot.d, true), money(tot.b - tot.d, true)]
-      : ["Total", money(tot.a, true), money(tot.c, true), money(tot.a - tot.c, true)];
+      : ["Total", money(tot.a, true), money(tot.b, true), money(tot.c, true), money(tot.d, true), money(tot.a + tot.b - tot.c - tot.d, true)];
 
   const summaryText =
     `${title} — ${businessName}\nPeriod: ${periodLabel}\n` +
     (kind === "gst"
       ? `Sales GST: ${money(tot.b, true)}\nPurchase GST: ${money(tot.d, true)}\nNet GST payable: ${money(tot.b - tot.d, true)}`
-      : `Sales: ${money(tot.a, true)}\nPurchases: ${money(tot.c, true)}\nGross profit: ${money(tot.a - tot.c, true)}`);
+      : `Sales: ${money(tot.a, true)}\nOther income: ${money(tot.b, true)}\nPurchases: ${money(tot.c, true)}\nExpenses: ${money(tot.d, true)}\nNet profit: ${money(tot.a + tot.b - tot.c - tot.d, true)}`);
 
   const fileBase = `${kind === "gst" ? "GST-report" : "Profit-Loss"}-${from || "all"}${to ? "_to_" + to : ""}`;
 
@@ -334,9 +337,9 @@ export function ReportClient({
               ["Net GST payable", money(tot.b - tot.d)],
             ]
           : [
-              ["Total sales", money(tot.a)],
-              ["Total purchases", money(tot.c)],
-              ["Gross profit", money(tot.a - tot.c)],
+              ["Total income (sales + other)", money(tot.a + tot.b)],
+              ["Total expenses (purchases + other)", money(tot.c + tot.d)],
+              ["Net profit", money(tot.a + tot.b - tot.c - tot.d)],
             ]
         ).map(([l, v], i) => {
           const tone = [
@@ -401,7 +404,7 @@ export function ReportClient({
       <p className="text-xs text-text-soft">
         {kind === "gst"
           ? "Net GST payable = GST collected on sales − GST paid on purchases. A negative number means you have GST credit."
-          : "Gross profit = paid sales − paid purchases. Other business expenses (rent, salaries, etc.) aren't tracked."}
+          : "Net profit = paid sales + other income − paid purchases − expenses (salary, petrol, rent...). Add income and expenses under Income & Expenses."}
       </p>
     </div>
   );

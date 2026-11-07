@@ -1,4 +1,6 @@
 import Link from "next/link";
+import { getPeriod } from "@/lib/getPeriod";
+import { periodFrom, periodTo } from "@/lib/period";
 import { ICON_BTN, EditIcon } from "@/components/ActionIcons";
 import { createClient } from "@/lib/supabase/server";
 import { InvoiceStatusSelect } from "@/components/InvoiceStatusSelect";
@@ -16,12 +18,14 @@ function formatCurrency(n: number, currency: string = "INR") {
 export default async function InvoicesPage() {
   const supabase = createClient();
   const activeBusiness = await getActiveBusiness();
+  const period = getPeriod();
 
   const { data: invoices } = (await supabase
     .from("invoices" as never)
     .select("*, customers(name)")
     .eq("business_id", activeBusiness?.id ?? "")
     .eq("record_type", "invoice")
+    .gte("invoice_date", periodFrom(period)).lte("invoice_date", periodTo(period))
     .order("created_at", { ascending: false })) as { data: any[] | null };
 
   return (
