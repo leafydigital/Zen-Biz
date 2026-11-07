@@ -31,7 +31,7 @@ jobs:
         working-directory: electron
         run: |
           # A higher version number every build, so installed apps see the update.
-          npm version 1.0.${{ github.run_number }} --no-git-tag-version --allow-same-version
+          npm version 1.${{ github.run_number }}.0 --no-git-tag-version --allow-same-version
           npm install --no-package-lock
           npm install --no-package-lock --no-save electron@31 electron-builder@24
           npx electron-builder --win nsis --publish never

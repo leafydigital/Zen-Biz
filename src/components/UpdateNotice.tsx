@@ -24,7 +24,7 @@ export function UpdateNotice() {
 
   useEffect(() => {
     let stop = false;
-    async function check() {
+    async function check(foreground = false) {
       if (!navigator.onLine) return;
       try {
         const r = await fetch("/api/version", { cache: "no-store" });
@@ -33,7 +33,24 @@ export function UpdateNotice() {
         if (stop) return;
         // Inside the Android / Windows app only the app itself matters (logo, permissions);
         // website changes reach it automatically.
-        if (BUILD && j.build && j.build !== BUILD && !isNativeShell()) setWeb(true);
+        if (BUILD && j.build && j.build !== BUILD) {
+          if (!isNativeShell()) setWeb(true);
+          else if (foreground) {
+            // Android / Windows app: update the content silently when the app comes back to the
+            // screen (never in the middle of work). Once per new version, so it cannot loop.
+            try {
+              if (sessionStorage.getItem("zb_silent") !== j.build) {
+                sessionStorage.setItem("zb_silent", j.build);
+                const names = await caches.keys();
+                await Promise.all(names.filter((n) => n.startsWith("zb-pages") || n.startsWith("zb-static")).map((n) => caches.delete(n)));
+                window.location.reload();
+                return;
+              }
+            } catch {
+              /* ignore */
+            }
+          }
+        }
         const cap = (window as any).Capacitor;
         if (cap?.isNativePlatform?.() && j.apk) {
           const app = cap.Plugins?.App ?? cap.registerPlugin?.("App");
@@ -44,16 +61,17 @@ export function UpdateNotice() {
         /* ignore */
       }
     }
-    void check();
-    const t = setInterval(check, 10 * 60 * 1000);
-    const onVisible = () => document.visibilityState === "visible" && void check();
+    void check(true); // on app start: also silent (nothing is open yet)
+    const t = setInterval(() => void check(), 10 * 60 * 1000);
+    const onVisible = () => document.visibilityState === "visible" && void check(true);
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("online", check);
+    const onOnline = () => void check();
+    window.addEventListener("online", onOnline);
     return () => {
       stop = true;
       clearInterval(t);
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("online", check);
+      window.removeEventListener("online", onOnline);
     };
   }, []);
 

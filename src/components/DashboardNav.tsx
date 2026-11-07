@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabase/client";
 import { clearLoginVerification } from "@/lib/actions/otpActions";
 import { getLabels, ITEM_PLURAL_KEYS } from "@/lib/businessLabels";
 import { getPlanFeatures } from "@/lib/planFeatures";
-import { appVersionLabel } from "@/lib/appVersion";
+import { VersionLine } from "@/components/VersionLine";
 import { Logo } from "@/components/Logo";
 import { useUpdateAvailable } from "@/lib/useUpdateAvailable";
 import { PlanComparisonModal } from "@/components/PlanComparisonModal";
@@ -244,7 +244,7 @@ export function DashboardNav({
           </div>
         )}
 
-        <p className="mt-3 px-2 text-xs text-blue-200/60">{t.nav.version} {appVersionLabel()}</p>
+        <p className="mt-3 px-2 text-xs text-blue-200/60"><VersionLine label={t.nav.version} /></p>
       </nav>
 
       {/* Phone / app: 3-line button (top-left) opens a left-side menu with every page */}
@@ -316,7 +316,7 @@ export function DashboardNav({
                 👑 Upgrade to Pro
               </button>
             )}
-            <p className="mt-3 px-2 text-xs text-blue-200/70">{t.nav.version} {appVersionLabel()}</p>
+            <p className="mt-3 px-2 text-xs text-blue-200/70"><VersionLine label={t.nav.version} /></p>
           </nav>
         </div>
       )}

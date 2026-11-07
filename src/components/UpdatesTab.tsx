@@ -50,7 +50,7 @@ export function UpdatesTab() {
     // 1) Screens, features and fixes (website content). Not shown inside the Android / Windows
     // app: there they arrive by themselves, and only app updates (logo, permissions) are listed.
     if (isNativeShell()) {
-      /* skip */
+      out.push({ key: "web", title: "App content & features", current: appVersionLabel(), state: "uptodate", detail: "Updates by itself in the background. The version above changes when new content arrives." });
     } else if (!server) {
       out.push({ key: "web", title: "App content & features", current: appVersionLabel(), state: "unknown", detail: "Could not check. Connect to the internet and try again." });
     } else if (BUILD && server.build && server.build !== BUILD) {
@@ -82,7 +82,7 @@ export function UpdatesTab() {
       try {
         const app = cap.Plugins?.App ?? cap.registerPlugin?.("App");
         const info = await app?.getInfo?.();
-        const cur = info ? `${info.version} (build ${info.build})` : undefined;
+        const cur = info ? String(info.version) : undefined;
         if (!server?.apk) {
           out.push({ key: "apk", title: "Android app", current: cur, state: server ? "uptodate" : "unknown", detail: server ? "You have the latest version." : "Could not check." });
         } else if (info && Number(info.build) < server.apk.versionCode) {
@@ -119,7 +119,7 @@ export function UpdatesTab() {
     }
     if (desktop) {
       try {
-        const version = await desktop.getVersion();
+        const version = String(await desktop.getVersion()).replace(/.0$/, "");
         const res = await desktop.checkUpdate();
         if (res.status === "available") {
           out.push({
@@ -181,7 +181,7 @@ export function UpdatesTab() {
                 {r.title}
                 <span className={`rounded-full px-2.5 py-0.5 text-xs font-semibold ${badge(r.state)}`}>{badgeText(r.state)}</span>
               </p>
-              {r.current && <p className="mt-0.5 text-xs text-text-soft">Installed version: {r.current}</p>}
+              {r.current && <p className="mt-0.5 text-xs text-text-soft">{r.key === "web" ? "Content version" : "App version"}: {r.current}</p>}
               {r.detail && <p className="mt-1 text-sm text-text-soft">{r.detail}</p>}
               {r.link && (
                 <a href={r.link.href} target="_blank" rel="noreferrer" className="mt-1 inline-block text-xs font-semibold text-ink underline">

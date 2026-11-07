@@ -75,7 +75,7 @@ jobs:
           KS_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
           KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
         run: |
-          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.0.${{ github.run_number }}\"/" android/app/build.gradle
+          sed -i -E "s/versionCode [0-9]+/versionCode ${{ github.run_number }}/; s/versionName \"[^\"]*\"/versionName \"1.${{ github.run_number }}\"/" android/app/build.gradle
           if [ -n "$KS_B64" ]; then
             echo "$KS_B64" | base64 -d > android/zenbiz.keystore
             {
@@ -116,5 +116,5 @@ jobs:
         run: |
           cp android/app/build/outputs/apk/debug/app-debug.apk ZenBiz.apk
           gh release view downloads >/dev/null 2>&1 || gh release create downloads --title "Zen Biz downloads" --notes "Latest Android and Windows apps."
-          echo '{"versionCode": ${{ github.run_number }}, "versionName": "1.0.${{ github.run_number }}"}' > apk-version.json
+          echo '{"versionCode": ${{ github.run_number }}, "versionName": "1.${{ github.run_number }}"}' > apk-version.json
           gh release upload downloads ZenBiz.apk apk-version.json --clobber
